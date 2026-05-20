@@ -1,4 +1,5 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
+import { generateSpec } from "../../agents/SpecAgentImpl.js";
 
 export async function specAgentNode(
   state: UBuildState
@@ -11,8 +12,14 @@ export async function specAgentNode(
     );
   }
 
-  console.log(`[specAgentNode] Processing user story: ${userStory.id}`);
+  console.log(`[specAgentNode] Gerando spec para: "${userStory.title}"`);
 
-  // TODO: invoke IAgentProvider to call LLM and generate Spec
-  return {};
+  const spec = await generateSpec(userStory);
+
+  console.log(`[specAgentNode] Spec gerada: ${spec.id}`);
+
+  return {
+    specs: { [userStory.id]: spec },
+    status: "awaiting_human",
+  };
 }
