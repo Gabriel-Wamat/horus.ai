@@ -3,6 +3,7 @@ import type { WorkflowEvent } from "@u-build/shared";
 
 interface UseEventStreamResult {
   latestEvent: WorkflowEvent | null;
+  events: WorkflowEvent[];
   isConnected: boolean;
   error: string | null;
 }
@@ -11,11 +12,15 @@ export function useEventStream(
   threadId: string | null
 ): UseEventStreamResult {
   const [latestEvent, setLatestEvent] = useState<WorkflowEvent | null>(null);
+  const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!threadId) return;
+
+    setLatestEvent(null);
+    setEvents([]);
 
     const source = new EventSource(`/api/events/${threadId}`);
 
@@ -28,6 +33,7 @@ export function useEventStream(
       try {
         const event = JSON.parse(e.data) as WorkflowEvent;
         setLatestEvent(event);
+        setEvents((prev) => [...prev, event]);
       } catch {
         console.error("[useEventStream] Failed to parse event:", e.data);
       }
@@ -44,5 +50,5 @@ export function useEventStream(
     };
   }, [threadId]);
 
-  return { latestEvent, isConnected, error };
+  return { latestEvent, events, isConnected, error };
 }

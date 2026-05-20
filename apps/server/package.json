@@ -12,6 +12,7 @@
     "clean": "rimraf dist *.tsbuildinfo"
   },
   "dependencies": {
+    "@langchain/anthropic": "^0.3.34",
     "@langchain/core": "^0.3.58",
     "@langchain/langgraph": "^0.2.70",
     "@u-build/shared": "workspace:*",

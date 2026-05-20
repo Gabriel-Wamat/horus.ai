@@ -1,6 +1,6 @@
 import { Command } from "@langchain/langgraph";
 import { v4 as uuidv4 } from "uuid";
-import type { IStorageProvider, IEventStream, UserStory, HumanFeedback } from "@u-build/shared";
+import type { IStorageProvider, IEventStream, UserStory, HumanFeedback, Spec } from "@u-build/shared";
 import { graph } from "../../infrastructure/langgraph/graph.js";
 
 export interface StartWorkflowOptions {
@@ -74,6 +74,24 @@ export class WorkflowOrchestrator {
       for await (const chunk of await graph.stream(input as Parameters<typeof graph.stream>[0], config)) {
         const nodeName = Object.keys(chunk)[0];
         console.log(`[WorkflowOrchestrator] Node completed: ${nodeName}`);
+
+        if (nodeName === "specAgent") {
+          const update = (chunk as Record<string, { specs?: Record<string, Spec> }>)[nodeName];
+          const specs = update?.specs;
+          if (specs) {
+            const entries = Object.entries(specs);
+            if (entries.length > 0) {
+              const [userStoryId, spec] = entries[entries.length - 1]!;
+              this.events.emit({
+                type: "awaiting_approval",
+                threadId,
+                userStoryId,
+                spec,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        }
       }
     } catch (err) {
       this.events.emit({
