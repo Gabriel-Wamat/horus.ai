@@ -7,6 +7,7 @@ import type {
   HumanFeedback,
   Spec,
   AgentName,
+  WorkflowState,
 } from "@u-build/shared";
 import type { PendingRetryApproval } from "../../infrastructure/langgraph/state.js";
 import { graph } from "../../infrastructure/langgraph/graph.js";
@@ -36,6 +37,8 @@ const NODE_AGENT_MAP: Record<string, AgentName> = {
 };
 
 export class WorkflowOrchestrator {
+  private readonly startTimes = new Map<string, string>();
+
   constructor(
     private readonly storage: IStorageProvider,
     private readonly events: IEventStream
@@ -43,6 +46,7 @@ export class WorkflowOrchestrator {
 
   async start(options: StartWorkflowOptions): Promise<{ threadId: string }> {
     const threadId = uuidv4();
+    this.startTimes.set(threadId, new Date().toISOString());
     const config = {
       configurable: { thread_id: threadId },
       streamMode: "updates" as const,
@@ -252,13 +256,42 @@ export class WorkflowOrchestrator {
           });
         }
       }
+      await this.persistState(threadId);
     } catch (err) {
+      await this.persistState(threadId, err instanceof Error ? err.message : String(err));
       this.events.emit({
         type: "error",
         threadId,
         message: err instanceof Error ? err.message : String(err),
         timestamp: new Date().toISOString(),
       });
+    }
+  }
+
+  private async persistState(threadId: string, errorMessage?: string): Promise<void> {
+    try {
+      const snapshot = await graph.getState({ configurable: { thread_id: threadId } });
+      const values = snapshot.values as Record<string, unknown>;
+
+      const startedAt = this.startTimes.get(threadId) ?? new Date().toISOString();
+      const isError = Boolean(errorMessage);
+
+      const state: WorkflowState = {
+        threadId,
+        userStories: (values["userStories"] as WorkflowState["userStories"]) ?? [],
+        currentUSIndex: (values["currentUSIndex"] as number) ?? 0,
+        specs: (values["specs"] as WorkflowState["specs"]) ?? {},
+        humanFeedback: (values["humanFeedback"] as WorkflowState["humanFeedback"]) ?? {},
+        agentResults: (values["agentResults"] as WorkflowState["agentResults"]) ?? {},
+        status: isError ? "error" : ((values["status"] as WorkflowState["status"]) ?? "completed"),
+        startedAt,
+        completedAt: new Date().toISOString(),
+        ...(errorMessage ? { errorMessage } : {}),
+      };
+
+      await this.storage.save(state);
+    } catch (saveErr) {
+      console.error("[WorkflowOrchestrator] Failed to persist state:", saveErr);
     }
   }
 }
