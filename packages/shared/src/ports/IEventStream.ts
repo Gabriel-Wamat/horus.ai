@@ -26,6 +26,28 @@ export type WorkflowEvent =
       timestamp: string;
     }
   | {
+      // Curator failed and is asking for a retry within the loop
+      type: "retry_started";
+      threadId: string;
+      userStoryId: string;
+      retryCount: number;
+      fixTarget: "front" | "qa" | "both";
+      score: number;
+      notes: string;
+      timestamp: string;
+    }
+  | {
+      // Max retries exceeded — waiting for user to decide (HITL escalation)
+      type: "awaiting_retry_approval";
+      threadId: string;
+      userStoryId: string;
+      retryCount: number;
+      score: number;
+      notes: string;
+      missingItems: string[];
+      timestamp: string;
+    }
+  | {
       type: "status_changed";
       threadId: string;
       status: WorkflowStatus;
