@@ -17,11 +17,12 @@ export async function curatorAgentNode(
     throw new Error(`curatorAgentNode: missing spec for story ${userStory.id}`);
   }
 
-  // Read the frontAgent's generated HTML from agentResults
+  // Read the most recent frontAgent HTML from agentResults (last result wins on retry)
   const results = state.agentResults[userStory.id] ?? [];
-  const frontResult = results.find(
+  const frontResults = results.filter(
     (r) => r.agentName === "front" && r.status === "success"
   );
+  const frontResult = frontResults[frontResults.length - 1];
   const html =
     frontResult?.status === "success"
       ? ((frontResult.output["html"] as string) ?? "")
