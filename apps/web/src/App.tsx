@@ -7,6 +7,7 @@ import { UserStoryList } from "./components/UserStoryList.js";
 import { SpecReview } from "./components/SpecReview.js";
 import { WorkflowProgress } from "./components/WorkflowProgress.js";
 import { RetryApproval, type RetryApprovalPayload } from "./components/RetryApproval.js";
+import { WorkflowResults } from "./components/WorkflowResults.js";
 
 export function App(): JSX.Element {
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -143,6 +144,8 @@ export function App(): JSX.Element {
         />
 
         {workflowState && <UserStoryList state={workflowState} />}
+
+        {workflowState && <WorkflowResults state={workflowState} />}
 
         {pendingSpec && (
           <SpecReview
