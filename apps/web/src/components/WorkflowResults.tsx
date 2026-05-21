@@ -1,5 +1,5 @@
 import { useState, type JSX } from "react";
-import type { WorkflowState } from "@u-build/shared";
+import type { WorkflowState, AgentResult, UserStory } from "@u-build/shared";
 
 interface TestCase {
   id: string;
@@ -180,28 +180,46 @@ function QaResultCard({
   );
 }
 
+interface StoryResult {
+  story: UserStory;
+  html: string | undefined;
+  testCases: TestCase[] | undefined;
+  curatorScore: number | undefined;
+  curatorPassed: boolean | undefined;
+  curatorNotes: string | undefined;
+}
+
+function extractStoryResult(story: UserStory, results: AgentResult[]): StoryResult {
+  const successFront = results.filter((r): r is Extract<AgentResult, { status: "success" }> =>
+    r.agentName === "front" && r.status === "success"
+  );
+  const successQa = results.filter((r): r is Extract<AgentResult, { status: "success" }> =>
+    r.agentName === "qa" && r.status === "success"
+  );
+  const successCurator = results.filter((r): r is Extract<AgentResult, { status: "success" }> =>
+    r.agentName === "curator" && r.status === "success"
+  );
+
+  const lastFront = successFront[successFront.length - 1];
+  const lastQa = successQa[successQa.length - 1];
+  const lastCurator = successCurator[successCurator.length - 1];
+
+  return {
+    story,
+    html: lastFront ? (lastFront.output.html as string | undefined) : undefined,
+    testCases: lastQa ? (lastQa.output.testCases as TestCase[] | undefined) : undefined,
+    curatorScore: lastCurator ? (lastCurator.output.score as number | undefined) : undefined,
+    curatorPassed: lastCurator ? (lastCurator.output.passed as boolean | undefined) : undefined,
+    curatorNotes: lastCurator ? (lastCurator.output.notes as string | undefined) : undefined,
+  };
+}
+
 export function WorkflowResults({ state }: WorkflowResultsProps): JSX.Element {
   const stories = state.userStories;
 
-  const storyResults = stories.map((story) => {
-    const results = state.agentResults[story.id] ?? [];
-
-    // Pick the last successful front/qa/curator results across all retries
-    const allFront = results.filter((r) => r.agentName === "front" && r.status === "success");
-    const allQa = results.filter((r) => r.agentName === "qa" && r.status === "success");
-    const allCurator = results.filter((r) => r.agentName === "curator" && r.status === "success");
-
-    const lastFront = allFront[allFront.length - 1];
-    const lastQa = allQa[allQa.length - 1];
-    const lastCurator = allCurator[allCurator.length - 1];
-
-    const html = lastFront?.status === "success" ? (lastFront.output.html as string | undefined) : undefined;
-    const testCases = lastQa?.status === "success" ? (lastQa.output.testCases as TestCase[] | undefined) : undefined;
-    const curatorScore = lastCurator?.status === "success" ? (lastCurator.output.score as number | undefined) : undefined;
-    const curatorPassed = lastCurator?.status === "success" ? (lastCurator.output.passed as boolean | undefined) : undefined;
-    const curatorNotes = lastCurator?.status === "success" ? (lastCurator.output.notes as string | undefined) : undefined;
-
-    return { story, html, testCases, curatorScore, curatorPassed, curatorNotes };
+  const storyResults: StoryResult[] = stories.map((story: UserStory) => {
+    const results: AgentResult[] = state.agentResults[story.id] ?? [];
+    return extractStoryResult(story, results);
   });
 
   const hasAnyResult = storyResults.some((r) => r.html ?? r.testCases);
@@ -218,7 +236,7 @@ export function WorkflowResults({ state }: WorkflowResultsProps): JSX.Element {
         <div className="h-px flex-1 bg-slate-800" />
       </div>
 
-      {storyResults.map(({ story, html, testCases, curatorScore, curatorPassed, curatorNotes }) => (
+      {storyResults.map(({ story, html, testCases, curatorScore, curatorPassed, curatorNotes }: StoryResult) => (
         <div key={story.id} className="flex flex-col gap-3">
           {html && (
             <HtmlPreviewCard
