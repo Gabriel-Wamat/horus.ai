@@ -28,7 +28,7 @@ export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.
   };
 
   return (
-    <div className="bg-slate-900 border border-violet-800/50 rounded-xl overflow-hidden">
+    <div className="bg-slate-900 border border-violet-800/50 rounded-xl">
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -58,8 +58,8 @@ export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.
           <textarea
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            rows={2}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition resize-none"
+            rows={3}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition resize-y overflow-y-auto"
           />
         </div>
 
@@ -71,8 +71,8 @@ export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.
           <textarea
             value={approach}
             onChange={(e) => setApproach(e.target.value)}
-            rows={4}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition resize-none"
+            rows={6}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition resize-y overflow-y-auto"
           />
         </div>
 
