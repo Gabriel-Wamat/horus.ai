@@ -1,4 +1,5 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
+import { decideRouting } from "../../agents/OdinAgentImpl.js";
 
 export async function odinAgentNode(
   state: UBuildState
@@ -9,8 +10,34 @@ export async function odinAgentNode(
     throw new Error("odinAgentNode: missing user story");
   }
 
-  console.log(`[odinAgentNode] Orchestrating for story: ${userStory.id}`);
+  const spec = state.specs[userStory.id];
+  if (!spec) {
+    throw new Error(`odinAgentNode: missing spec for story ${userStory.id}`);
+  }
 
-  // TODO: invoke IAgentProvider to coordinate downstream agents
-  return {};
+  const start = Date.now();
+
+  // Reflection pattern: pass curator feedback so Odin can narrow routing on retry
+  const curatorFeedback = state.curatorFeedback[userStory.id];
+  const agents = decideRouting(spec, curatorFeedback);
+
+  console.log(
+    `[odinAgentNode] Routing for ${userStory.id} (retry=${state.retryCount}): [${agents.join(", ")}]`
+  );
+
+  return {
+    routingDecision: agents,
+    agentResults: {
+      [userStory.id]: [
+        {
+          status: "success",
+          agentName: "odin",
+          userStoryId: userStory.id,
+          output: { routing: agents, retryCount: state.retryCount },
+          executionTimeMs: Date.now() - start,
+          completedAt: new Date().toISOString(),
+        },
+      ],
+    },
+  };
 }

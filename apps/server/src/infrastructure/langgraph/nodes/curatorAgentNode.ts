@@ -1,4 +1,7 @@
-import type { UBuildState, UBuildUpdate } from "../state.js";
+import type { UBuildState, UBuildUpdate, CuratorFeedback } from "../state.js";
+import { validateOutput } from "../../agents/CuratorAgentImpl.js";
+
+const MAX_RETRIES = 3;
 
 export async function curatorAgentNode(
   state: UBuildState
@@ -9,14 +12,87 @@ export async function curatorAgentNode(
     throw new Error("curatorAgentNode: missing user story");
   }
 
-  const nextIndex = state.currentUSIndex + 1;
-  const isLast = nextIndex >= state.userStories.length;
+  const spec = state.specs[userStory.id];
+  if (!spec) {
+    throw new Error(`curatorAgentNode: missing spec for story ${userStory.id}`);
+  }
 
-  console.log(`[curatorAgentNode] Validating story: ${userStory.id}`);
+  // Read the frontAgent's generated HTML from agentResults
+  const results = state.agentResults[userStory.id] ?? [];
+  const frontResult = results.find(
+    (r) => r.agentName === "front" && r.status === "success"
+  );
+  const html =
+    frontResult?.status === "success"
+      ? ((frontResult.output["html"] as string) ?? "")
+      : "";
 
-  // TODO: invoke IAgentProvider to validate against approved Spec
+  const start = Date.now();
+  console.log(
+    `[curatorAgentNode] Validating story: ${userStory.id} (attempt ${state.retryCount + 1})`
+  );
+
+  const validation = await validateOutput(spec, html);
+
+  const feedback: CuratorFeedback = {
+    passed: validation.passed,
+    score: validation.score,
+    notes: validation.notes,
+    missingItems: validation.missingItems,
+    fixTarget: validation.fixTarget,
+  };
+
+  const agentResultEntry = {
+    status: "success" as const,
+    agentName: "curator" as const,
+    userStoryId: userStory.id,
+    output: { ...validation, attempt: state.retryCount + 1 },
+    executionTimeMs: Date.now() - start,
+    completedAt: new Date().toISOString(),
+  };
+
+  console.log(
+    `[curatorAgentNode] score=${validation.score} passed=${validation.passed} fixTarget=${validation.fixTarget}`
+  );
+
+  // ── Success path ──────────────────────────────────────────────────────────
+  if (validation.passed) {
+    const nextIndex = state.currentUSIndex + 1;
+    return {
+      currentUSIndex: nextIndex,
+      retryCount: 0,
+      pendingRetryApproval: null,
+      curatorFeedback: { [userStory.id]: feedback },
+      status: nextIndex >= state.userStories.length ? "completed" : "running",
+      agentResults: { [userStory.id]: [agentResultEntry] },
+    };
+  }
+
+  const newRetryCount = state.retryCount + 1;
+
+  // ── Max retries exceeded → escalate to HITL ───────────────────────────────
+  if (newRetryCount > MAX_RETRIES) {
+    return {
+      retryCount: newRetryCount,
+      curatorFeedback: { [userStory.id]: feedback },
+      pendingRetryApproval: {
+        userStoryId: userStory.id,
+        retryCount: newRetryCount,
+        score: validation.score,
+        notes: validation.notes,
+        missingItems: validation.missingItems,
+      },
+      status: "awaiting_human",
+      agentResults: { [userStory.id]: [agentResultEntry] },
+    };
+  }
+
+  // ── Retry path ────────────────────────────────────────────────────────────
   return {
-    currentUSIndex: nextIndex,
-    status: isLast ? "completed" : "running",
+    retryCount: newRetryCount,
+    curatorFeedback: { [userStory.id]: feedback },
+    pendingRetryApproval: null,
+    status: "running",
+    agentResults: { [userStory.id]: [agentResultEntry] },
   };
 }

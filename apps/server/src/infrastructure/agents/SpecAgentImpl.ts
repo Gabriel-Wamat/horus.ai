@@ -13,7 +13,6 @@ const LlmSpecSchema = SpecSchema.omit({
 
 const model = new ChatAnthropic({
   model: "private-model-haiku-4-5-20251001",
-  temperature: 0,
 }).withStructuredOutput(LlmSpecSchema);
 
 export async function generateSpec(userStory: UserStory): Promise<Spec> {

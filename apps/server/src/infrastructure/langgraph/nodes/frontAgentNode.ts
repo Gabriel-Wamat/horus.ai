@@ -1,4 +1,5 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
+import { generateFrontend } from "../../agents/FrontAgentImpl.js";
 
 export async function frontAgentNode(
   state: UBuildState
@@ -9,8 +10,37 @@ export async function frontAgentNode(
     throw new Error("frontAgentNode: missing user story");
   }
 
-  console.log(`[frontAgentNode] Generating code for story: ${userStory.id}`);
+  const spec = state.specs[userStory.id];
+  if (!spec) {
+    throw new Error(`frontAgentNode: missing spec for story ${userStory.id}`);
+  }
 
-  // TODO: invoke IAgentProvider to generate frontend code artefacts
-  return {};
+  const start = Date.now();
+  const curatorFeedback = state.curatorFeedback[userStory.id];
+
+  console.log(
+    `[frontAgentNode] Generating frontend for: ${userStory.id} (retry=${state.retryCount})`
+  );
+
+  // Self-correction: pass curator feedback so the agent improves on retry
+  const { html } = await generateFrontend(userStory, spec, curatorFeedback);
+
+  console.log(
+    `[frontAgentNode] HTML generated (${html.length} chars) for: ${userStory.id}`
+  );
+
+  return {
+    agentResults: {
+      [userStory.id]: [
+        {
+          status: "success",
+          agentName: "front",
+          userStoryId: userStory.id,
+          output: { html, attempt: state.retryCount },
+          executionTimeMs: Date.now() - start,
+          completedAt: new Date().toISOString(),
+        },
+      ],
+    },
+  };
 }

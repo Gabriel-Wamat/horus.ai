@@ -1,4 +1,4 @@
-import { useState, useEffect, type JSX } from "react";
+import { useState, useEffect, useRef, type JSX } from "react";
 import type { WorkflowState, Spec, UserStory } from "@u-build/shared";
 import { workflowApi } from "./api/workflowApi.js";
 import { useEventStream } from "./hooks/useEventStream.js";
@@ -6,35 +6,66 @@ import { UserStoryInputPage } from "./components/UserStoryInputPage.js";
 import { UserStoryList } from "./components/UserStoryList.js";
 import { SpecReview } from "./components/SpecReview.js";
 import { WorkflowProgress } from "./components/WorkflowProgress.js";
+import { RetryApproval, type RetryApprovalPayload } from "./components/RetryApproval.js";
 
 export function App(): JSX.Element {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
+
+  // Spec approval HITL
   const [pendingSpec, setPendingSpec] = useState<{
     userStoryId: string;
     spec: Spec;
   } | null>(null);
+
+  // Retry approval HITL (escalation after max retries)
+  const [pendingRetry, setPendingRetry] = useState<RetryApprovalPayload | null>(null);
+  const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
+
   const [lastSubmittedStories, setLastSubmittedStories] = useState<UserStory[]>([]);
 
-  const { latestEvent, events, isConnected } = useEventStream(threadId);
+  const { events, isConnected } = useEventStream(threadId);
+  // Track how many events have been processed to avoid re-processing on re-render.
+  // React 18 automatic batching can cause latestEvent to skip events when two SSE
+  // messages arrive in the same microtask, so we drain the events array instead.
+  const processedCountRef = useRef(0);
 
   useEffect(() => {
-    if (!latestEvent || !threadId) return;
+    if (!threadId) return;
 
-    if (latestEvent.type === "awaiting_approval") {
-      setPendingSpec({
-        userStoryId: latestEvent.userStoryId,
-        spec: latestEvent.spec,
-      });
-    }
+    const newEvents = events.slice(processedCountRef.current);
+    processedCountRef.current = events.length;
 
-    if (
-      latestEvent.type === "status_changed" &&
-      (latestEvent.status === "completed" || latestEvent.status === "error")
-    ) {
-      void workflowApi.getStatus(threadId).then(setWorkflowState);
+    for (const event of newEvents) {
+      switch (event.type) {
+        case "awaiting_approval":
+          setPendingSpec({
+            userStoryId: event.userStoryId,
+            spec: event.spec,
+          });
+          break;
+
+        case "awaiting_retry_approval":
+          setPendingRetry({
+            userStoryId: event.userStoryId,
+            retryCount: event.retryCount,
+            score: event.score,
+            notes: event.notes,
+            missingItems: event.missingItems,
+          });
+          break;
+
+        case "status_changed":
+          if (event.status === "completed" || event.status === "error") {
+            void workflowApi.getStatus(threadId).then(setWorkflowState);
+          }
+          if (event.status === "running") {
+            setPendingRetry(null);
+          }
+          break;
+      }
     }
-  }, [latestEvent, threadId]);
+  }, [events, threadId]);
 
   const handleStart = async (stories: UserStory[]): Promise<void> => {
     setLastSubmittedStories(stories);
@@ -64,6 +95,27 @@ export function App(): JSX.Element {
     setPendingSpec(null);
   };
 
+  const handleRetryDecision = async (continueRetry: boolean): Promise<void> => {
+    if (!threadId || !pendingRetry) return;
+
+    setIsRetrySubmitting(true);
+    try {
+      await workflowApi.retryDecision(
+        threadId,
+        pendingRetry.userStoryId,
+        continueRetry
+      );
+      if (!continueRetry) {
+        // User stopped: fetch final state
+        const state = await workflowApi.getStatus(threadId);
+        setWorkflowState(state);
+      }
+      setPendingRetry(null);
+    } finally {
+      setIsRetrySubmitting(false);
+    }
+  };
+
   if (!threadId) {
     return <UserStoryInputPage onSubmit={handleStart} initialStories={lastSubmittedStories} />;
   }
@@ -86,7 +138,6 @@ export function App(): JSX.Element {
       <main className="max-w-3xl mx-auto px-6 py-10 flex flex-col gap-6">
         <WorkflowProgress
           threadId={threadId}
-          latestEvent={latestEvent}
           events={events}
           isConnected={isConnected}
         />
@@ -98,6 +149,15 @@ export function App(): JSX.Element {
             spec={pendingSpec.spec}
             onApprove={(edited) => handleSpecApproval(true, edited)}
             onReject={() => handleSpecApproval(false)}
+          />
+        )}
+
+        {pendingRetry && (
+          <RetryApproval
+            payload={pendingRetry}
+            onContinue={() => handleRetryDecision(true)}
+            onStop={() => handleRetryDecision(false)}
+            isSubmitting={isRetrySubmitting}
           />
         )}
       </main>
