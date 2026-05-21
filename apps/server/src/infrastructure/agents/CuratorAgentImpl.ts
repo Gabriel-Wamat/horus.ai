@@ -31,30 +31,30 @@ export async function validateOutput(
 
   const htmlPreview = html;
 
-  const prompt = `Você é um curador de qualidade de software. Analise o HTML gerado e verifique se atende à especificação técnica.
+  const prompt = `You are a software quality curator. Analyze the generated HTML and verify whether it meets the technical specification.
 
-# Especificação Técnica
+# Technical Specification
 
-**Componentes esperados:**
+**Expected components:**
 ${components}
 
-**Critérios de Aceite:**
+**Acceptance Criteria:**
 ${criteria}
 
-# HTML Gerado
+# Generated HTML
 \`\`\`html
 ${htmlPreview}
 \`\`\`
 
-## Instruções de Avaliação
-- score: 0–100 indicando cobertura da spec
-- passed: true se score >= 70
-- notes: resumo objetivo da avaliação em 1–2 frases
-- missingItems: lista dos itens da spec ausentes ou incompletos (array vazio se passou)
-- fixTarget: se falhou, indique qual agente deve corrigir:
-  - "front" → problema visual/estrutural no HTML/CSS/JS
-  - "qa" → critérios de aceite mal interpretados nos testes
-  - "both" → ambos precisam ser refeitos`;
+## Evaluation Instructions
+- score: 0–100 indicating spec coverage (how well the HTML implements the spec)
+- passed: true if score >= 70
+- notes: an objective 1–2 sentence summary of the evaluation
+- missingItems: list of spec items that are absent or incomplete (empty array if passed)
+- fixTarget: if failed, indicate which agent should fix it:
+  - "front" → visual or structural problem in the HTML/CSS/JS
+  - "qa" → acceptance criteria misinterpreted in the tests
+  - "both" → both need to be redone`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -66,8 +66,8 @@ ${htmlPreview}
         return {
           passed: false,
           score: 0,
-          notes: "Curador não conseguiu avaliar o output (falha de parsing).",
-          missingItems: ["Avaliação manual necessária"],
+          notes: "Curator could not evaluate the output (parsing failure).",
+          missingItems: ["Manual evaluation required"],
           fixTarget: "both",
         };
       }
@@ -77,7 +77,7 @@ ${htmlPreview}
   return {
     passed: false,
     score: 0,
-    notes: "Curador não conseguiu avaliar o output.",
+    notes: "Curator could not evaluate the output.",
     missingItems: [],
     fixTarget: "both",
   };

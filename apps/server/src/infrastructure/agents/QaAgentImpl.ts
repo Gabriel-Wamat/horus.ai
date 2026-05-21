@@ -36,28 +36,28 @@ export async function generateQaTests(
   const reflectionBlock =
     curatorFeedback && !curatorFeedback.passed
       ? `
-# Feedback da Curadoria (tentativa anterior — REFINE os casos de teste)
-**Avaliação:** ${curatorFeedback.notes}
-**Itens com cobertura insuficiente:**
+# Curator Feedback (previous attempt — REFINE the test cases)
+**Evaluation:** ${curatorFeedback.notes}
+**Items with insufficient coverage:**
 ${curatorFeedback.missingItems.map((m) => `- ${m}`).join("\n")}
 
-Garanta que os novos casos de teste cubram todos os itens acima com maior precisão.
+Ensure the new test cases cover all the items above with greater precision.
 `
       : "";
 
-  const prompt = `Você é um QA engineer especializado em testes de interface web. Gere casos de teste detalhados para validação manual.
+  const prompt = `You are a QA engineer specializing in web interface testing. Generate detailed manual test cases for validation.
 ${reflectionBlock}
-# História de Usuário
+# User Story
 ${userStory.title}
 
-# Componentes da Página
+# Page Components
 ${components}
 
-# Critérios de Aceite
+# Acceptance Criteria
 ${criteria}
 
-Gere um caso de teste por critério de aceite. Cada caso deve ter steps claros e objetivo com o resultado esperado.
-IDs devem ser TC-01, TC-02, etc.`;
+Generate one test case per acceptance criterion. Each case must have clear, objective steps and a specific expected result.
+IDs must be TC-01, TC-02, etc.`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {

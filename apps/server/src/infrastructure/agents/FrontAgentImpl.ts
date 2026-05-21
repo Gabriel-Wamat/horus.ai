@@ -30,44 +30,44 @@ export async function generateFrontend(
   const reflectionBlock =
     curatorFeedback && !curatorFeedback.passed
       ? `
-# Feedback da Curadoria (tentativa anterior — CORRIJA estes problemas)
-**Score anterior:** ${curatorFeedback.score}/100
-**Avaliação:** ${curatorFeedback.notes}
-**Itens faltando:**
+# Curator Feedback (previous attempt — YOU MUST FIX these issues)
+**Previous score:** ${curatorFeedback.score}/100
+**Evaluation:** ${curatorFeedback.notes}
+**Missing items:**
 ${curatorFeedback.missingItems.map((m) => `- ${m}`).join("\n")}
 
-Você DEVE corrigir todos os itens acima na nova implementação.
+You MUST address every item above in this new implementation.
 `
       : "";
 
-  const prompt = `Você é um desenvolvedor frontend expert. Gere uma página HTML completa e funcional com base na especificação técnica abaixo.
+  const prompt = `You are an expert frontend developer. Generate a complete and fully functional HTML page based on the technical specification below.
 ${reflectionBlock}
-# História de Usuário
-**Título:** ${userStory.title}
+# User Story
+**Title:** ${userStory.title}
 
-# Especificação Técnica
-**Resumo:** ${spec.summary}
+# Technical Specification
+**Summary:** ${spec.summary}
 
-**Abordagem Técnica:** ${spec.technicalApproach}
+**Technical Approach:** ${spec.technicalApproach}
 
-**Componentes/Seções:**
+**Components/Sections:**
 ${components}
 
-**Modelos de Dados:**
+**Data Models:**
 ${dataModels}
 
-**Critérios de Aceite:**
+**Acceptance Criteria:**
 ${criteria}
 
-# Regras de Implementação
-- Use apenas HTML, CSS e JavaScript vanilla (sem frameworks, sem CDNs externos)
-- CSS e JS devem estar embutidos no HTML (dentro das tags <style> e <script>)
-- Design responsivo usando CSS Flexbox e/ou Grid com media queries
-- Use variáveis CSS (--cor-primaria, --cor-fundo, etc.) para o tema
-- Inclua dados de exemplo (mock data) realistas em JavaScript para popular a UI
-- O código deve ser completo, funcional e abrível diretamente no browser
-- Retorne APENAS o código HTML completo, começando com <!DOCTYPE html>
-- Não inclua explicações, markdown code fences, ou qualquer texto fora do HTML`;
+# Implementation Rules
+- Use only HTML, CSS, and vanilla JavaScript (no frameworks, no external CDNs)
+- All CSS must be inside a <style> tag and all JS inside a <script> tag — everything embedded in one HTML file
+- Responsive design using CSS Flexbox and/or Grid with media queries
+- Use CSS custom properties (--color-primary, --color-bg, etc.) for theming
+- Include realistic mock data in JavaScript to populate the UI
+- The code must be complete, functional, and openable directly in a browser
+- Return ONLY the complete HTML code, starting with <!DOCTYPE html>
+- Do not include explanations, markdown code fences, or any text outside the HTML`;
 
   const response = await model.invoke(prompt);
   const content =

@@ -12,11 +12,11 @@ export async function specAgentNode(
     );
   }
 
-  console.log(`[specAgentNode] Gerando spec para: "${userStory.title}"`);
+  console.log(`[specAgentNode] Generating spec for: "${userStory.title}"`);
 
   const spec = await generateSpec(userStory);
 
-  console.log(`[specAgentNode] Spec gerada: ${spec.id}`);
+  console.log(`[specAgentNode] Spec generated: ${spec.id}`);
 
   return {
     specs: { [userStory.id]: spec },
