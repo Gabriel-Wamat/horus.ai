@@ -333,10 +333,10 @@ export function WorkflowProgress({
           </p>
           <div className="flex flex-col gap-2">
             {visibleEvents.map((evt, i) => (
-              <div key={i} className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-sm text-slate-300 min-w-0">
+              <div key={i} className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-2 text-sm text-slate-300 min-w-0">
                   <div
-                    className={`size-1.5 rounded-full shrink-0 ${
+                    className={`size-1.5 rounded-full shrink-0 mt-1.5 ${
                       evt.type === "retry_started" || evt.type === "awaiting_retry_approval"
                         ? "bg-amber-500"
                         : evt.type === "error"
@@ -344,9 +344,11 @@ export function WorkflowProgress({
                         : "bg-violet-500"
                     }`}
                   />
-                  <EventLabel event={evt} />
+                  <span className="break-words min-w-0">
+                    <EventLabel event={evt} />
+                  </span>
                 </div>
-                <span className="text-xs text-slate-600 font-mono shrink-0">
+                <span className="text-xs text-slate-600 font-mono shrink-0 mt-0.5">
                   {formatTime(evt.timestamp)}
                 </span>
               </div>
