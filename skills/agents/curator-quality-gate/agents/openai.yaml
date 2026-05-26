@@ -1,0 +1,4 @@
+interface:
+  display_name: "Curator Quality Gate"
+  short_description: "Evaluate generated frontend and QA artifacts against Horus.AI specs."
+  default_prompt: "Use this skill to produce a structured pass/fail verdict, score, missing items, and fixTarget for the Horus.AI self-correction loop."

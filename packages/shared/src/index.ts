@@ -1,4 +1,5 @@
 export * from "./entities/UserStory.js";
+export * from "./entities/LlmSettings.js";
 export * from "./entities/Spec.js";
 export * from "./entities/AgentResult.js";
 export * from "./entities/WorkflowState.js";

@@ -1,5 +1,6 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
 import { generateQaTests } from "../../agents/QaAgentImpl.js";
+import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
 
 export async function qaAgentNode(state: UBuildState): Promise<UBuildUpdate> {
   const userStory = state.userStories[state.currentUSIndex];
@@ -21,7 +22,12 @@ export async function qaAgentNode(state: UBuildState): Promise<UBuildUpdate> {
   );
 
   // Self-correction: curator feedback refines test coverage on retry
-  const qaOutput = await generateQaTests(userStory, spec, curatorFeedback);
+  const qaOutput = await generateQaTests(
+    userStory,
+    spec,
+    curatorFeedback,
+    getRuntimeLlmSettings(state.threadId)
+  );
 
   console.log(
     `[qaAgentNode] Generated ${qaOutput.testCases.length} test cases for: ${userStory.id}`

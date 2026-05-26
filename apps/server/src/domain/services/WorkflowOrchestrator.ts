@@ -8,12 +8,23 @@ import type {
   Spec,
   AgentName,
   WorkflowState,
+  WorkflowStatus,
+  LlmSettings,
 } from "@u-build/shared";
 import type { PendingRetryApproval } from "../../infrastructure/langgraph/state.js";
 import { graph } from "../../infrastructure/langgraph/graph.js";
+import {
+  WorkflowResumeUnavailableError,
+  hasPendingCheckpoint,
+} from "./resumeCheckpoint.js";
+import {
+  clearRuntimeLlmSettings,
+  setRuntimeLlmSettings,
+} from "../../infrastructure/llm/runtimeLlmSettings.js";
 
 export interface StartWorkflowOptions {
   userStories: UserStory[];
+  llmSettings?: LlmSettings;
 }
 
 export interface ResumeWorkflowOptions {
@@ -46,6 +57,10 @@ export class WorkflowOrchestrator {
 
   async start(options: StartWorkflowOptions): Promise<{ threadId: string }> {
     const threadId = uuidv4();
+    if (options.llmSettings) {
+      setRuntimeLlmSettings(threadId, options.llmSettings);
+    }
+
     this.startTimes.set(threadId, new Date().toISOString());
     const config = {
       configurable: { thread_id: threadId },
@@ -79,6 +94,8 @@ export class WorkflowOrchestrator {
   }
 
   async resume(options: ResumeWorkflowOptions): Promise<void> {
+    await this.assertResumableCheckpoint(options.threadId, "hitlCheckpoint");
+
     const config = {
       configurable: { thread_id: options.threadId },
       streamMode: "updates" as const,
@@ -102,6 +119,8 @@ export class WorkflowOrchestrator {
   }
 
   async retryDecision(options: RetryDecisionOptions): Promise<void> {
+    await this.assertResumableCheckpoint(options.threadId, "retryCheckpoint");
+
     const config = {
       configurable: { thread_id: options.threadId },
       streamMode: "updates" as const,
@@ -128,6 +147,20 @@ export class WorkflowOrchestrator {
 
   async getStatus(threadId: string) {
     return this.storage.load(threadId);
+  }
+
+  private async assertResumableCheckpoint(
+    threadId: string,
+    nodeName: string
+  ): Promise<void> {
+    const snapshot = await graph.getState({ configurable: { thread_id: threadId } });
+    if (hasPendingCheckpoint(snapshot, nodeName)) return;
+
+    const stored = await this.storage.load(threadId);
+    const status = stored ? ` Last persisted status: ${stored.status}.` : "";
+    throw new WorkflowResumeUnavailableError(
+      `Workflow ${threadId} cannot be resumed because its in-memory checkpoint "${nodeName}" is unavailable.${status} Start a new workflow.`
+    );
   }
 
   private async runGraphStream(
@@ -245,20 +278,24 @@ export class WorkflowOrchestrator {
           });
         }
 
-        // ── Emit status_changed: completed when any node signals done ──────
+        // ── Emit status_changed when any node signals a terminal state ─────
         const nodeStatus = nodeUpdate?.["status"] as string | undefined;
-        if (nodeStatus === "completed") {
+        if (nodeStatus === "completed" || nodeStatus === "cancelled") {
           this.events.emit({
             type: "status_changed",
             threadId,
-            status: "completed",
+            status: nodeStatus,
             timestamp: new Date().toISOString(),
           });
         }
       }
-      await this.persistState(threadId);
+      const status = await this.persistState(threadId);
+      if (isTerminalStatus(status)) {
+        clearRuntimeLlmSettings(threadId);
+      }
     } catch (err) {
       await this.persistState(threadId, err instanceof Error ? err.message : String(err));
+      clearRuntimeLlmSettings(threadId);
       this.events.emit({
         type: "error",
         threadId,
@@ -268,7 +305,10 @@ export class WorkflowOrchestrator {
     }
   }
 
-  private async persistState(threadId: string, errorMessage?: string): Promise<void> {
+  private async persistState(
+    threadId: string,
+    errorMessage?: string
+  ): Promise<WorkflowStatus | undefined> {
     try {
       const snapshot = await graph.getState({ configurable: { thread_id: threadId } });
       const values = snapshot.values as Record<string, unknown>;
@@ -290,8 +330,14 @@ export class WorkflowOrchestrator {
       };
 
       await this.storage.save(state);
+      return state.status;
     } catch (saveErr) {
       console.error("[WorkflowOrchestrator] Failed to persist state:", saveErr);
+      return undefined;
     }
   }
+}
+
+function isTerminalStatus(status: WorkflowStatus | undefined): boolean {
+  return status === "completed" || status === "cancelled" || status === "error";
 }

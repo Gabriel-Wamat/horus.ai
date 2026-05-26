@@ -28,6 +28,7 @@ export const AgentResultSchema = z.discriminatedUnion("status", [
 ]);
 
 export type AgentResult = z.infer<typeof AgentResultSchema>;
+export type SuccessfulAgentResult = Extract<AgentResult, { status: "success" }>;
 
 export const AgentNameSchema = z.enum([
   "spec",
@@ -38,3 +39,17 @@ export const AgentNameSchema = z.enum([
 ]);
 
 export type AgentName = z.infer<typeof AgentNameSchema>;
+
+export function getLatestSuccessfulAgentResult(
+  results: readonly AgentResult[],
+  agentName: AgentName
+): SuccessfulAgentResult | undefined {
+  for (let i = results.length - 1; i >= 0; i -= 1) {
+    const result = results[i];
+    if (result?.status === "success" && result.agentName === agentName) {
+      return result;
+    }
+  }
+
+  return undefined;
+}

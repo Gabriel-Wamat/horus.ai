@@ -11,8 +11,15 @@ interface WorkflowProgressProps {
 type Phase = 0 | 1 | 2 | 3;
 
 function derivePhase(events: WorkflowEvent[]): Phase {
-  if (events.some((e) => e.type === "status_changed" && e.status === "completed"))
+  if (
+    events.some(
+      (e) =>
+        e.type === "status_changed" &&
+        (e.status === "completed" || e.status === "cancelled")
+    )
+  ) {
     return 3;
+  }
 
   const approvalIdx = events.findIndex((e) => e.type === "awaiting_approval");
   if (approvalIdx === -1) return 0;
@@ -76,25 +83,7 @@ const STEPS: { label: string; description: string }[] = [
 ];
 
 function StepIcon({ state }: { state: "done" | "active" | "pending" }): JSX.Element {
-  if (state === "done") {
-    return (
-      <div className="size-7 rounded-full bg-violet-600 flex items-center justify-center shrink-0">
-        <svg className="size-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-        </svg>
-      </div>
-    );
-  }
-  if (state === "active") {
-    return (
-      <div className="size-7 rounded-full bg-violet-600/20 border-2 border-violet-500 flex items-center justify-center shrink-0">
-        <div className="size-2 rounded-full bg-violet-400 animate-pulse" />
-      </div>
-    );
-  }
-  return (
-    <div className="size-7 rounded-full bg-slate-800 border-2 border-slate-700 shrink-0" />
-  );
+  return <span className={`step-dot ${state === "done" ? "completed" : state === "active" ? "running" : ""}`} />;
 }
 
 function SubStep({
@@ -109,25 +98,24 @@ function SubStep({
   badge?: string;
 }): JSX.Element {
   return (
-    <div className="flex items-center gap-2 py-0.5">
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}>
       <div
-        className={`size-2 rounded-full shrink-0 ${
+        className={`step-dot ${
           done
-            ? "bg-violet-500"
+            ? "completed"
             : active
-            ? "bg-violet-400 animate-pulse"
-            : "bg-slate-700"
+            ? "running"
+            : ""
         }`}
+        style={{ width: 7, height: 7, boxShadow: "none" }}
       />
       <span
-        className={`text-xs ${
-          done ? "text-violet-300" : active ? "text-slate-300" : "text-slate-600"
-        }`}
+        style={{ color: done ? "var(--p)" : active ? "var(--t2)" : "var(--t3)", fontSize: 11 }}
       >
         {label}
       </span>
       {badge && (
-        <span className="text-[10px] font-mono text-amber-400 bg-amber-950 border border-amber-800 px-1.5 py-0.5 rounded">
+        <span className="status-chip-value" style={{ color: "var(--warn)" }}>
           {badge}
         </span>
       )}
@@ -150,6 +138,7 @@ function EventLabel({ event }: { event: WorkflowEvent }): JSX.Element {
         running: "Workflow em execução",
         awaiting_human: "Aguardando decisão humana",
         completed: "Concluído com sucesso",
+        cancelled: "Cancelado",
         error: "Erro",
         idle: "Idle",
       };
@@ -160,31 +149,31 @@ function EventLabel({ event }: { event: WorkflowEvent }): JSX.Element {
     case "node_started":
       return (
         <span>
-          Agente <code className="text-violet-400">{event.agentName}</code> iniciado
+          Agente <code style={{ color: "var(--p)" }}>{event.agentName}</code> iniciado
         </span>
       );
     case "node_completed":
       return (
         <span>
-          Agente <code className="text-violet-400">{event.agentName}</code> concluído
+          Agente <code style={{ color: "var(--p)" }}>{event.agentName}</code> concluído
         </span>
       );
     case "retry_started":
       return (
-        <span className="text-amber-300">
+        <span style={{ color: "var(--warn)" }}>
           Tentativa {event.retryCount} — corrigindo{" "}
-          <code className="text-amber-400">{event.fixTarget}</code>
+          <code>{event.fixTarget}</code>
           {" "}(score anterior: {event.score}/100)
         </span>
       );
     case "awaiting_retry_approval":
       return (
-        <span className="text-amber-400">
+        <span style={{ color: "var(--warn)" }}>
           {event.retryCount} tentativas sem aprovação (score: {event.score}/100) — aguardando sua decisão
         </span>
       );
     case "error":
-      return <span className="text-rose-400">Erro: {event.message}</span>;
+      return <span style={{ color: "var(--danger)" }}>Erro: {event.message}</span>;
     default:
       return <span>{(event as { type: string }).type}</span>;
   }
@@ -206,94 +195,51 @@ export function WorkflowProgress({
     .slice(-8);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl px-5 py-4 flex items-center justify-between">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-widest">
-            Workflow em andamento
-          </span>
-          <span className="text-sm font-mono text-slate-400">
-            {threadId.slice(0, 8)}&hellip;{threadId.slice(-4)}
-          </span>
+    <section className="workflow-panel">
+      <div className="panel-head">
+        <div>
+          <p className="panel-kicker">Workflow</p>
+          <h2 className="panel-title">Execução em tempo real</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`size-2 rounded-full ${
-              isConnected ? "bg-emerald-400 animate-pulse" : "bg-slate-600"
-            }`}
-          />
-          <span className={`text-xs font-medium ${isConnected ? "text-emerald-400" : "text-slate-500"}`}>
+        <div className="status-chip">
+          <span className={`live-dot ${isConnected ? "running" : ""}`} aria-hidden="true" />
+          <span className="status-chip-label">sse</span>
+          <span className="status-chip-value">
             {isConnected ? "Conectado" : "Desconectado"}
           </span>
         </div>
       </div>
 
-      {/* Error banner */}
       {errorMsg && (
-        <div className="flex items-start gap-3 bg-rose-950/50 border border-rose-800 rounded-xl px-4 py-3.5 text-sm text-rose-300">
-          <svg className="size-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-          </svg>
+        <div className="error-banner" style={{ margin: 12 }}>
           {errorMsg}
         </div>
       )}
 
-      {/* Retry warning banner */}
       {retryInfo && phase === 2 && !isAwaiting && (
-        <div className="flex items-center gap-3 bg-amber-950/40 border border-amber-800/60 rounded-xl px-4 py-3 text-sm text-amber-300">
-          <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-          <span>
-            Tentativa {retryInfo.retryCount}/3 — Score: {retryInfo.score}/100 — {retryInfo.notes}
-          </span>
+        <div className="story-card" style={{ margin: 12, color: "var(--warn)" }}>
+          Tentativa {retryInfo.retryCount}/3 — Score: {retryInfo.score}/100 — {retryInfo.notes}
         </div>
       )}
 
-      {/* Steps */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <div className="flex flex-col gap-0">
+      <div className="workflow-list">
           {STEPS.map((step, i) => {
             const stepState: "done" | "active" | "pending" =
               i < phase ? "done" : i === phase ? "active" : "pending";
-            const isLast = i === STEPS.length - 1;
 
             return (
-              <div key={step.label} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <StepIcon state={stepState} />
-                  {!isLast && (
-                    <div
-                      className={`w-px flex-1 my-1 ${
-                        i < phase ? "bg-violet-700" : "bg-slate-800"
-                      }`}
-                      style={{ minHeight: "1.5rem" }}
-                    />
-                  )}
-                </div>
-
-                <div className="pb-5 pt-0.5 flex-1 min-w-0">
-                  <p
-                    className={`text-sm font-semibold leading-tight ${
-                      stepState === "active"
-                        ? "text-white"
-                        : stepState === "done"
-                        ? "text-violet-300"
-                        : "text-slate-600"
-                    }`}
-                  >
+              <div key={step.label} className={`workflow-step ${stepState === "done" ? "completed" : stepState === "active" ? "active" : ""}`}>
+                <StepIcon state={stepState} />
+                <div style={{ minWidth: 0 }}>
+                  <p className="workflow-title">
                     {step.label}
                   </p>
-                  {stepState === "active" && (
-                    <p className="text-xs text-slate-500 mt-0.5 mb-2">
+                  <p className="workflow-meta">
                       {step.description}
-                    </p>
-                  )}
+                  </p>
 
-                  {/* Implementation sub-steps */}
                   {i === 2 && stepState !== "pending" && (
-                    <div className="mt-1 flex flex-col gap-0.5 pl-1 border-l border-slate-700/50">
+                    <div style={{ marginTop: 6, borderLeft: "1px solid var(--bd)", paddingLeft: 8 }}>
                       <SubStep
                         label="Odin — roteando agentes"
                         done={subSteps.odin}
@@ -319,41 +265,57 @@ export function WorkflowProgress({
                     </div>
                   )}
                 </div>
+                <span className="status-chip-value">{String(i + 1).padStart(2, "0")}</span>
               </div>
             );
           })}
-        </div>
       </div>
 
-      {/* Event feed */}
       {visibleEvents.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
-            Histórico de eventos
-          </p>
-          <div className="flex flex-col gap-2">
+        <>
+          <div className="panel-head" style={{ borderTop: "1px solid var(--bd)" }}>
+            <div>
+              <p className="panel-kicker">Events</p>
+              <h2 className="panel-title">Histórico</h2>
+            </div>
+          </div>
+          <div className="event-list" style={{ padding: 12 }}>
             {visibleEvents.map((evt, i) => (
-              <div key={i} className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-sm text-slate-300 min-w-0">
-                  <div
-                    className={`size-1.5 rounded-full shrink-0 ${
+              <div key={i} className="message" style={{ maxWidth: "100%" }}>
+                <div className="message-meta">
+                  <span>
+                    {evt.type === "retry_started" || evt.type === "awaiting_retry_approval"
+                      ? "Retry"
+                      : evt.type === "error"
+                      ? "Error"
+                      : "Event"}
+                  </span>
+                  <span className="message-time">{formatTime(evt.timestamp)}</span>
+                </div>
+                <div className="message-body" style={{ display: "flex", gap: 8 }}>
+                  <span
+                    className={`step-dot ${
                       evt.type === "retry_started" || evt.type === "awaiting_retry_approval"
-                        ? "bg-amber-500"
+                        ? ""
                         : evt.type === "error"
-                        ? "bg-rose-500"
-                        : "bg-violet-500"
+                        ? "failed"
+                        : "completed"
                     }`}
+                    style={{
+                      width: 7,
+                      height: 7,
+                      marginTop: 7,
+                      boxShadow: evt.type === "retry_started" || evt.type === "awaiting_retry_approval" ? "none" : undefined,
+                      background: evt.type === "retry_started" || evt.type === "awaiting_retry_approval" ? "var(--warn)" : undefined,
+                    }}
                   />
                   <EventLabel event={evt} />
                 </div>
-                <span className="text-xs text-slate-600 font-mono shrink-0">
-                  {formatTime(evt.timestamp)}
-                </span>
               </div>
             ))}
           </div>
-        </div>
+        </>
       )}
-    </div>
+    </section>
   );
 }

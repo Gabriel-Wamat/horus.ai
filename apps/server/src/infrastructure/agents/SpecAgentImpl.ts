@@ -1,6 +1,11 @@
-import { ChatAnthropic } from "@langchain/anthropic";
 import { v4 as uuidv4 } from "uuid";
-import { SpecSchema, type Spec, type UserStory } from "@u-build/shared";
+import {
+  SpecSchema,
+  type LlmSettings,
+  type Spec,
+  type UserStory,
+} from "@u-build/shared";
+import { createChatModel } from "../llm/createChatModel.js";
 
 // Schema sem campos que o LLM não deve gerar — serão preenchidos aqui
 const LlmSpecSchema = SpecSchema.omit({
@@ -11,12 +16,16 @@ const LlmSpecSchema = SpecSchema.omit({
   approvedBy: true,
 });
 
-const model = new ChatAnthropic({
-  model: "private-model-haiku-4-5-20251001",
-}).withStructuredOutput(LlmSpecSchema);
-
-export async function generateSpec(userStory: UserStory): Promise<Spec> {
+export async function generateSpec(
+  userStory: UserStory,
+  llmSettings?: LlmSettings
+): Promise<Spec> {
   const prompt = buildPrompt(userStory);
+  const model = createChatModel(
+    "spec",
+    {},
+    llmSettings
+  ).withStructuredOutput(LlmSpecSchema);
   const raw = await model.invoke(prompt);
 
   return SpecSchema.parse({
