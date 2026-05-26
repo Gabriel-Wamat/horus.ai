@@ -1,7 +1,8 @@
-import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import type { Spec, UserStory } from "@u-build/shared";
+import type { LlmSettings, Spec, UserStory } from "@u-build/shared";
 import type { CuratorFeedback } from "../langgraph/state.js";
+import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import { createChatModel } from "../llm/createChatModel.js";
 
 const TestCaseSchema = z.object({
   id: z.string(),
@@ -16,15 +17,11 @@ const QaOutputSchema = z.object({
 
 export type QaOutput = z.infer<typeof QaOutputSchema>;
 
-const model = new ChatAnthropic({
-  model: "claude-sonnet-4-6",
-  temperature: 1,
-}).withStructuredOutput(QaOutputSchema);
-
 export async function generateQaTests(
   userStory: UserStory,
   spec: Spec,
-  curatorFeedback?: CuratorFeedback
+  curatorFeedback?: CuratorFeedback,
+  llmSettings?: LlmSettings
 ): Promise<QaOutput> {
   const criteria = spec.acceptanceCriteria
     .map((c, i) => `${i + 1}. ${c}`)
@@ -45,7 +42,11 @@ Garanta que os novos casos de teste cubram todos os itens acima com maior precis
 `
       : "";
 
+  const skill = loadAgentSkill("qa-frontend-testing");
   const prompt = `Você é um QA engineer especializado em testes de interface web. Gere casos de teste detalhados para validação manual.
+
+# Skill obrigatória do agente
+${skill}
 ${reflectionBlock}
 # História de Usuário
 ${userStory.title}
@@ -59,9 +60,13 @@ ${criteria}
 Gere um caso de teste por critério de aceite. Cada caso deve ter steps claros e objetivo com o resultado esperado.
 IDs devem ser TC-01, TC-02, etc.`;
 
+  const model = createChatModel("qa", {
+    temperature: 1,
+  }, llmSettings).withStructuredOutput(QaOutputSchema);
+
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return await model.invoke(prompt);
+      return QaOutputSchema.parse(await model.invoke(prompt));
     } catch (err) {
       console.warn(`[QaAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend QA Planner"
+  short_description: "Generate frontend test cases mapped to Horus.AI specs and acceptance criteria."
+  default_prompt: "Use this skill to create structured frontend validation cases covering acceptance criteria, primary journey, responsive behavior, accessibility basics, interactions, and edge cases."

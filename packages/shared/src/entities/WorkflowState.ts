@@ -16,6 +16,7 @@ export const WorkflowStatusSchema = z.enum([
   "running",
   "awaiting_human",
   "completed",
+  "cancelled",
   "error",
 ]);
 

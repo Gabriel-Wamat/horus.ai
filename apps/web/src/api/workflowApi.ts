@@ -1,19 +1,38 @@
-import type { UserStory, HumanFeedback, WorkflowState } from "@u-build/shared";
+import type {
+  UserStory,
+  HumanFeedback,
+  WorkflowState,
+  LlmSettings,
+} from "@u-build/shared";
 
 const BASE = "/api";
+
+async function requireOk(res: Response, action: string): Promise<void> {
+  if (res.ok) return;
+
+  const body = await res.text().catch(() => "");
+  const detail = body.trim() || res.statusText || "sem detalhe retornado";
+  throw new Error(`${action} falhou (${res.status}): ${detail}`);
+}
 
 export interface StartWorkflowResponse {
   threadId: string;
 }
 
 export const workflowApi = {
-  start: async (userStories: UserStory[]): Promise<StartWorkflowResponse> => {
+  start: async (
+    userStories: UserStory[],
+    llmSettings?: LlmSettings
+  ): Promise<StartWorkflowResponse> => {
     const res = await fetch(`${BASE}/workflow/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userStories }),
+      body: JSON.stringify({
+        userStories,
+        ...(llmSettings ? { llmSettings } : {}),
+      }),
     });
-    if (!res.ok) throw new Error(`Start failed: ${res.statusText}`);
+    await requireOk(res, "Iniciar workflow");
     return res.json() as Promise<StartWorkflowResponse>;
   },
 
@@ -27,7 +46,7 @@ export const workflowApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ threadId, userStoryId, feedback }),
     });
-    if (!res.ok) throw new Error(`Resume failed: ${res.statusText}`);
+    await requireOk(res, "Retomar workflow");
   },
 
   retryDecision: async (
@@ -40,13 +59,13 @@ export const workflowApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ threadId, userStoryId, continueRetry }),
     });
-    if (!res.ok) throw new Error(`Retry decision failed: ${res.statusText}`);
+    await requireOk(res, "Enviar decisão de retry");
   },
 
   getStatus: async (threadId: string): Promise<WorkflowState | null> => {
     const res = await fetch(`${BASE}/workflow/status/${threadId}`);
     if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Status failed: ${res.statusText}`);
+    await requireOk(res, "Consultar status");
     return res.json() as Promise<WorkflowState>;
   },
 } as const;

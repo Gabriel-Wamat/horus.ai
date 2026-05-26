@@ -1,21 +1,17 @@
-import { ChatAnthropic } from "@langchain/anthropic";
-import type { Spec, UserStory } from "@u-build/shared";
+import type { LlmSettings, Spec, UserStory } from "@u-build/shared";
 import type { CuratorFeedback } from "../langgraph/state.js";
+import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import { createChatModel } from "../llm/createChatModel.js";
 
 export interface FrontendOutput {
   html: string;
 }
 
-const model = new ChatAnthropic({
-  model: "claude-haiku-4-5-20251001",
-  temperature: 0.2,
-  maxTokens: 8192,
-});
-
 export async function generateFrontend(
   userStory: UserStory,
   spec: Spec,
-  curatorFeedback?: CuratorFeedback
+  curatorFeedback?: CuratorFeedback,
+  llmSettings?: LlmSettings
 ): Promise<FrontendOutput> {
   const components = spec.components
     .map((c) => `- ${c.name} (${c.type}): ${c.description}`)
@@ -40,7 +36,11 @@ Você DEVE corrigir todos os itens acima na nova implementação.
 `
       : "";
 
+  const skill = loadAgentSkill("front-design-frontend");
   const prompt = `Você é um desenvolvedor frontend expert. Gere uma página HTML completa e funcional com base na especificação técnica abaixo.
+
+# Skill obrigatória do agente
+${skill}
 ${reflectionBlock}
 # História de Usuário
 **Título:** ${userStory.title}
@@ -69,6 +69,10 @@ ${criteria}
 - Retorne APENAS o código HTML completo, começando com <!DOCTYPE html>
 - Não inclua explicações, markdown code fences, ou qualquer texto fora do HTML`;
 
+  const model = createChatModel("front", {
+    temperature: 0.2,
+    maxTokens: 8192,
+  }, llmSettings);
   const response = await model.invoke(prompt);
   const content =
     typeof response.content === "string"

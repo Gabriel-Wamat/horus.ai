@@ -1,6 +1,27 @@
 import { interrupt } from "@langchain/langgraph";
 import type { UBuildState, UBuildUpdate } from "../state.js";
-import type { HumanFeedback } from "@u-build/shared";
+import type { HumanFeedback, Spec } from "@u-build/shared";
+
+export function resolveSpecApproval(
+  userStoryId: string,
+  spec: Spec,
+  feedback: HumanFeedback
+): UBuildUpdate {
+  if (!feedback.approved) {
+    return {
+      humanFeedback: { [userStoryId]: feedback },
+      status: "cancelled",
+    };
+  }
+
+  const resolvedSpec = feedback.editedSpec ? feedback.editedSpec : spec;
+
+  return {
+    humanFeedback: { [userStoryId]: feedback },
+    specs: { [userStoryId]: resolvedSpec },
+    status: "running",
+  };
+}
 
 export async function hitlCheckpointNode(
   state: UBuildState
@@ -31,12 +52,5 @@ export async function hitlCheckpointNode(
     spec,
   }) as HumanFeedback;
 
-  const resolvedSpec =
-    feedback.approved && feedback.editedSpec ? feedback.editedSpec : spec;
-
-  return {
-    humanFeedback: { [userStory.id]: feedback },
-    specs: { [userStory.id]: resolvedSpec },
-    status: "running",
-  };
+  return resolveSpecApproval(userStory.id, spec, feedback);
 }

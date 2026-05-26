@@ -1,5 +1,6 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
 import { generateSpec } from "../../agents/SpecAgentImpl.js";
+import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
 
 export async function specAgentNode(
   state: UBuildState
@@ -14,7 +15,10 @@ export async function specAgentNode(
 
   console.log(`[specAgentNode] Gerando spec para: "${userStory.title}"`);
 
-  const spec = await generateSpec(userStory);
+  const spec = await generateSpec(
+    userStory,
+    getRuntimeLlmSettings(state.threadId)
+  );
 
   console.log(`[specAgentNode] Spec gerada: ${spec.id}`);
 
