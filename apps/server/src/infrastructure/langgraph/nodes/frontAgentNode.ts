@@ -1,5 +1,6 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
 import { generateFrontend } from "../../agents/FrontAgentImpl.js";
+import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
 
 export async function frontAgentNode(
   state: UBuildState
@@ -23,7 +24,12 @@ export async function frontAgentNode(
   );
 
   // Self-correction: pass curator feedback so the agent improves on retry
-  const { html } = await generateFrontend(userStory, spec, curatorFeedback);
+  const { html } = await generateFrontend(
+    userStory,
+    spec,
+    curatorFeedback,
+    getRuntimeLlmSettings(state.threadId)
+  );
 
   console.log(
     `[frontAgentNode] HTML generated (${html.length} chars) for: ${userStory.id}`

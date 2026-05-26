@@ -1,5 +1,7 @@
 import type { UBuildState, UBuildUpdate, CuratorFeedback } from "../state.js";
 import { validateOutput } from "../../agents/CuratorAgentImpl.js";
+import { selectCuratorInputs } from "../curatorInputs.js";
+import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
 
 const MAX_RETRIES = 3;
 
@@ -17,22 +19,20 @@ export async function curatorAgentNode(
     throw new Error(`curatorAgentNode: missing spec for story ${userStory.id}`);
   }
 
-  // Read the frontAgent's generated HTML from agentResults
   const results = state.agentResults[userStory.id] ?? [];
-  const frontResult = results.find(
-    (r) => r.agentName === "front" && r.status === "success"
-  );
-  const html =
-    frontResult?.status === "success"
-      ? ((frontResult.output["html"] as string) ?? "")
-      : "";
+  const { html, qaOutput } = selectCuratorInputs(results);
 
   const start = Date.now();
   console.log(
     `[curatorAgentNode] Validating story: ${userStory.id} (attempt ${state.retryCount + 1})`
   );
 
-  const validation = await validateOutput(spec, html);
+  const validation = await validateOutput(
+    spec,
+    html,
+    qaOutput,
+    getRuntimeLlmSettings(state.threadId)
+  );
 
   const feedback: CuratorFeedback = {
     passed: validation.passed,

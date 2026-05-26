@@ -1,0 +1,4 @@
+interface:
+  display_name: "Front Design Builder"
+  short_description: "Generate high-quality static frontend artifacts from Horus.AI specs."
+  default_prompt: "Use this skill to generate a complete browser-runnable HTML/CSS/JS frontend that satisfies the spec, acceptance criteria, responsive behavior, and accessibility basics."

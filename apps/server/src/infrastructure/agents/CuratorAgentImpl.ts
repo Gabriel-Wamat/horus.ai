@@ -1,6 +1,8 @@
-import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import type { Spec } from "@u-build/shared";
+import type { LlmSettings, Spec } from "@u-build/shared";
+import type { QaOutput } from "./QaAgentImpl.js";
+import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import { createChatModel } from "../llm/createChatModel.js";
 
 const CuratorOutputSchema = z.object({
   passed: z.boolean(),
@@ -13,14 +15,11 @@ const CuratorOutputSchema = z.object({
 
 export type CuratorOutput = z.infer<typeof CuratorOutputSchema>;
 
-const model = new ChatAnthropic({
-  model: "private-model-sonnet-4-6",
-  temperature: 1,
-}).withStructuredOutput(CuratorOutputSchema);
-
 export async function validateOutput(
   spec: Spec,
-  html: string
+  html: string,
+  qaOutput: QaOutput = { testCases: [] },
+  llmSettings?: LlmSettings
 ): Promise<CuratorOutput> {
   const components = spec.components
     .map((c) => `- ${c.name} (${c.type}): ${c.description}`)
@@ -30,8 +29,13 @@ export async function validateOutput(
     .join("\n");
 
   const htmlPreview = html;
+  const qaPreview = JSON.stringify(qaOutput.testCases, null, 2);
+  const skill = loadAgentSkill("curator-quality-gate");
 
-  const prompt = `Você é um curador de qualidade de software. Analise o HTML gerado e verifique se atende à especificação técnica.
+  const prompt = `Você é um curador de qualidade de software. Analise o HTML gerado e os casos de teste de QA. Verifique se ambos atendem à especificação técnica.
+
+# Skill obrigatória do agente
+${skill}
 
 # Especificação Técnica
 
@@ -46,19 +50,28 @@ ${criteria}
 ${htmlPreview}
 \`\`\`
 
+# Casos de Teste Gerados Pelo QA
+\`\`\`json
+${qaPreview}
+\`\`\`
+
 ## Instruções de Avaliação
-- score: 0–100 indicando cobertura da spec
-- passed: true se score >= 70
+- score: 0–100 indicando cobertura combinada da spec pelo HTML e pelos testes
+- passed: true se score >= 70 e não houver lacuna crítica no HTML nem nos testes
 - notes: resumo objetivo da avaliação em 1–2 frases
-- missingItems: lista dos itens da spec ausentes ou incompletos (array vazio se passou)
+- missingItems: lista dos itens da spec ausentes, incompletos ou sem cobertura de teste (array vazio se passou)
 - fixTarget: se falhou, indique qual agente deve corrigir:
   - "front" → problema visual/estrutural no HTML/CSS/JS
-  - "qa" → critérios de aceite mal interpretados nos testes
-  - "both" → ambos precisam ser refeitos`;
+  - "qa" → HTML adequado, mas testes ausentes, fracos ou desalinhados aos critérios de aceite
+  - "both" → HTML e testes precisam ser refeitos`;
+
+  const model = createChatModel("curator", {
+    temperature: 1,
+  }, llmSettings).withStructuredOutput(CuratorOutputSchema);
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return await model.invoke(prompt);
+      return CuratorOutputSchema.parse(await model.invoke(prompt));
     } catch (err) {
       console.warn(`[CuratorAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {

@@ -36,6 +36,13 @@ function routeToParallelAgents(
   return sends;
 }
 
+function routeAfterHitlCheckpoint(
+  state: typeof UBuildStateAnnotation.State
+): typeof ODIN_AGENT | typeof END {
+  if (state.status === "cancelled") return END;
+  return ODIN_AGENT;
+}
+
 /**
  * Reflection loop routing after curator:
  * - passed → advance to next user story (or END)
@@ -45,7 +52,7 @@ function routeToParallelAgents(
 function routeAfterCurator(
   state: typeof UBuildStateAnnotation.State
 ): typeof SPEC_AGENT | typeof ODIN_AGENT | typeof RETRY_CHECKPOINT | typeof END {
-  if (state.status === "completed") return END;
+  if (state.status === "completed" || state.status === "cancelled") return END;
 
   const curStory = state.userStories[state.currentUSIndex];
   if (!curStory) return END;
@@ -84,7 +91,10 @@ const workflow = new StateGraph(UBuildStateAnnotation)
   // Main pipeline
   .addEdge(START, SPEC_AGENT)
   .addEdge(SPEC_AGENT, HITL_CHECKPOINT)
-  .addEdge(HITL_CHECKPOINT, ODIN_AGENT)
+  .addConditionalEdges(HITL_CHECKPOINT, routeAfterHitlCheckpoint, [
+    ODIN_AGENT,
+    END,
+  ])
 
   // Fan-out: odinAgent routes to front ∥ qa based on routingDecision
   .addConditionalEdges(ODIN_AGENT, routeToParallelAgents, [FRONT_AGENT, QA_AGENT])

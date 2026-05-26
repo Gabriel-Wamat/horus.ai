@@ -12,6 +12,7 @@ build/
 *.tsbuildinfo
 
 data/
+spec/
 *.log
 
 .vite/
