@@ -7,6 +7,7 @@ import {
   type UserStory,
 } from "@u-build/shared";
 import { createChatModel } from "../llm/createChatModel.js";
+import { resolveAgentModelConfig } from "../llm/providerConfig.js";
 
 const LlmSpecSchema = z.object({
   summary: z.string().min(20).max(240),
@@ -30,6 +31,64 @@ const LlmSpecSchema = z.object({
   acceptanceCriteria: z.array(z.string().min(8).max(240)).min(1).max(8),
 });
 
+const LLM_SPEC_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    summary: { type: "string" },
+    technicalApproach: { type: "string" },
+    components: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          name: { type: "string" },
+          type: { type: "string", enum: ["ui", "logic", "data", "api"] },
+          description: { type: "string" },
+          dependencies: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        required: ["name", "type", "description", "dependencies"],
+      },
+    },
+    apiEndpoints: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          method: {
+            type: "string",
+            enum: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+          },
+          path: { type: "string" },
+          description: { type: "string" },
+        },
+        required: ["method", "path", "description"],
+      },
+    },
+    dataModels: {
+      type: "array",
+      items: { type: "string" },
+    },
+    acceptanceCriteria: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: [
+    "summary",
+    "technicalApproach",
+    "components",
+    "apiEndpoints",
+    "dataModels",
+    "acceptanceCriteria",
+  ],
+} as const;
+
 const SPEC_GENERATION_TIMEOUT_MS = Number(
   process.env["SPEC_AGENT_TIMEOUT_MS"] ?? 180_000
 );
@@ -47,16 +106,7 @@ export async function generateSpec(
   console.log(
     `[SpecAgent] calling LLM for userStory=${userStory.id} title="${userStory.title}"`
   );
-  const model = createChatModel(
-    "spec",
-    { maxTokens: 1400 },
-    options.llmSettings
-  ).withStructuredOutput(LlmSpecSchema);
-  const raw = (await withTimeout(
-    model.invoke(prompt),
-    SPEC_GENERATION_TIMEOUT_MS,
-    `SpecAgent timed out after ${SPEC_GENERATION_TIMEOUT_MS / 1000}s while generating "${userStory.title}".`
-  )) as z.infer<typeof LlmSpecSchema>;
+  const raw = await invokeSpecModel(prompt, options.llmSettings);
 
   return SpecSchema.parse({
     ...raw,
@@ -65,6 +115,129 @@ export async function generateSpec(
     userStoryId: userStory.id,
     generatedAt: new Date().toISOString(),
   });
+}
+
+async function invokeSpecModel(
+  prompt: string,
+  llmSettings: LlmSettings | undefined
+): Promise<z.infer<typeof LlmSpecSchema>> {
+  const config = resolveAgentModelConfig(
+    "spec",
+    { maxTokens: 1400 },
+    process.env,
+    llmSettings
+  );
+
+  if (config.provider === "openai") {
+    return invokeOpenAiResponses(prompt, config);
+  }
+
+  const model = createChatModel(
+    "spec",
+    { maxTokens: 1400 },
+    llmSettings
+  ).withStructuredOutput(LlmSpecSchema);
+
+  return (await withTimeout(
+    model.invoke(prompt),
+    SPEC_GENERATION_TIMEOUT_MS,
+    `SpecAgent timed out after ${SPEC_GENERATION_TIMEOUT_MS / 1000}s while generating a structured spec.`
+  )) as z.infer<typeof LlmSpecSchema>;
+}
+
+async function invokeOpenAiResponses(
+  prompt: string,
+  config: ReturnType<typeof resolveAgentModelConfig>
+): Promise<z.infer<typeof LlmSpecSchema>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    SPEC_GENERATION_TIMEOUT_MS
+  );
+
+  try {
+    const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/responses`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: config.model,
+        input: prompt,
+        ...(config.maxTokens ? { max_output_tokens: config.maxTokens } : {}),
+        text: {
+          format: {
+            type: "json_schema",
+            name: "horus_spec",
+            strict: true,
+            schema: LLM_SPEC_JSON_SCHEMA,
+          },
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    const body = (await response.json().catch(() => null)) as unknown;
+    if (!response.ok) {
+      throw new Error(
+        `OpenAI Responses API failed (${response.status}): ${extractErrorMessage(body)}`
+      );
+    }
+
+    const outputText = extractOutputText(body);
+    if (!outputText) {
+      throw new Error("OpenAI Responses API returned no output_text for SpecAgent.");
+    }
+
+    return LlmSpecSchema.parse(JSON.parse(outputText));
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        `SpecAgent timed out after ${SPEC_GENERATION_TIMEOUT_MS / 1000}s while generating a structured spec.`
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function extractOutputText(body: unknown): string | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const output = (body as { output?: unknown }).output;
+  if (!Array.isArray(output)) return undefined;
+
+  for (const item of output) {
+    if (!item || typeof item !== "object") continue;
+    const content = (item as { content?: unknown }).content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      if (
+        part &&
+        typeof part === "object" &&
+        (part as { type?: unknown }).type === "output_text" &&
+        typeof (part as { text?: unknown }).text === "string"
+      ) {
+        return (part as { text: string }).text;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function extractErrorMessage(body: unknown): string {
+  if (
+    body &&
+    typeof body === "object" &&
+    "error" in body &&
+    (body as { error?: { message?: unknown } }).error &&
+    typeof (body as { error: { message?: unknown } }).error.message === "string"
+  ) {
+    return (body as { error: { message: string } }).error.message;
+  }
+  return "unknown error";
 }
 
 function buildPrompt(us: UserStory, skill: string): string {
