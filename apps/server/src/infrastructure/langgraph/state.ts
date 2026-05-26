@@ -5,6 +5,8 @@ import type {
   AgentResult,
   HumanFeedback,
   WorkflowStatus,
+  WorkflowMode,
+  WorkspaceArtifactContext,
 } from "@u-build/shared";
 
 // Structured feedback from curator passed back to odin/front/qa on retry
@@ -41,6 +43,11 @@ export const UBuildStateAnnotation = Annotation.Root({
     default: () => ({}),
   }),
 
+  workspaceArtifactContext: Annotation<Record<string, WorkspaceArtifactContext>>({
+    reducer: (prev, next) => ({ ...prev, ...next }),
+    default: () => ({}),
+  }),
+
   humanFeedback: Annotation<Record<string, HumanFeedback>>({
     reducer: (prev, next) => ({ ...prev, ...next }),
     default: () => ({}),
@@ -65,6 +72,31 @@ export const UBuildStateAnnotation = Annotation.Root({
   threadId: Annotation<string>({
     reducer: (_, next) => next,
     default: () => "",
+  }),
+
+  workspaceFolderId: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
+  }),
+
+  workflowMode: Annotation<WorkflowMode>({
+    reducer: (_, next) => next,
+    default: () => "standard",
+  }),
+
+  sourceChatSessionId: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
+  }),
+
+  sourceChatMessageId: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
+  }),
+
+  executionBrief: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
   }),
 
   // Routing decision set by odinAgent; drives fan-out to front/qa agents

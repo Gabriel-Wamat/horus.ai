@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getLatestSuccessfulAgentResult } from "../dist/entities/AgentResult.js";
+import {
+  AgentResultSchema,
+  getLatestSuccessfulAgentResult,
+} from "../dist/entities/AgentResult.js";
 
 const base = {
   userStoryId: "11111111-1111-4111-8111-111111111111",
@@ -57,4 +60,25 @@ test("getLatestSuccessfulAgentResult returns undefined when no success exists", 
   ];
 
   assert.equal(getLatestSuccessfulAgentResult(results, "curator"), undefined);
+});
+
+test("AgentResultSchema accepts consumed workspace artifact revision metadata", () => {
+  const parsed = AgentResultSchema.parse({
+    ...base,
+    status: "success",
+    agentName: "front",
+    output: { html: "<main></main>" },
+    completedAt: "2026-05-26T00:03:00.000Z",
+    workspaceFolderId: "22222222-2222-4222-8222-222222222222",
+    userStoryRevisionId: "user-story:2",
+    specRevisionId: "spec:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:abc123",
+    chatSessionId: "33333333-3333-4333-8333-333333333333",
+    sourceMessageId: "44444444-4444-4444-8444-444444444444",
+  });
+
+  assert.equal(parsed.workspaceFolderId, "22222222-2222-4222-8222-222222222222");
+  assert.equal(parsed.userStoryRevisionId, "user-story:2");
+  assert.equal(parsed.specRevisionId, "spec:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:abc123");
+  assert.equal(parsed.chatSessionId, "33333333-3333-4333-8333-333333333333");
+  assert.equal(parsed.sourceMessageId, "44444444-4444-4444-8444-444444444444");
 });
