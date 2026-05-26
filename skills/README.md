@@ -1,6 +1,6 @@
 # Horus.AI Agent Skills
 
-Version: 0.2.0
+Version: 0.6.0
 Status: active
 Last updated: 2026-05-26
 
@@ -11,6 +11,7 @@ This folder stores project-local skills used by Horus.AI agents at runtime. Thes
 1. `agents/front-design-frontend/SKILL.md`
 2. `agents/qa-frontend-testing/SKILL.md`
 3. `agents/curator-quality-gate/SKILL.md`
+4. `agents/spec-frontend-sdd/SKILL.md`
 
 ## Structure
 

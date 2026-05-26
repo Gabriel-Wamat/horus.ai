@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 import { ZodError } from "zod";
 import { WorkflowResumeUnavailableError } from "../../../domain/services/resumeCheckpoint.js";
 import { buildWorkflowArtifactFiles } from "../artifacts.js";
+import { WorkspaceFolderNotFoundError } from "../../workspace/FileWorkspaceStore.js";
 
 // archiver is CJS — use createRequire for ESM interop
 const _require = createRequire(import.meta.url);
@@ -30,6 +31,10 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
     } catch (err) {
       if (err instanceof ZodError) {
         res.status(400).json({ error: "Validation failed", issues: err.issues });
+        return;
+      }
+      if (err instanceof WorkspaceFolderNotFoundError) {
+        res.status(404).json({ error: "Workspace folder not found", message: err.message });
         return;
       }
       res.status(500).json({ error: "Internal server error" });

@@ -1,11 +1,13 @@
 import { interrupt } from "@langchain/langgraph";
 import type { UBuildState, UBuildUpdate } from "../state.js";
-import type { HumanFeedback, Spec } from "@u-build/shared";
+import type { HumanFeedback, Spec, WorkspaceArtifactContext } from "@u-build/shared";
+import { createSpecRevisionId } from "../artifactContext.js";
 
 export function resolveSpecApproval(
   userStoryId: string,
   spec: Spec,
-  feedback: HumanFeedback
+  feedback: HumanFeedback,
+  currentArtifactContext?: WorkspaceArtifactContext
 ): UBuildUpdate {
   if (!feedback.approved) {
     return {
@@ -15,10 +17,19 @@ export function resolveSpecApproval(
   }
 
   const resolvedSpec = feedback.editedSpec ? feedback.editedSpec : spec;
+  const artifactContext = currentArtifactContext
+    ? {
+        ...currentArtifactContext,
+        specRevisionId: createSpecRevisionId(resolvedSpec),
+      }
+    : undefined;
 
   return {
     humanFeedback: { [userStoryId]: feedback },
     specs: { [userStoryId]: resolvedSpec },
+    ...(artifactContext
+      ? { workspaceArtifactContext: { [userStoryId]: artifactContext } }
+      : {}),
     status: "running",
   };
 }
@@ -52,5 +63,10 @@ export async function hitlCheckpointNode(
     spec,
   }) as HumanFeedback;
 
-  return resolveSpecApproval(userStory.id, spec, feedback);
+  return resolveSpecApproval(
+    userStory.id,
+    spec,
+    feedback,
+    state.workspaceArtifactContext[userStory.id]
+  );
 }

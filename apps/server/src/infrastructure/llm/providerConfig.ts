@@ -1,7 +1,7 @@
 import type { LlmSettings } from "@u-build/shared";
 
 export type LlmProvider = "openai" | "openrouter" | "groq";
-export type AgentRole = "spec" | "front" | "qa" | "curator";
+export type AgentRole = "spec" | "front" | "qa" | "curator" | "horus";
 
 export interface AgentModelDefaults {
   temperature?: number;
@@ -27,6 +27,8 @@ export class LlmProviderConfigError extends Error {
 type Env = Record<string, string | undefined>;
 
 const PROVIDERS = ["openai", "openrouter", "groq"] as const;
+const DEFAULT_PROVIDER: LlmProvider = "openai";
+const DEFAULT_MODEL = "gpt-5";
 
 const PROVIDER_KEY_ENV: Record<LlmProvider, string> = {
   openai: "OPENAI_API_KEY",
@@ -51,6 +53,7 @@ const ROLE_ENV_PREFIX: Record<AgentRole, string> = {
   front: "FRONT_AGENT",
   qa: "QA_AGENT",
   curator: "CURATOR_AGENT",
+  horus: "HORUS_AGENT",
 };
 
 export function parseLlmProvider(value: string | undefined): LlmProvider {
@@ -75,13 +78,17 @@ export function resolveAgentModelConfig(
 ): AgentModelConfig {
   const prefix = ROLE_ENV_PREFIX[role];
   const provider = parseLlmProvider(
-    runtimeSettings?.provider ?? env[`${prefix}_PROVIDER`] ?? env["LLM_PROVIDER"]
+    runtimeSettings?.provider ??
+      env[`${prefix}_PROVIDER`] ??
+      env["LLM_PROVIDER"] ??
+      DEFAULT_PROVIDER
   );
 
   const model = firstNonEmpty(
     runtimeSettings?.model,
     env[`${prefix}_MODEL`],
-    env["LLM_MODEL"]
+    env["LLM_MODEL"],
+    provider === DEFAULT_PROVIDER ? DEFAULT_MODEL : undefined
   );
   if (!model) {
     throw new LlmProviderConfigError(

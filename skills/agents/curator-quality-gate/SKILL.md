@@ -8,7 +8,7 @@ description: Use this skill when the Curator Agent must evaluate generated front
 ```yaml
 id: "curator-quality-gate"
 agent: "curator"
-version: "0.1.0"
+version: "0.2.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into CuratorAgent prompt before evaluation rules."
@@ -16,14 +16,14 @@ runtime_use: "Injected into CuratorAgent prompt before evaluation rules."
 
 ## Purpose
 
-Use this skill to perform a rigorous quality gate over the generated frontend and QA test cases.
+Use this skill to perform a rigorous quality gate over the generated frontend and QA test cases against the complete frontend-first spec.
 
 This skill helps the Curator Agent produce validation that is:
 
 - scoped to the approved spec;
 - evidence-based from generated HTML and QA output;
-- modular across frontend, QA, accessibility, responsiveness, and acceptance criteria;
-- actionable for Odin routing;
+- modular across frontend, QA, data models, future route contracts, accessibility, responsiveness, and acceptance criteria;
+- actionable for Horus/Odin routing;
 - aligned with the self-correction loop;
 - validated through a clear score and pass/fail decision;
 - safe against common agent errors such as vague feedback or wrong retry targets.
@@ -34,6 +34,8 @@ Use this skill when the workflow asks the Curator Agent to:
 
 - compare generated HTML against the spec;
 - compare QA cases against the spec;
+- evaluate `technicalApproach`, `dataModels`, and `apiEndpoints`;
+- detect frontend route-readiness gaps without requiring live backend calls;
 - score the combined output;
 - decide whether the workflow passes;
 - produce missing items for retry;
@@ -58,6 +60,7 @@ input_contract:
   target_files:
     - "generated index.html artifact"
     - "generated test-cases.json artifact"
+    - "approved Spec object with summary, technicalApproach, components, dataModels, apiEndpoints, and acceptanceCriteria"
   target_stack:
     frontend:
       - "HTML"
@@ -70,7 +73,7 @@ input_contract:
     - "Score must be 0-100"
     - "fixTarget must be front, qa, or both"
   validation_expected:
-    - "Odin uses fixTarget for retry routing"
+    - "Horus/Odin uses fixTarget for retry routing"
 ```
 
 If an input is missing, mark it as a missing item and route to the responsible agent.
@@ -86,12 +89,15 @@ principles:
   evidence_first:
     - "Cite observable gaps in HTML or QA cases."
     - "Distinguish missing implementation from missing test coverage."
+    - "Evaluate the full spec: summary, technicalApproach, components, dataModels, apiEndpoints, and acceptanceCriteria."
+    - "Treat future apiEndpoints as route-readiness contracts, not proof that a backend exists."
     - "Treat generated artifacts as the source of evaluation evidence."
   architecture:
     - "Keep verdict, score, notes, missingItems, and fixTarget cohesive."
     - "Make feedback actionable for the retry loop."
   code_quality:
     - "Prefer concise, concrete missing items."
+    - "Prefix missingItems when useful with [front], [qa], [data], [route], [accessibility], or [responsive]."
     - "Avoid vague notes such as 'improve design' without evidence."
   validation:
     - "Only pass when both implementation and QA coverage satisfy the spec."
@@ -109,17 +115,23 @@ request_analysis:
   interpreted_goal: "Determine whether frontend and QA satisfy the spec"
   in_scope:
     - "Acceptance criteria"
+    - "Technical approach"
     - "Expected components"
     - "Expected data models"
+    - "Future API/route contracts"
     - "Frontend output"
     - "QA coverage"
   out_of_scope:
     - "New features not in the spec"
+    - "Requiring live backend endpoints for future route contracts"
+    - "Claiming browser, screenshot, CLI, or endpoint execution without evidence"
     - "Provider/model behavior"
   risks:
     - "Passing weak QA coverage"
     - "Failing good output for subjective design reasons"
     - "Routing retry to wrong agent"
+    - "Passing output that ignores data models or future route contracts"
+    - "Requiring backend behavior that the static artifact cannot provide"
   unknowns:
     - "Runtime/browser-only behavior if not observable from HTML"
 ```
@@ -132,10 +144,14 @@ evaluation_matrix:
     - "Required components present"
     - "Acceptance criteria implemented"
     - "Data and interactions represented"
+    - "Data models represented with correct fields, formatting, and fallbacks"
+    - "Future route contracts represented through safe adapter/mock behavior when present"
     - "Responsive/accessibility basics present"
   qa:
     - "Each criterion has test coverage"
     - "Primary journey covered"
+    - "Data model rendering and fallback coverage included when relevant"
+    - "Route-readiness and adapter-state coverage included when apiEndpoints exist"
     - "Responsive/accessibility checks included where relevant"
   routing:
     - "front when implementation is missing or broken"
@@ -163,7 +179,7 @@ Missing items must be:
 
 - specific;
 - tied to spec criteria or visible artifacts;
-- grouped enough for Odin to route;
+- grouped enough for Horus/Odin to route;
 - short enough for Front/QA agents to act on.
 
 ### Step 5 - Final Output
@@ -172,16 +188,17 @@ Return only the structured curator verdict expected by the runtime schema.
 
 ## 10 Foundations
 
-1. Evaluate only against the approved spec, acceptance criteria, generated HTML, and generated QA cases.
+1. Evaluate only against the approved spec, generated HTML, and generated QA cases.
 2. Require both usable frontend implementation and meaningful QA coverage before passing.
 3. Distinguish implementation defects from test coverage defects before choosing `fixTarget`.
 4. Score consistently using the 0-100 policy and pass only when score is at least 70 with no critical gap.
 5. Make every missing item concrete, observable, and actionable by FrontAgent or QAAgent.
 6. Check that generated HTML includes required components, realistic content, interactions, and responsive/accessibility basics.
-7. Check that QA cases map to acceptance criteria and include primary journey, responsive, interaction, and accessibility checks where relevant.
-8. Penalize generic, decorative, or placeholder output that does not satisfy the user story.
-9. Preserve the self-correction loop by routing narrowly when only one agent needs repair and broadly when both do.
-10. Never claim live execution, browser rendering, or automated test results unless those checks actually ran.
+7. Check that data models are represented in HTML and QA through visible fields, formatting, fallbacks, or interactions.
+8. Check future apiEndpoints as frontend route-readiness contracts through safe adapter/mock behavior, not live backend execution.
+9. Check that QA cases map to acceptance criteria and include primary journey, responsive, interaction, accessibility, data, and route-readiness checks where relevant.
+10. Preserve the self-correction loop by routing narrowly when only one agent needs repair and broadly when both do.
+11. Never claim live execution, browser rendering, or automated test results unless those checks actually ran.
 
 ## Agent Error Mitigation
 
@@ -190,15 +207,18 @@ agent_error_mitigation:
   anti_hallucination:
     - "Do not invent browser results."
     - "Do not invent requirements beyond the spec."
+    - "Do not invent live backend availability from future apiEndpoints."
   anti_overengineering:
     - "Do not fail output for subjective preferences unrelated to the spec."
     - "Do not request broad retries when a narrow fix is enough."
   anti_regression:
     - "On repeated attempts, compare whether prior missing items were addressed."
     - "Do not ignore QA coverage when frontend appears visually acceptable."
+    - "Do not ignore data model or route-readiness requirements when acceptance criteria look satisfied."
   anti_false_validation:
     - "Do not pass if QA cases are absent or generic."
     - "Do not pass if critical frontend acceptance criteria are absent."
+    - "Do not claim route integration works; only assess adapter/mock readiness unless runtime evidence exists."
 ```
 
 ## Architecture Checklist
@@ -207,6 +227,7 @@ agent_error_mitigation:
 architecture_checklist:
   - "Is the verdict based on spec ownership rather than new requirements?"
   - "Are frontend and QA responsibilities evaluated separately?"
+  - "Are data model and future route contract responsibilities evaluated separately?"
   - "Is fixTarget aligned with the actual failing responsibility?"
   - "Are missing items useful for retry prompts?"
 ```
@@ -218,10 +239,13 @@ testing_checklist:
   curator:
     - "Acceptance criteria implementation checked."
     - "QA criteria coverage checked."
+    - "Technical approach checked."
+    - "Data model rendering and fallback checked when relevant."
+    - "Future route contract readiness checked when apiEndpoints exist."
     - "Responsive/accessibility basics considered."
     - "Score and fixTarget are consistent."
   workflow:
-    - "Feedback can drive Odin retry routing."
+    - "Feedback can drive Horus/Odin retry routing."
 ```
 
 ## Final Report Contract

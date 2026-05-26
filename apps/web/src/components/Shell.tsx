@@ -1,18 +1,45 @@
-import type { JSX, ReactNode } from "react";
+import { useState, type JSX, type ReactNode } from "react";
+
+export type ShellMode = "stories" | "preview";
+type SidebarIconName =
+  | "menu"
+  | "stories"
+  | "preview"
+  | "settings";
 
 interface ShellProps {
   readonly title: string;
   readonly subtitle: string;
   readonly status: Array<{ label: string; value: string; live?: boolean }>;
+  readonly activeMode: ShellMode;
+  readonly onChangeMode: (mode: ShellMode) => void;
   readonly onOpenSettings: () => void;
   readonly children: ReactNode;
 }
 
-function Icon({ name }: { name: "layers" | "activity" | "settings" }): JSX.Element {
-  if (name === "activity") {
+function Icon({ name }: { name: SidebarIconName }): JSX.Element {
+  if (name === "menu") {
     return (
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3 12h4l3-8 4 16 3-8h4" />
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </svg>
+    );
+  }
+
+  if (name === "stories") {
+    return (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5Z" />
+        <path d="M4 5.5v16M8 7h7M8 11h6" />
+      </svg>
+    );
+  }
+
+  if (name === "preview") {
+    return (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <path d="M8 20h8M12 16v4" />
       </svg>
     );
   }
@@ -26,42 +53,65 @@ function Icon({ name }: { name: "layers" | "activity" | "settings" }): JSX.Eleme
     );
   }
 
-  return (
-    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3 4 7l8 4 8-4-8-4Z" />
-      <path d="m4 12 8 4 8-4" />
-      <path d="m4 17 8 4 8-4" />
-    </svg>
-  );
+  return <></>;
 }
 
 export function Shell({
   title,
   subtitle,
   status,
+  activeMode,
+  onChangeMode,
   onOpenSettings,
   children,
 }: ShellProps): JSX.Element {
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isSidebarExpanded ? "sidebar-expanded" : ""}`}>
       <aside className="sidebar" aria-label="Navegação principal">
-        <div className="brand-mark" aria-label="Horus">
-          H
-        </div>
-        <button className="nav-button active" type="button" aria-label="Workflow">
-          <Icon name="layers" />
+        <button
+          className="sidebar-icon-button menu-button"
+          type="button"
+          aria-label={isSidebarExpanded ? "Recolher menu" : "Expandir menu"}
+          title={isSidebarExpanded ? "Recolher menu" : "Expandir menu"}
+          onClick={() => setIsSidebarExpanded((current) => !current)}
+        >
+          <Icon name="menu" />
+          <span className="sidebar-label">Menu</span>
         </button>
-        <button className="nav-button" type="button" aria-label="Atividade">
-          <Icon name="activity" />
+        <div className="sidebar-separator" />
+        <button
+          className={`sidebar-icon-button ${activeMode === "stories" ? "active" : ""}`}
+          type="button"
+          aria-label="User Stories"
+          title="User Stories"
+          onClick={() => onChangeMode("stories")}
+        >
+          <Icon name="stories" />
+          <span className="sidebar-label">User Stories</span>
+        </button>
+        <button
+          className={`sidebar-icon-button ${activeMode === "preview" ? "active" : ""}`}
+          type="button"
+          aria-label="Preview"
+          title="Preview"
+          onClick={() => onChangeMode("preview")}
+        >
+          <Icon name="preview" />
+          <span className="sidebar-label">Preview</span>
         </button>
         <div className="sidebar-spacer" />
+        <div className="sidebar-separator" />
         <button
-          className="settings-button"
+          className="sidebar-icon-button"
           type="button"
           aria-label="Configurações"
+          title="Configurações"
           onClick={onOpenSettings}
         >
           <Icon name="settings" />
+          <span className="sidebar-label">Config</span>
         </button>
       </aside>
 

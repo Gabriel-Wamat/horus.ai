@@ -33,9 +33,20 @@ export async function odinAgentNode(
           status: "success",
           agentName: "odin",
           userStoryId: userStory.id,
-          output: { routing: agents, retryCount: state.retryCount },
+          output: {
+            routing: agents,
+            retryCount: state.retryCount,
+            workflowMode: state.workflowMode,
+            executionBrief: state.executionBrief ?? null,
+          },
           executionTimeMs: Date.now() - start,
           completedAt: new Date().toISOString(),
+          ...(state.sourceChatSessionId
+            ? { chatSessionId: state.sourceChatSessionId }
+            : {}),
+          ...(state.sourceChatMessageId
+            ? { sourceMessageId: state.sourceChatMessageId }
+            : {}),
         },
       ],
     },
