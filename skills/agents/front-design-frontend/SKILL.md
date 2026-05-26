@@ -8,7 +8,7 @@ description: Use this skill when the Front Agent must generate or revise static 
 ```yaml
 id: "front-design-frontend"
 agent: "front"
-version: "0.2.0"
+version: "0.3.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into FrontAgent prompt before implementation rules."
@@ -93,6 +93,7 @@ principles:
   code_quality:
     - "Prefer semantic elements and accessible attributes."
     - "Use stable dimensions for controls and repeated UI elements."
+    - "Every visible button must follow the icon+name pattern: a meaningful icon plus a short visible text label."
     - "Avoid layout shifts caused by dynamic labels, hover states, or long text."
   validation:
     - "Ensure the document opens directly in a browser."
@@ -177,6 +178,10 @@ Implementation rules:
 - Use realistic mock data from the spec.
 - Implement interactive behavior with small functions.
 - Keep content inspectable and useful.
+- Buttons must always use the `icon + name` pattern. Do not create text-only buttons for actions when an icon can clarify intent.
+- Icon-only buttons are allowed only for globally familiar chrome/navigation controls and must have `aria-label`.
+- Button labels must be short, visible, and action-oriented, such as `Editar`, `Excluir`, `Criar`, `Gerar specs`, `Salvar`, or `Cancelar`.
+- Button icons must use `currentColor`, fixed dimensions, and must not shift layout on hover or active states.
 
 ### Step 4 - Self-Check Before Returning
 
@@ -206,7 +211,7 @@ Return only the complete HTML document.
 6. Use real content structures and realistic mock data derived from the spec rather than generic filler.
 7. Keep CSS organized with variables, component-level sections, predictable states, and no one-note color palette.
 8. Implement complete interactive behavior expected by the spec, including empty, loading, selected, hover, focus, and error states when relevant.
-9. Use vanilla JavaScript carefully: small functions, no global sprawl, deterministic state updates, and no external CDNs or frameworks.
+9. Standardize action buttons as `icon + visible name`, preserving accessible labels, stable dimensions, and consistent hover/active states.
 10. Return one complete, directly runnable HTML document starting with `<!DOCTYPE html>`, with embedded CSS and JavaScript only.
 
 ## Agent Error Mitigation
@@ -222,6 +227,7 @@ agent_error_mitigation:
   anti_regression:
     - "On retry, fix curator feedback without removing previously correct requirements."
     - "Preserve acceptance criteria coverage."
+    - "Do not replace standardized icon+name buttons with text-only controls."
   anti_false_validation:
     - "Do not say the page is accessible unless labels, focus, and semantics are present."
 ```
@@ -234,6 +240,7 @@ architecture_checklist:
   - "Is CSS separated into tokens, layout, components, states, and responsive rules?"
   - "Is JavaScript limited to UI behavior required by the spec?"
   - "Are semantic regions and controls used correctly?"
+  - "Do all action buttons follow icon+name unless they are documented chrome/navigation exceptions?"
   - "Are long text and dynamic content constrained?"
 ```
 
@@ -246,6 +253,7 @@ testing_checklist:
     - "Can QA execute all test steps against visible UI?"
     - "Does the UI work at mobile and desktop widths?"
     - "Are focus states and labels present for controls?"
+    - "Do buttons use icon+name consistently and preserve visible text at desktop and mobile widths?"
   workflow:
     - "Does the output provide enough evidence for Curator to score it?"
 ```

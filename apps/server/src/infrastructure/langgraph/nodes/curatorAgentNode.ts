@@ -2,6 +2,7 @@ import type { UBuildState, UBuildUpdate, CuratorFeedback } from "../state.js";
 import { validateOutput } from "../../agents/CuratorAgentImpl.js";
 import { selectCuratorInputs } from "../curatorInputs.js";
 import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
+import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
 
 const MAX_RETRIES = 3;
 
@@ -21,6 +22,7 @@ export async function curatorAgentNode(
 
   const results = state.agentResults[userStory.id] ?? [];
   const { html, qaOutput } = selectCuratorInputs(results);
+  const artifactContext = getArtifactContext(state, userStory.id);
 
   const start = Date.now();
   console.log(
@@ -31,7 +33,8 @@ export async function curatorAgentNode(
     spec,
     html,
     qaOutput,
-    getRuntimeLlmSettings(state.threadId)
+    getRuntimeLlmSettings(state.threadId),
+    state.executionBrief
   );
 
   const feedback: CuratorFeedback = {
@@ -49,6 +52,7 @@ export async function curatorAgentNode(
     output: { ...validation, attempt: state.retryCount + 1 },
     executionTimeMs: Date.now() - start,
     completedAt: new Date().toISOString(),
+    ...agentArtifactFields(artifactContext, state),
   };
 
   console.log(

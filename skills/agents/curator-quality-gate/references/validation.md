@@ -9,3 +9,5 @@ Manual validation checklist:
 - `missingItems` are concrete and actionable.
 - `fixTarget` matches the failing responsibility.
 - Notes are concise and explain the decision.
+- Data model requirements are checked against both HTML and QA cases.
+- Future apiEndpoints are checked as frontend route-readiness, not live backend execution.

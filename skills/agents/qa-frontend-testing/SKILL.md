@@ -16,12 +16,13 @@ runtime_use: "Injected into QAAgent prompt before test generation rules."
 
 ## Purpose
 
-Use this skill to create rigorous frontend validation cases that verify generated UI against the spec, acceptance criteria, responsive behavior, accessibility expectations, and user workflows.
+Use this skill to create rigorous frontend validation cases that verify generated UI against the spec, acceptance criteria, technical approach, data models, future route contracts, responsive behavior, accessibility expectations, and user workflows.
 
 This skill helps the QA Agent produce test work that is:
 
 - scoped to the spec;
 - traceable to acceptance criteria;
+- grounded in the spec's frontend architecture, state model, data model, and route-readiness contracts;
 - modular by scenario;
 - executable by a human or automation engineer;
 - aligned with the generated static frontend artifact;
@@ -35,6 +36,8 @@ Use this skill when the workflow asks the QA Agent to:
 - generate frontend test cases from a `Spec`;
 - revise QA output after curator feedback;
 - validate a static HTML/CSS/JavaScript artifact;
+- validate frontend readiness for future backend routes described in `apiEndpoints`;
+- validate data adapter and mock-data behavior described by the spec;
 - check responsive behavior and accessibility basics;
 - ensure acceptance criteria are covered by concrete steps.
 
@@ -56,6 +59,7 @@ input_contract:
   repository_root: "/Users/wamat/Desktop/horus.ai"
   target_files:
     - "generated index.html artifact when available"
+    - "technical spec with components, data models, apiEndpoints, and acceptance criteria"
   target_stack:
     frontend:
       - "HTML"
@@ -67,6 +71,7 @@ input_contract:
     - "Return structured test cases"
     - "One or more tests must map to each acceptance criterion"
     - "Tests must be executable manually in a browser"
+    - "Tests must not assume real backend routes exist"
   validation_expected:
     - "Curator compares QA cases with spec and frontend output"
 ```
@@ -83,15 +88,18 @@ principles:
     - "Do not convert manual validation into framework-specific code unless requested."
   evidence_first:
     - "Trace tests to acceptance criteria."
-    - "Use component names and data models from the spec."
+    - "Use component names, technical approach, data models, and apiEndpoints from the spec."
+    - "When the spec describes future backend routes, test the frontend adapter/mock behavior and visible states rather than real network availability."
     - "Use curator feedback as a correction contract on retries."
   architecture:
     - "Separate primary journey, component behavior, responsive checks, and accessibility checks."
+    - "Separate route-readiness tests from real backend integration tests."
     - "Keep each test case focused on one observable outcome."
   code_quality:
     - "Write clear steps."
     - "Write observable expected results."
     - "Use stable IDs: TC-01, TC-02, etc."
+    - "Make expected results specific enough for the Curator to compare against generated HTML."
   validation:
     - "Every acceptance criterion must be covered."
     - "Frontend-specific risks must be represented."
@@ -111,14 +119,20 @@ request_analysis:
     - "Acceptance criteria"
     - "Named UI components"
     - "Interaction requirements"
+    - "Technical approach and data adapter expectations"
+    - "Future API/route contracts if present"
+    - "Data models and mock-data shapes"
     - "Responsive and accessibility expectations"
   out_of_scope:
     - "Backend implementation details"
+    - "Real network calls for future backend contracts"
     - "Unrequested browser automation framework"
   risks:
     - "Missing criteria coverage"
     - "Vague expected results"
     - "No responsive or accessibility coverage"
+    - "Tests that ignore route-readiness contracts from the spec"
+    - "Tests that assume real backend endpoints exist"
   unknowns:
     - "Generated frontend details not yet available"
 ```
@@ -135,6 +149,9 @@ coverage_matrix:
     - "Responsive layout"
     - "Keyboard/focus behavior"
     - "Long text and empty state"
+    - "Loading, error, and disabled states"
+    - "Future route contract compatibility through mock data or adapter functions"
+    - "Data model fields rendered with correct labels, formatting, and fallbacks"
 ```
 
 ### Step 3 - Generate Test Cases
@@ -146,6 +163,11 @@ Implementation rules:
 - Make `steps` concrete and reproducible.
 - Make `expected` observable in the browser.
 - Include negative/edge cases when the spec includes input or dynamic data.
+- Add at least one route-readiness test when `apiEndpoints` is non-empty.
+- Add at least one data rendering/fallback test when `dataModels` is non-empty.
+- Add loading, empty, and error-state tests when the technical approach mentions adapter-backed data.
+- Do not write "verify API call succeeds" unless the spec explicitly says a real backend route exists.
+- Prefer "verify the UI uses mock/adapter-compatible data and exposes loading/error fallback" for future route contracts.
 
 ### Step 4 - Self-Check Before Returning
 
@@ -155,6 +177,8 @@ self_check:
   - "No test only says 'page loads'."
   - "At least one test addresses responsive behavior when UI layout exists."
   - "At least one test addresses accessibility basics when controls exist."
+  - "Future route contracts are covered through adapter/mock behavior if apiEndpoints exist."
+  - "Data model fields are covered when dynamic data appears in the spec."
   - "Steps are executable by a human tester."
 ```
 
@@ -173,7 +197,7 @@ Return only the structured test cases expected by the runtime schema.
 7. Verify interaction behavior, including buttons, forms, filters, tabs, menus, modals, and dynamic updates when present.
 8. Include negative and edge cases when the spec implies user input, missing data, long text, or unusual combinations.
 9. Make each test executable by a human or automation engineer with concrete steps, no vague assertions, and observable outcomes.
-10. Prioritize defects by user impact and distinguish frontend implementation failures from weak or missing test coverage.
+10. Prioritize defects by user impact and distinguish frontend implementation failures, route-readiness gaps, and weak or missing test coverage.
 
 ## Agent Error Mitigation
 
@@ -182,12 +206,14 @@ agent_error_mitigation:
   anti_hallucination:
     - "Do not invent UI controls absent from the spec."
     - "Do not invent framework-specific test runners."
+    - "Do not invent real backend availability when apiEndpoints are future contracts."
   anti_overengineering:
     - "Do not create exhaustive low-value permutations."
     - "Prefer a focused coverage set over repetitive checks."
   anti_regression:
     - "On retry, preserve previous useful coverage while addressing curator feedback."
     - "Do not remove coverage for acceptance criteria."
+    - "Do not drop route-readiness or data-model coverage when curator feedback targets QA."
   anti_false_validation:
     - "Do not claim automation execution."
     - "Do not mark accessibility verified without concrete checks."
@@ -201,6 +227,8 @@ architecture_checklist:
   - "Does each test case have one clear responsibility?"
   - "Are criteria, steps, and expected results aligned?"
   - "Are frontend-specific risks represented?"
+  - "Are future backend route contracts tested safely through adapter/mock expectations?"
+  - "Are data models represented in visible rendering, fallback, or interaction checks?"
 ```
 
 ## Testing Checklist
@@ -212,6 +240,10 @@ testing_checklist:
     - "Responsive behavior covered."
     - "Accessibility basics covered."
     - "Dynamic/interactive states covered when present."
+    - "Loading, empty, error, and success states covered when adapter-backed data exists."
+  contract_readiness:
+    - "Future apiEndpoints covered without assuming live backend availability."
+    - "Data models covered with visible field, formatting, and fallback expectations."
   workflow:
     - "Curator has enough QA evidence to score test coverage."
 ```

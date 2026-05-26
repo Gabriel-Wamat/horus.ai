@@ -43,6 +43,21 @@ function routeAfterHitlCheckpoint(
   return ODIN_AGENT;
 }
 
+function routeAfterSpecAgent(
+  state: typeof UBuildStateAnnotation.State
+): typeof SPEC_AGENT | typeof HITL_CHECKPOINT | typeof END {
+  if (state.workflowMode !== "spec_generation") return HITL_CHECKPOINT;
+  if (state.status === "completed") return END;
+  return SPEC_AGENT;
+}
+
+function routeFromStart(
+  state: typeof UBuildStateAnnotation.State
+): typeof SPEC_AGENT | typeof ODIN_AGENT {
+  if (state.workflowMode === "chat_code_change") return ODIN_AGENT;
+  return SPEC_AGENT;
+}
+
 /**
  * Reflection loop routing after curator:
  * - passed → advance to next user story (or END)
@@ -89,8 +104,12 @@ const workflow = new StateGraph(UBuildStateAnnotation)
   .addNode(RETRY_CHECKPOINT, retryCheckpointNode)
 
   // Main pipeline
-  .addEdge(START, SPEC_AGENT)
-  .addEdge(SPEC_AGENT, HITL_CHECKPOINT)
+  .addConditionalEdges(START, routeFromStart, [SPEC_AGENT, ODIN_AGENT])
+  .addConditionalEdges(SPEC_AGENT, routeAfterSpecAgent, [
+    SPEC_AGENT,
+    HITL_CHECKPOINT,
+    END,
+  ])
   .addConditionalEdges(HITL_CHECKPOINT, routeAfterHitlCheckpoint, [
     ODIN_AGENT,
     END,

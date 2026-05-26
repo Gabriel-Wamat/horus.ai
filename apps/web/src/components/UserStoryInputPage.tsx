@@ -1,5 +1,5 @@
 import { useState, type JSX } from "react";
-import type { UserStory } from "@u-build/shared";
+import type { UserStory, WorkspaceFolder } from "@u-build/shared";
 
 interface StoryDraft {
   id: string;
@@ -34,11 +34,26 @@ const PRIORITY_COLORS: Record<StoryDraft["priority"], string> = {
 };
 
 interface Props {
-  onSubmit: (stories: UserStory[]) => Promise<void>;
+  onSubmit: (stories: UserStory[], workspaceFolderId: string) => Promise<void>;
   initialStories?: UserStory[];
+  workspaceFolders: WorkspaceFolder[];
+  selectedWorkspaceFolderId: string;
+  isLoadingWorkspaceFolders?: boolean;
+  workspaceFolderError?: string | null;
+  onSelectWorkspaceFolder: (folderId: string) => void;
+  onCreateWorkspaceFolder: (name: string) => Promise<void>;
 }
 
-export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Element {
+export function UserStoryInputPage({
+  onSubmit,
+  initialStories,
+  workspaceFolders,
+  selectedWorkspaceFolderId,
+  isLoadingWorkspaceFolders = false,
+  workspaceFolderError,
+  onSelectWorkspaceFolder,
+  onCreateWorkspaceFolder,
+}: Props): JSX.Element {
   const [drafts, setDrafts] = useState<StoryDraft[]>(() =>
     initialStories && initialStories.length > 0
       ? initialStories.map((s) => ({
@@ -51,6 +66,8 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
       : [createDraft()]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const updateDraft = <K extends keyof StoryDraft>(
@@ -104,6 +121,11 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
   };
 
   const handleSubmit = async () => {
+    if (!selectedWorkspaceFolderId) {
+      setError("Selecione ou crie uma pasta do workspace antes de gerar specs.");
+      return;
+    }
+
     for (const draft of drafts) {
       if (!draft.title.trim()) {
         setError("Todas as histórias precisam de um título.");
@@ -137,10 +159,29 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
     }));
 
     try {
-      await onSubmit(stories);
+      await onSubmit(stories, selectedWorkspaceFolderId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao iniciar o workflow.");
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) {
+      setError("Informe um nome para iniciar uma pasta do workspace.");
+      return;
+    }
+
+    setIsCreatingFolder(true);
+    setError(null);
+    try {
+      await onCreateWorkspaceFolder(name);
+      setNewFolderName("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao criar pasta.");
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
@@ -159,6 +200,70 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
 
       <div className="panel-body">
         <div className="form-grid">
+          <div className="story-card">
+            <div className="story-card-head">
+              <span className="story-index">Workspace</span>
+              <span className="status-chip">
+                <span className="status-chip-label">pastas</span>
+                <span className="status-chip-value">{workspaceFolders.length}</span>
+              </span>
+            </div>
+
+            <div className="field-row workspace-folder-row">
+              <div>
+                <label className="field-label">
+                  Pasta de destino *
+                </label>
+                <select
+                  value={selectedWorkspaceFolderId}
+                  onChange={(e) => onSelectWorkspaceFolder(e.target.value)}
+                  className="select"
+                  disabled={isLoadingWorkspaceFolders || workspaceFolders.length === 0}
+                >
+                  <option value="">
+                    {isLoadingWorkspaceFolders
+                      ? "Carregando pastas..."
+                      : "Selecione uma pasta"}
+                  </option>
+                  {workspaceFolders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">
+                  Nova pasta
+                </label>
+                <div className="workspace-folder-create">
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Nome da pasta"
+                    className="input"
+                  />
+                  <button
+                    type="button"
+                    className="panel-action"
+                    onClick={handleCreateFolder}
+                    disabled={isCreatingFolder}
+                  >
+                    {isCreatingFolder ? "Criando..." : "Iniciar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {(workspaceFolderError || workspaceFolders.length === 0) && (
+              <p className="workflow-meta" style={{ marginTop: 10 }}>
+                {workspaceFolderError ??
+                  "Nenhuma pasta encontrada. Inicie uma pasta para direcionar estas user stories."}
+              </p>
+            )}
+          </div>
+
           {drafts.map((draft, storyIndex) => (
             <div
               key={draft.id}
@@ -315,7 +420,7 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !selectedWorkspaceFolderId}
             className="primary-button"
           >
             {isSubmitting ? (

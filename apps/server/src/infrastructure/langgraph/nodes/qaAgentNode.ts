@@ -1,6 +1,7 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
 import { generateQaTests } from "../../agents/QaAgentImpl.js";
 import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
+import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
 
 export async function qaAgentNode(state: UBuildState): Promise<UBuildUpdate> {
   const userStory = state.userStories[state.currentUSIndex];
@@ -16,6 +17,7 @@ export async function qaAgentNode(state: UBuildState): Promise<UBuildUpdate> {
 
   const start = Date.now();
   const curatorFeedback = state.curatorFeedback[userStory.id];
+  const artifactContext = getArtifactContext(state, userStory.id);
 
   console.log(
     `[qaAgentNode] Generating QA tests for: ${userStory.id} (retry=${state.retryCount})`
@@ -26,7 +28,8 @@ export async function qaAgentNode(state: UBuildState): Promise<UBuildUpdate> {
     userStory,
     spec,
     curatorFeedback,
-    getRuntimeLlmSettings(state.threadId)
+    getRuntimeLlmSettings(state.threadId),
+    state.executionBrief
   );
 
   console.log(
@@ -43,6 +46,7 @@ export async function qaAgentNode(state: UBuildState): Promise<UBuildUpdate> {
           output: { ...qaOutput, attempt: state.retryCount },
           executionTimeMs: Date.now() - start,
           completedAt: new Date().toISOString(),
+          ...agentArtifactFields(artifactContext, state),
         },
       ],
     },

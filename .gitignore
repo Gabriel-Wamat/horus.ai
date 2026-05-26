@@ -19,3 +19,12 @@ spec/
 
 .DS_Store
 Thumbs.db
+
+# Root-level local reference files
+/*.md
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.svg

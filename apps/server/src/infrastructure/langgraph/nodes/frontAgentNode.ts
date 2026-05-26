@@ -1,6 +1,7 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
 import { generateFrontend } from "../../agents/FrontAgentImpl.js";
 import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
+import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
 
 export async function frontAgentNode(
   state: UBuildState
@@ -18,6 +19,7 @@ export async function frontAgentNode(
 
   const start = Date.now();
   const curatorFeedback = state.curatorFeedback[userStory.id];
+  const artifactContext = getArtifactContext(state, userStory.id);
 
   console.log(
     `[frontAgentNode] Generating frontend for: ${userStory.id} (retry=${state.retryCount})`
@@ -28,7 +30,8 @@ export async function frontAgentNode(
     userStory,
     spec,
     curatorFeedback,
-    getRuntimeLlmSettings(state.threadId)
+    getRuntimeLlmSettings(state.threadId),
+    state.executionBrief
   );
 
   console.log(
@@ -45,6 +48,7 @@ export async function frontAgentNode(
           output: { html, attempt: state.retryCount },
           executionTimeMs: Date.now() - start,
           completedAt: new Date().toISOString(),
+          ...agentArtifactFields(artifactContext, state),
         },
       ],
     },

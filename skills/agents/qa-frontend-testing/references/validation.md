@@ -9,3 +9,5 @@ Manual validation checklist:
 - Expected results are visible and objective.
 - Responsive behavior is covered when layout matters.
 - Accessibility basics are covered when controls exist.
+- Future apiEndpoints are covered as frontend route-readiness checks without requiring live backend calls.
+- Data model fields are covered through visible rendering, formatting, fallback, or interaction expectations.
