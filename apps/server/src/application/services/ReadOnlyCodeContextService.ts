@@ -3,10 +3,12 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type {
   ChatAgentContextBundle,
   CodeContextBundle,
+  CodeContextExcerpt,
   CodeContextLimits,
   FrontendProject,
 } from "@u-build/shared";
 import { CodeContextBundleSchema } from "@u-build/shared";
+import { ProjectManifestService } from "../../infrastructure/project/ProjectManifestService.js";
 
 export class CodeContextAccessError extends Error {
   constructor(message: string) {
@@ -22,11 +24,20 @@ export interface BuildCodeContextInput {
   readonly requestedPaths?: string[];
 }
 
+export interface BuildCodeContextFromRootInput {
+  readonly projectId: string;
+  readonly projectRootPath: string;
+  readonly query: string;
+  readonly requestedPaths?: string[];
+}
+
 const DEFAULT_LIMITS: CodeContextLimits = {
   maxFiles: 12,
   maxBytesPerFile: 8_000,
   maxTotalBytes: 32_000,
 };
+const EXCERPT_RADIUS = 6;
+const MIN_MATCH_SCORE = 20;
 
 const IGNORED_DIRS = new Set([
   ".git",
@@ -39,27 +50,49 @@ const IGNORED_DIRS = new Set([
 ]);
 
 const DEFAULT_PRIORITY_FILES = [
+  "horus.project.json",
   "package.json",
   "src/main.tsx",
   "src/main.ts",
   "src/App.tsx",
   "src/App.ts",
+  "src/styles/tokens.css",
+  "src/styles/app.css",
   "src/index.css",
+  "src/features/welcome/components/WelcomeScreen.tsx",
   "vite.config.ts",
   "tsconfig.json",
 ];
 
 export class ReadOnlyCodeContextService {
-  constructor(private readonly limits: CodeContextLimits = DEFAULT_LIMITS) {}
+  constructor(
+    private readonly limits: CodeContextLimits = DEFAULT_LIMITS,
+    private readonly manifestService = new ProjectManifestService()
+  ) {}
 
   async buildContext(input: BuildCodeContextInput): Promise<CodeContextBundle> {
-    const root = await fs.realpath(input.project.rootPath);
+    return this.buildContextFromProjectRoot({
+      projectId: input.project.id,
+      projectRootPath: input.project.rootPath,
+      query: input.query,
+      ...(input.requestedPaths ? { requestedPaths: input.requestedPaths } : {}),
+    });
+  }
+
+  async buildContextFromProjectRoot(
+    input: BuildCodeContextFromRootInput
+  ): Promise<CodeContextBundle> {
+    const root = await fs.realpath(input.projectRootPath);
+    const manifest = await this.manifestService.read(root);
+    const allFiles = await this.listFiles(root);
     const candidates =
       input.requestedPaths && input.requestedPaths.length > 0
         ? input.requestedPaths
-        : await this.selectCandidatePaths(root, input.query);
+        : await this.selectCandidatePaths(root, input.query, allFiles);
+    const terms = extractSearchTerms(input.query);
 
     const files = [];
+    const excerpts: CodeContextExcerpt[] = [];
     let totalBytes = 0;
     let omittedFilesCount = 0;
 
@@ -82,22 +115,50 @@ export class ReadOnlyCodeContextService {
       const raw = await fs.readFile(absolutePath, "utf-8");
       const content = raw.slice(0, this.limits.maxBytesPerFile);
       const normalizedPath = normalizeRelativePath(relative(root, absolutePath));
+      const matchedTerms = terms.filter((term) =>
+        `${normalizedPath}\n${content}`.toLowerCase().includes(term)
+      );
+      const lineCount = Math.max(1, content.split("\n").length);
       files.push({
         path: normalizedPath,
         bytes: Buffer.byteLength(content, "utf-8"),
         content,
+        startLine: 1,
+        endLine: lineCount,
+        matchedTerms,
       });
+      if (normalizedPath !== "horus.project.json") {
+        const excerpt = buildBestExcerpt(normalizedPath, content, terms);
+        if (excerpt) excerpts.push(excerpt);
+      }
       totalBytes += Buffer.byteLength(content, "utf-8");
     }
+    excerpts.sort((a, b) => b.score - a.score || a.filePath.localeCompare(b.filePath));
+    const bestScore = excerpts[0]?.score ?? 0;
+    const retrievalStatus =
+      excerpts.length === 0
+        ? "no_match"
+        : bestScore >= MIN_MATCH_SCORE
+          ? "matched"
+          : "partial";
 
     return CodeContextBundleSchema.parse({
-      projectId: input.project.id,
+      projectId: input.projectId,
       query: input.query,
       inspectedFiles: files.map((file) => file.path),
       files,
+      excerpts: excerpts.slice(0, Math.min(5, this.limits.maxFiles)),
       omittedFilesCount,
       totalBytes,
       limits: this.limits,
+      manifest,
+      retrievalStatus,
+      retrievalNotes:
+        retrievalStatus === "no_match"
+          ? ["Nenhum trecho de código compatível com a pergunta foi encontrado."]
+          : retrievalStatus === "partial"
+            ? ["A busca encontrou apenas evidências fracas ou arquivos de fallback."]
+            : [],
     });
   }
 
@@ -124,20 +185,34 @@ export class ReadOnlyCodeContextService {
 
   private async selectCandidatePaths(
     root: string,
-    query: string
+    query: string,
+    allFiles: string[]
   ): Promise<string[]> {
-    const allFiles = await this.listFiles(root);
     const terms = extractSearchTerms(query);
+    const explicitPaths = extractExplicitPaths(query).filter((path) =>
+      allFiles.includes(path)
+    );
+    const contentScores = await Promise.all(
+      allFiles.map(async (path) => {
+        const absolutePath = await this.resolveInsideRoot(root, path);
+        const content = await fs.readFile(absolutePath, "utf-8").catch(() => "");
+        return {
+          path,
+          score: scorePath(path, terms) + scoreContent(content, terms),
+        };
+      })
+    );
     const scored = allFiles
       .map((path) => ({
         path,
-        score: scorePath(path, terms),
+        score: contentScores.find((item) => item.path === path)?.score ?? scorePath(path, terms),
       }))
       .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
     return [
-      ...DEFAULT_PRIORITY_FILES,
+      ...explicitPaths,
       ...scored.filter((item) => item.score > 0).map((item) => item.path),
+      ...DEFAULT_PRIORITY_FILES.filter((path) => allFiles.includes(path)),
       ...scored.slice(0, this.limits.maxFiles).map((item) => item.path),
     ].filter(dedupe);
   }
@@ -234,6 +309,67 @@ function scorePath(path: string, terms: string[]): number {
     (score, term) => score + (normalized.includes(term) ? 1 : 0),
     0
   );
+}
+
+function scoreContent(content: string, terms: string[]): number {
+  const normalized = content.toLowerCase();
+  return terms.reduce((score, term) => {
+    const exact = normalized.includes(term) ? 8 : 0;
+    const symbol = new RegExp(`\\b${escapeRegExp(term)}\\b`, "i").test(content) ? 12 : 0;
+    return score + exact + symbol;
+  }, 0);
+}
+
+function extractExplicitPaths(query: string): string[] {
+  return [...query.matchAll(/[A-Za-z0-9_./-]+\.(?:tsx?|jsx?|css|html|json|md|ya?ml)/g)]
+    .map((match) => match[0].replace(/^['"`]+|['"`.,;:]+$/g, ""))
+    .map((path) => normalizeRelativePath(path.replace(/^\.?\//, "")))
+    .filter(dedupe);
+}
+
+function buildBestExcerpt(
+  filePath: string,
+  content: string,
+  terms: string[]
+): CodeContextExcerpt | null {
+  const lines = content.split("\n");
+  if (lines.length === 0) return null;
+  let bestLine = -1;
+  let bestScore = 0;
+  const normalizedTerms = terms.length > 0 ? terms : [filePath.split("/").pop() ?? filePath];
+
+  lines.forEach((line, index) => {
+    const normalized = line.toLowerCase();
+    const lineScore = normalizedTerms.reduce(
+      (score, term) => score + (normalized.includes(term.toLowerCase()) ? 10 : 0),
+      0
+    );
+    if (lineScore > bestScore) {
+      bestScore = lineScore;
+      bestLine = index;
+    }
+  });
+
+  if (bestLine < 0) {
+    if (terms.length > 0) return null;
+    bestLine = 0;
+    bestScore = 1;
+  }
+
+  const start = Math.max(0, bestLine - EXCERPT_RADIUS);
+  const end = Math.min(lines.length - 1, bestLine + EXCERPT_RADIUS);
+  return {
+    filePath,
+    startLine: start + 1,
+    endLine: end + 1,
+    content: lines.slice(start, end + 1).join("\n"),
+    reason: bestScore >= MIN_MATCH_SCORE ? "Correspondência forte com a pergunta." : "Correspondência parcial com a pergunta.",
+    score: bestScore,
+  };
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function dedupe(value: string, index: number, values: string[]): boolean {

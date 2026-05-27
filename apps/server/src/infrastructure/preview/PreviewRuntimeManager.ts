@@ -15,12 +15,15 @@ import {
   type SetPreviewDeviceInput,
   type VisualInstructionDraft,
 } from "@u-build/shared";
-import type { FileFrontendProjectRegistry } from "./FileFrontendProjectRegistry.js";
-import type { FilePreviewSessionStore } from "./FilePreviewSessionStore.js";
 import {
   BrowserPreviewStartError,
   type BrowserPreviewAdapter,
 } from "./NoopBrowserPreviewAdapter.js";
+import { buildPreviewRuntimeEvidence } from "./PreviewRuntimeEvidence.js";
+import type {
+  FrontendProjectRepository,
+  PreviewSessionRepository,
+} from "../repositories/contracts.js";
 
 export interface PreviewActionResult {
   session: PreviewSession;
@@ -47,8 +50,8 @@ function buildPreviewUrl(project: FrontendProject, route: string): string | null
 
 export class PreviewRuntimeManager {
   constructor(
-    private readonly registry: FileFrontendProjectRegistry,
-    private readonly store: FilePreviewSessionStore,
+    private readonly registry: FrontendProjectRepository,
+    private readonly store: PreviewSessionRepository,
     private readonly adapter: BrowserPreviewAdapter,
     private readonly eventStream: IPreviewEventStream
   ) {}
@@ -108,6 +111,7 @@ export class PreviewRuntimeManager {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Preview session failed to start";
       const evidence = err instanceof BrowserPreviewStartError ? err.evidence : {};
+      const runtimeEvidence = buildPreviewRuntimeEvidence(evidence);
       const failed = await this.store.saveSession({
         ...starting,
         status: "error",
@@ -120,7 +124,7 @@ export class PreviewRuntimeManager {
         failed,
         "preview_error",
         "Preview session failed to start",
-        { errorMessage: message, ...evidence }
+        { errorMessage: message, runtimeEvidence }
       );
       return { session: failed, event };
     }
@@ -134,11 +138,25 @@ export class PreviewRuntimeManager {
       updatedAt: new Date().toISOString(),
       errorMessage: null,
     });
-    const event = await this.recordEvent(
+    const runtimeEvidence = buildPreviewRuntimeEvidence({
+      ...started.evidence,
+      previewUrl: updated.previewUrl,
+    });
+    await this.recordEvent(
       updated,
       "preview_started",
       "Preview session started",
-      { previewUrl: updated.previewUrl, processId: updated.processId, ...started.evidence }
+      { previewUrl: updated.previewUrl, processId: updated.processId, runtimeEvidence }
+    );
+    const event = await this.recordEvent(
+      updated,
+      "preview_ready",
+      "Preview session ready",
+      {
+        previewUrl: updated.previewUrl,
+        startupDurationMs: runtimeEvidence.durationMs,
+        runtimeEvidence,
+      }
     );
     return { session: updated, event };
   }

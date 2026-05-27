@@ -1,102 +1,109 @@
 import type { UBuildState, UBuildUpdate, CuratorFeedback } from "../state.js";
-import { validateOutput } from "../../agents/CuratorAgentImpl.js";
 import { selectCuratorInputs } from "../curatorInputs.js";
-import { getRuntimeLlmSettings } from "../../llm/runtimeLlmSettings.js";
+import type { LangGraphDependencies } from "../dependencies.js";
+import { defaultLangGraphDependencies } from "../dependencies.js";
 import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
 
 const MAX_RETRIES = 3;
 
-export async function curatorAgentNode(
-  state: UBuildState
-): Promise<UBuildUpdate> {
-  const userStory = state.userStories[state.currentUSIndex];
+export function createCuratorAgentNode(deps: LangGraphDependencies) {
+  return async function curatorAgentNode(
+    state: UBuildState
+  ): Promise<UBuildUpdate> {
+    const userStory = state.userStories[state.currentUSIndex];
 
-  if (!userStory) {
-    throw new Error("curatorAgentNode: missing user story");
-  }
+    if (!userStory) {
+      throw new Error("curatorAgentNode: missing user story");
+    }
 
-  const spec = state.specs[userStory.id];
-  if (!spec) {
-    throw new Error(`curatorAgentNode: missing spec for story ${userStory.id}`);
-  }
+    const spec = state.specs[userStory.id];
+    if (!spec) {
+      throw new Error(`curatorAgentNode: missing spec for story ${userStory.id}`);
+    }
 
-  const results = state.agentResults[userStory.id] ?? [];
-  const { html, qaOutput } = selectCuratorInputs(results);
-  const artifactContext = getArtifactContext(state, userStory.id);
+    const results = state.agentResults[userStory.id] ?? [];
+    const { html, qaOutput, codeChangeSet } = selectCuratorInputs(results);
+    const artifactContext = getArtifactContext(state, userStory.id);
 
-  const start = Date.now();
-  console.log(
-    `[curatorAgentNode] Validating story: ${userStory.id} (attempt ${state.retryCount + 1})`
-  );
+    const start = Date.now();
+    console.log(
+      `[curatorAgentNode] Validating story: ${userStory.id} (attempt ${state.retryCount + 1})`
+    );
 
-  const validation = await validateOutput(
-    spec,
-    html,
-    qaOutput,
-    getRuntimeLlmSettings(state.threadId),
-    state.executionBrief
-  );
+    const validation = await deps.validateOutput(
+      spec,
+      html,
+      qaOutput,
+      codeChangeSet,
+      deps.getRuntimeLlmSettings(state.threadId),
+      state.executionBrief
+    );
 
-  const feedback: CuratorFeedback = {
-    passed: validation.passed,
-    score: validation.score,
-    notes: validation.notes,
-    missingItems: validation.missingItems,
-    fixTarget: validation.fixTarget,
-  };
-
-  const agentResultEntry = {
-    status: "success" as const,
-    agentName: "curator" as const,
-    userStoryId: userStory.id,
-    output: { ...validation, attempt: state.retryCount + 1 },
-    executionTimeMs: Date.now() - start,
-    completedAt: new Date().toISOString(),
-    ...agentArtifactFields(artifactContext, state),
-  };
-
-  console.log(
-    `[curatorAgentNode] score=${validation.score} passed=${validation.passed} fixTarget=${validation.fixTarget}`
-  );
-
-  // ── Success path ──────────────────────────────────────────────────────────
-  if (validation.passed) {
-    const nextIndex = state.currentUSIndex + 1;
-    return {
-      currentUSIndex: nextIndex,
-      retryCount: 0,
-      pendingRetryApproval: null,
-      curatorFeedback: { [userStory.id]: feedback },
-      status: nextIndex >= state.userStories.length ? "completed" : "running",
-      agentResults: { [userStory.id]: [agentResultEntry] },
+    const feedback: CuratorFeedback = {
+      passed: validation.passed,
+      score: validation.score,
+      notes: validation.notes,
+      missingItems: validation.missingItems,
+      fixTarget: validation.fixTarget,
     };
-  }
 
-  const newRetryCount = state.retryCount + 1;
+    const agentResultEntry = {
+      status: "success" as const,
+      agentName: "curator" as const,
+      userStoryId: userStory.id,
+      output: { ...validation, attempt: state.retryCount + 1 },
+      executionTimeMs: Date.now() - start,
+      completedAt: new Date().toISOString(),
+      ...agentArtifactFields(artifactContext, state),
+    };
 
-  // ── Max retries exceeded → escalate to HITL ───────────────────────────────
-  if (newRetryCount > MAX_RETRIES) {
+    console.log(
+      `[curatorAgentNode] score=${validation.score} passed=${validation.passed} fixTarget=${validation.fixTarget}`
+    );
+
+    // ── Success path ──────────────────────────────────────────────────────────
+    if (validation.passed) {
+      const nextIndex = state.currentUSIndex + 1;
+      return {
+        currentUSIndex: nextIndex,
+        retryCount: 0,
+        pendingRetryApproval: null,
+        curatorFeedback: { [userStory.id]: feedback },
+        status: nextIndex >= state.userStories.length ? "completed" : "running",
+        agentResults: { [userStory.id]: [agentResultEntry] },
+      };
+    }
+
+    const newRetryCount = state.retryCount + 1;
+
+    // ── Max retries exceeded → escalate to HITL ───────────────────────────────
+    if (newRetryCount > MAX_RETRIES) {
+      return {
+        retryCount: newRetryCount,
+        curatorFeedback: { [userStory.id]: feedback },
+        pendingRetryApproval: {
+          userStoryId: userStory.id,
+          retryCount: newRetryCount,
+          score: validation.score,
+          notes: validation.notes,
+          missingItems: validation.missingItems,
+        },
+        status: "awaiting_human",
+        agentResults: { [userStory.id]: [agentResultEntry] },
+      };
+    }
+
+    // ── Retry path ────────────────────────────────────────────────────────────
     return {
       retryCount: newRetryCount,
       curatorFeedback: { [userStory.id]: feedback },
-      pendingRetryApproval: {
-        userStoryId: userStory.id,
-        retryCount: newRetryCount,
-        score: validation.score,
-        notes: validation.notes,
-        missingItems: validation.missingItems,
-      },
-      status: "awaiting_human",
+      pendingRetryApproval: null,
+      status: "running",
       agentResults: { [userStory.id]: [agentResultEntry] },
     };
-  }
-
-  // ── Retry path ────────────────────────────────────────────────────────────
-  return {
-    retryCount: newRetryCount,
-    curatorFeedback: { [userStory.id]: feedback },
-    pendingRetryApproval: null,
-    status: "running",
-    agentResults: { [userStory.id]: [agentResultEntry] },
   };
 }
+
+export const curatorAgentNode = createCuratorAgentNode(
+  defaultLangGraphDependencies
+);

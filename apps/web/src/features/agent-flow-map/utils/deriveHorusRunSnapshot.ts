@@ -1,0 +1,424 @@
+import type {
+  AgentName,
+  AgentResult,
+  AgentRunActorKind,
+  AgentRunLoopEventType,
+  AgentRunPhase,
+  WorkflowEvent,
+  WorkflowState,
+  WorkflowStatus,
+} from "@u-build/shared";
+import type {
+  HorusAgentExecutionSnapshot,
+  HorusRunEventSnapshot,
+  HorusRunSnapshot,
+  HorusWorkflowNodeId,
+  HorusWorkflowStepSnapshot,
+} from "../types/api.types.js";
+import { HORUS_NODE_BY_AGENT } from "./nodeMetadata.js";
+
+const NODE_LABELS: Record<HorusWorkflowNodeId, string> = {
+  specAgent: "Spec Agent",
+  hitlCheckpoint: "Human review",
+  odinAgent: "Odin router",
+  frontAgent: "Front Agent",
+  qaAgent: "QA Agent",
+  curatorAgent: "Curator Agent",
+  retryCheckpoint: "Retry approval",
+  finalize: "Finalizado",
+  fail: "Falha",
+};
+
+export function deriveHorusRunSnapshot(
+  state: WorkflowState | null,
+  events: WorkflowEvent[]
+): HorusRunSnapshot | null {
+  if (!state) return null;
+
+  const normalizedEvents = events.map((event, index) => mapWorkflowEvent(event, index + 1));
+  const agentExecutions = deriveAgentExecutions(state);
+  const currentStory = state.userStories[state.currentUSIndex] ?? null;
+  const currentNode = resolveCurrentNode(state, normalizedEvents, agentExecutions);
+
+  return {
+    threadId: state.threadId,
+    ...(state.workspaceFolderId ? { workspaceFolderId: state.workspaceFolderId } : {}),
+    workflowMode: state.workflowMode,
+    status: state.status,
+    currentPhase: normalizedEvents.at(-1)?.phase ?? phaseFromStatus(state.status),
+    currentNode,
+    currentUserStoryId: currentStory?.id ?? null,
+    currentUserStoryTitle: currentStory?.title ?? null,
+    startedAt: state.startedAt,
+    ...(state.completedAt ? { completedAt: state.completedAt } : {}),
+    ...(state.errorMessage ? { errorMessage: state.errorMessage } : {}),
+    userStories: state.userStories.map((story, index) => ({
+      id: story.id,
+      title: story.title,
+      index,
+      hasSpec: Boolean(state.specs[story.id]),
+    })),
+    steps: deriveSteps(state, agentExecutions, normalizedEvents),
+    agentExecutions,
+    events: normalizedEvents,
+    evidenceSummaries: [],
+    validationSummary: {
+      finalStatus: state.status === "completed" ? "completed" : "completed_unverified",
+      gates: state.validationGates ?? [],
+      passedCount: (state.validationGates ?? []).filter((gate) => gate.status === "passed").length,
+      failedCount: (state.validationGates ?? []).filter((gate) => gate.status === "failed").length,
+      skippedCount: (state.validationGates ?? []).filter((gate) => gate.status === "skipped").length,
+      blockedCount: (state.validationGates ?? []).filter((gate) => gate.status === "blocked").length,
+      message: "Local snapshot derived without backend validation aggregation.",
+    },
+    sourceState: state,
+  };
+}
+
+function mapWorkflowEvent(event: WorkflowEvent, sequence: number): HorusRunEventSnapshot {
+  const agentName = "agentName" in event ? event.agentName : undefined;
+  const nodeId = agentName ? HORUS_NODE_BY_AGENT[agentName] : nodeFromEventType(event);
+  const summary = summaryForEvent(event);
+  const loop = loopMetadataForEvent(event);
+  return {
+    id: `${event.threadId}:${sequence}:${event.type}`,
+    threadId: event.threadId,
+    sequence,
+    type: event.type,
+    phase: loop.phase,
+    eventType: loop.eventType,
+    actorKind: loop.actorKind,
+    actorName: loop.actorName,
+    ...(nodeId ? { nodeId } : {}),
+    ...(agentName ? { agentName } : {}),
+    ...("userStoryId" in event ? { userStoryId: event.userStoryId } : {}),
+    ...("retryCount" in event ? { attempt: event.retryCount } : {}),
+    title: titleForEvent(event),
+    ...(summary ? { summary } : {}),
+    ...(event.type === "validation_evidence" ? { evidence: event.evidence } : {}),
+    ...("changeSetId" in event ? { metadata: { changeSetId: event.changeSetId } } : {}),
+    ...("filePaths" in event ? { filePaths: event.filePaths } : {}),
+    ...(event.type === "validation_evidence"
+      ? {
+          commandIds: event.evidence.commands.map((command) => command.commandId),
+          validationGateId: event.evidence.id,
+        }
+      : {}),
+    ...(event.type === "error" ? { errorMessage: event.message } : {}),
+    timestamp: event.timestamp,
+  };
+}
+
+function nodeFromEventType(event: WorkflowEvent): HorusWorkflowNodeId | undefined {
+  if (event.type === "awaiting_approval") return "hitlCheckpoint";
+  if (event.type === "validation_evidence") return "qaAgent";
+  if (event.type === "patch_proposed") return "frontAgent";
+  if (event.type === "patch_applied") return "curatorAgent";
+  if (event.type === "awaiting_retry_approval") return "retryCheckpoint";
+  if (event.type === "retry_started") return "odinAgent";
+  if (event.type === "error") return "fail";
+  if (event.type === "status_changed") {
+    if (event.status === "completed") return "finalize";
+    if (event.status === "cancelled" || event.status === "error") return "fail";
+  }
+  return undefined;
+}
+
+function titleForEvent(event: WorkflowEvent): string {
+  switch (event.type) {
+    case "node_started":
+      return `${agentLabel(event.agentName)} iniciou`;
+    case "node_completed":
+      return `${agentLabel(event.agentName)} concluiu`;
+    case "patch_proposed":
+      return "Patch proposto";
+    case "patch_applied":
+      return "Patch aplicado";
+    case "validation_evidence":
+      return "Evidência de validação registrada";
+    case "awaiting_approval":
+      return "Aguardando aprovação da spec";
+    case "retry_started":
+      return `Retry ${event.retryCount} iniciado`;
+    case "awaiting_retry_approval":
+      return "Aguardando aprovação de retry";
+    case "status_changed":
+      return `Status alterado para ${event.status}`;
+    case "error":
+      return "Erro na execução";
+  }
+}
+
+function summaryForEvent(event: WorkflowEvent): string | undefined {
+  if (event.type === "error") return event.message;
+  if (event.type === "patch_proposed") {
+    return `${event.filePaths.length} arquivo(s) no CodeChangeSet ${event.changeSetId.slice(0, 8)}.`;
+  }
+  if (event.type === "patch_applied") {
+    return `${event.filePaths.length} arquivo(s) aplicado(s) do CodeChangeSet ${event.changeSetId.slice(0, 8)}.`;
+  }
+  if (event.type === "retry_started") return event.notes;
+  if (event.type === "awaiting_retry_approval") return event.notes;
+  if (event.type === "validation_evidence") {
+    const failedCommands = event.evidence.commands.filter(
+      (command) => command.exitCode !== 0
+    ).length;
+    return `Status: ${event.evidence.status}; comandos: ${event.evidence.commands.length}; falhas: ${failedCommands}; preview: ${event.evidence.preview.status}`;
+  }
+  if (event.type === "node_completed") return `Status: ${event.status}`;
+  return undefined;
+}
+
+function loopMetadataForEvent(event: WorkflowEvent): {
+  phase: AgentRunPhase;
+  eventType: AgentRunLoopEventType;
+  actorKind: AgentRunActorKind;
+  actorName: string;
+} {
+  switch (event.type) {
+    case "status_changed":
+      return statusLoopMetadata(event.status);
+    case "node_started":
+      return {
+        phase: phaseForAgent(event.agentName, "started"),
+        eventType: event.agentName === "qa" ? "validation_started" : event.agentName === "curator" ? "review_started" : event.agentName === "front" ? "context_read" : "planning",
+        actorKind: "agent",
+        actorName: agentLabel(event.agentName),
+      };
+    case "node_completed":
+      return {
+        phase: phaseForAgent(event.agentName, "completed"),
+        eventType: event.status === "error" ? "failed" : completedEventTypeForAgent(event.agentName),
+        actorKind: "agent",
+        actorName: agentLabel(event.agentName),
+      };
+    case "patch_proposed":
+      return {
+        phase: "patching",
+        eventType: "patch_proposed",
+        actorKind: "agent",
+        actorName: "Front Agent",
+      };
+    case "patch_applied":
+      return {
+        phase: "applying",
+        eventType: "patch_applied",
+        actorKind: "tool",
+        actorName: "CodeChangeSetApplier",
+      };
+    case "validation_evidence": {
+      const hasFailure =
+        event.evidence.status === "failed" ||
+        event.evidence.commands.some((command) => command.exitCode !== 0) ||
+        event.evidence.preview.status === "failed";
+      return {
+        phase: "validating",
+        eventType: hasFailure ? "validation_failed" : "validation_passed",
+        actorKind: "tool",
+        actorName: "Runtime validation",
+      };
+    }
+    case "awaiting_approval":
+      return {
+        phase: "planning",
+        eventType: "awaiting_approval",
+        actorKind: "human",
+        actorName: "Human review",
+      };
+    case "retry_started":
+      return {
+        phase: "retrying",
+        eventType: "retry_started",
+        actorKind: "agent",
+        actorName: "Odin",
+      };
+    case "awaiting_retry_approval":
+      return {
+        phase: "retrying",
+        eventType: "awaiting_approval",
+        actorKind: "human",
+        actorName: "Retry approval",
+      };
+    case "error":
+      return {
+        phase: "failed",
+        eventType: "failed",
+        actorKind: "system",
+        actorName: "Horus",
+      };
+  }
+}
+
+function statusLoopMetadata(status: WorkflowStatus): {
+  phase: AgentRunPhase;
+  eventType: AgentRunLoopEventType;
+  actorKind: AgentRunActorKind;
+  actorName: string;
+} {
+  if (status === "running") return { phase: "received", eventType: "received", actorKind: "system", actorName: "Horus" };
+  if (status === "completed") return { phase: "completed", eventType: "completed", actorKind: "system", actorName: "Horus" };
+  if (status === "cancelled") return { phase: "cancelled", eventType: "cancelled", actorKind: "system", actorName: "Horus" };
+  return { phase: "failed", eventType: "failed", actorKind: "system", actorName: "Horus" };
+}
+
+function phaseFromStatus(status: WorkflowStatus): AgentRunPhase {
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  if (status === "error") return "failed";
+  return status === "running" ? "received" : "planning";
+}
+
+function phaseForAgent(agentName: AgentName, moment: "started" | "completed"): AgentRunPhase {
+  if (agentName === "spec" || agentName === "odin") return "planning";
+  if (agentName === "front") return moment === "started" ? "context_reading" : "patching";
+  if (agentName === "qa") return "validating";
+  if (agentName === "curator") return "reviewing";
+  return "understanding";
+}
+
+function completedEventTypeForAgent(agentName: AgentName): AgentRunLoopEventType {
+  if (agentName === "front") return "patch_proposed";
+  if (agentName === "qa") return "validation_passed";
+  if (agentName === "curator") return "review_passed";
+  if (agentName === "spec" || agentName === "odin") return "planning";
+  return "completed";
+}
+
+function deriveAgentExecutions(state: WorkflowState): HorusAgentExecutionSnapshot[] {
+  const executions: HorusAgentExecutionSnapshot[] = [];
+  let sequence = 1;
+  for (const [userStoryId, results] of Object.entries(state.agentResults)) {
+    for (const result of results) {
+      const agentName = result.agentName as AgentName;
+      const nodeId = HORUS_NODE_BY_AGENT[agentName];
+      if (!nodeId) continue;
+      executions.push({
+        id: `${userStoryId}:${agentName}:${sequence}`,
+        sequence,
+        userStoryId,
+        agentName,
+        nodeId,
+        status: result.status,
+        ...("executionTimeMs" in result ? { executionTimeMs: result.executionTimeMs } : {}),
+        completedAt: result.completedAt,
+        summary: summarizeAgentResult(result),
+        errorMessage: result.status === "error" ? result.errorMessage : null,
+        outputPreview: "output" in result ? shrinkOutput(result.output) : null,
+      });
+      sequence += 1;
+    }
+  }
+  return executions.sort((a, b) => {
+    const left = a.completedAt ?? "";
+    const right = b.completedAt ?? "";
+    return left.localeCompare(right) || a.sequence - b.sequence;
+  });
+}
+
+function deriveSteps(
+  state: WorkflowState,
+  executions: HorusAgentExecutionSnapshot[],
+  events: HorusRunEventSnapshot[]
+): HorusWorkflowStepSnapshot[] {
+  const observed = new Map<HorusWorkflowNodeId, HorusWorkflowStepSnapshot>();
+  for (const execution of executions) {
+    observed.set(execution.nodeId, {
+      id: `step:${execution.nodeId}`,
+      nodeId: execution.nodeId,
+      label: NODE_LABELS[execution.nodeId],
+      status: execution.status,
+      userStoryId: execution.userStoryId,
+      latency_ms: execution.executionTimeMs ?? null,
+      error_message: execution.errorMessage ?? null,
+      created_at: execution.completedAt ?? state.startedAt,
+    });
+  }
+
+  for (const event of events) {
+    if (!event.nodeId || observed.has(event.nodeId)) continue;
+    observed.set(event.nodeId, {
+      id: `event-step:${event.sequence}:${event.nodeId}`,
+      nodeId: event.nodeId,
+      label: NODE_LABELS[event.nodeId],
+      status: event.type === "error" ? "error" : state.status,
+      userStoryId: event.userStoryId ?? null,
+      created_at: event.timestamp,
+    });
+  }
+
+  if (state.status === "completed") {
+    observed.set("finalize", {
+      id: "step:finalize",
+      nodeId: "finalize",
+      label: NODE_LABELS.finalize,
+      status: "completed",
+      created_at: state.completedAt ?? new Date().toISOString(),
+    });
+  }
+
+  if (state.status === "error" || state.status === "cancelled") {
+    observed.set("fail", {
+      id: "step:fail",
+      nodeId: "fail",
+      label: NODE_LABELS.fail,
+      status: state.status,
+      ...(state.errorMessage ? { error_message: state.errorMessage } : {}),
+      created_at: state.completedAt ?? new Date().toISOString(),
+    });
+  }
+
+  return [...observed.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+function resolveCurrentNode(
+  state: WorkflowState,
+  events: HorusRunEventSnapshot[],
+  executions: HorusAgentExecutionSnapshot[]
+): HorusWorkflowNodeId | null {
+  if (state.status === "idle") return null;
+  if (state.status === "completed") return "finalize";
+  if (state.status === "error" || state.status === "cancelled") return "fail";
+  const latestEventNode = [...events].reverse().find((event) => event.nodeId)?.nodeId;
+  if (latestEventNode) return latestEventNode;
+  const latestExecution = executions.at(-1);
+  if (state.status === "awaiting_human") return latestExecution?.nodeId === "curatorAgent" ? "retryCheckpoint" : "hitlCheckpoint";
+  if (latestExecution?.nodeId === "specAgent") return "hitlCheckpoint";
+  if (latestExecution?.nodeId === "frontAgent" || latestExecution?.nodeId === "qaAgent") return "curatorAgent";
+  return latestExecution?.nodeId ?? "specAgent";
+}
+
+function summarizeAgentResult(result: AgentResult): string {
+  if (result.status === "error") return result.errorMessage;
+  if (result.status === "skipped") return result.reason;
+  if (result.agentName === "odin" && Array.isArray(result.output["routing"])) {
+    return `Roteamento: ${(result.output["routing"] as string[]).join(", ")}`;
+  }
+  if (result.agentName === "spec") return `Spec gerada: ${String(result.output["specId"] ?? "")}`;
+  if (result.agentName === "front") return "HTML/interface gerada para a história.";
+  if (result.agentName === "qa") return "Casos de teste e validações gerados.";
+  if (result.agentName === "curator") return `Score: ${String(result.output["score"] ?? "n/a")}`;
+  return "Execução registrada.";
+}
+
+function shrinkOutput(output: Record<string, unknown>): Record<string, unknown> {
+  const entries = Object.entries(output).slice(0, 6);
+  return Object.fromEntries(entries.map(([key, value]) => [key, normalizePreviewValue(value)]));
+}
+
+function normalizePreviewValue(value: unknown): unknown {
+  if (typeof value === "string") return value.length > 180 ? `${value.slice(0, 180)}...` : value;
+  if (Array.isArray(value)) return { count: value.length };
+  if (value && typeof value === "object") return { type: "object" };
+  return value;
+}
+
+function agentLabel(agentName: AgentName): string {
+  const labels: Record<AgentName, string> = {
+    spec: "Spec Agent",
+    odin: "Odin",
+    front: "Front Agent",
+    qa: "QA Agent",
+    curator: "Curator",
+  };
+  return labels[agentName];
+}

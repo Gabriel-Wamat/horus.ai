@@ -79,6 +79,21 @@ export const UBuildStateAnnotation = Annotation.Root({
     default: () => undefined,
   }),
 
+  frontendProjectId: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
+  }),
+
+  frontendProjectRootPath: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
+  }),
+
+  previewSessionId: Annotation<string | undefined>({
+    reducer: (_, next) => next,
+    default: () => undefined,
+  }),
+
   workflowMode: Annotation<WorkflowMode>({
     reducer: (_, next) => next,
     default: () => "standard",

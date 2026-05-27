@@ -8,6 +8,16 @@ export const PreviewDeviceSchema = z.object({
   height: z.number().int().positive(),
 });
 
+export const PreviewCommandSchema = z.object({
+  id: z.string().trim().min(1).regex(/^[a-z0-9]+(?:[-_:][a-z0-9]+)*$/),
+  label: z.string().trim().min(1).max(100).optional(),
+  executable: z.string().trim().min(1),
+  args: z.array(z.string()).default([]),
+  cwd: z.string().trim().min(1).default("."),
+  env: z.record(z.string()).default({}),
+  timeoutMs: z.number().int().positive().optional(),
+});
+
 export const PreviewStatusSchema = z.enum([
   "waiting",
   "stopped",
@@ -25,6 +35,8 @@ export const FrontendProjectSchema = z.object({
   rootPath: z.string().trim().min(1),
   defaultRoute: z.string().regex(/^\/(?:.*)?$/),
   devCommand: z.string().trim().min(1).nullable(),
+  previewCommandId: z.string().trim().min(1).nullable().default(null),
+  commandCatalog: z.array(PreviewCommandSchema).default([]),
   previewUrl: z.string().url().nullable(),
   createdAt: z.string().datetime(),
 });
@@ -97,6 +109,7 @@ export const VisualInstructionDraftSchema = z.object({
 
 export type PreviewDeviceName = z.infer<typeof PreviewDeviceNameSchema>;
 export type PreviewDevice = z.infer<typeof PreviewDeviceSchema>;
+export type PreviewCommand = z.infer<typeof PreviewCommandSchema>;
 export type PreviewStatus = z.infer<typeof PreviewStatusSchema>;
 export type FrontendProject = z.infer<typeof FrontendProjectSchema>;
 export type CreatePreviewSessionInput = z.infer<

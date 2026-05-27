@@ -1,5 +1,9 @@
 import { Command } from "@langchain/langgraph";
 import { v4 as uuidv4 } from "uuid";
+import {
+  CodeChangeSetSchema,
+  RuntimeValidationEvidenceSchema,
+} from "@u-build/shared";
 import type {
   IStorageProvider,
   IEventStream,
@@ -7,14 +11,17 @@ import type {
   HumanFeedback,
   Spec,
   AgentName,
+  CodeChangeSet,
+  FrontendProject,
+  RuntimeValidationEvidence,
   WorkflowState,
   WorkflowStatus,
   LlmSettings,
   WorkspaceArtifactContext,
   WorkflowMode,
+  WorkflowCheckpointNode,
 } from "@u-build/shared";
 import type { PendingRetryApproval } from "../../infrastructure/langgraph/state.js";
-import { graph } from "../../infrastructure/langgraph/graph.js";
 import {
   WorkflowResumeUnavailableError,
   hasPendingCheckpoint,
@@ -33,6 +40,9 @@ export interface StartWorkflowOptions {
   sourceChatSessionId?: string;
   sourceChatMessageId?: string;
   executionBrief?: string;
+  frontendProjectId?: string;
+  frontendProjectRootPath?: string;
+  previewSessionId?: string;
   llmSettings?: LlmSettings;
 }
 
@@ -41,6 +51,17 @@ export interface StartChatCodeChangeOptions {
   userStory: UserStory;
   spec: Spec;
   artifactContext: WorkspaceArtifactContext;
+  project: FrontendProject;
+  chatSessionId: string;
+  sourceMessageId: string;
+  executionBrief: string;
+  previewSessionId?: string;
+  llmSettings?: LlmSettings;
+}
+
+export interface StartSpecGenerationOptions {
+  workspaceFolderId: string;
+  userStory: UserStory;
   chatSessionId: string;
   sourceMessageId: string;
   executionBrief: string;
@@ -74,6 +95,26 @@ export interface ChatProgressSink {
   ): Promise<unknown>;
 }
 
+export interface WorkflowCodeChangeSetSink {
+  save(changeSet: CodeChangeSet): Promise<unknown>;
+  listByWorkflow?(threadId: string): Promise<CodeChangeSet[]>;
+}
+
+export interface WorkflowCodeChangeSetApplier {
+  apply(input: {
+    changeSet: CodeChangeSet;
+    projectRootPath: string;
+  }): Promise<CodeChangeSet>;
+}
+
+export interface WorkflowGraphRunner {
+  stream(
+    input: unknown,
+    config: object
+  ): Promise<AsyncIterable<unknown>>;
+  getState(config: object): Promise<{ values: unknown; next?: readonly unknown[] }>;
+}
+
 // Maps node names to typed AgentName values for SSE emission
 const NODE_AGENT_MAP: Record<string, AgentName> = {
   odinAgent: "odin",
@@ -88,8 +129,11 @@ export class WorkflowOrchestrator {
   constructor(
     private readonly storage: IStorageProvider,
     private readonly events: IEventStream,
+    private readonly workflowGraph: WorkflowGraphRunner,
     private readonly workspaceArtifacts?: WorkspaceArtifactStore,
-    private readonly chatProgress?: ChatProgressSink
+    private readonly chatProgress?: ChatProgressSink,
+    private readonly codeChangeSets?: WorkflowCodeChangeSetSink,
+    private readonly codeChangeSetApplier?: WorkflowCodeChangeSetApplier
   ) {}
 
   async start(options: StartWorkflowOptions): Promise<{ threadId: string }> {
@@ -98,7 +142,8 @@ export class WorkflowOrchestrator {
       setRuntimeLlmSettings(threadId, options.llmSettings);
     }
 
-    this.startTimes.set(threadId, new Date().toISOString());
+    const startedAt = new Date().toISOString();
+    this.startTimes.set(threadId, startedAt);
     const config = {
       configurable: { thread_id: threadId },
       streamMode: "updates" as const,
@@ -107,6 +152,15 @@ export class WorkflowOrchestrator {
     const initialState = {
       userStories: options.userStories,
       workspaceFolderId: options.workspaceFolderId,
+      ...(options.frontendProjectId
+        ? { frontendProjectId: options.frontendProjectId }
+        : {}),
+      ...(options.frontendProjectRootPath
+        ? { frontendProjectRootPath: options.frontendProjectRootPath }
+        : {}),
+      ...(options.previewSessionId
+        ? { previewSessionId: options.previewSessionId }
+        : {}),
       workflowMode: options.workflowMode ?? "standard",
       ...(options.sourceChatSessionId
         ? { sourceChatSessionId: options.sourceChatSessionId }
@@ -127,6 +181,38 @@ export class WorkflowOrchestrator {
       retryCount: 0,
       pendingRetryApproval: null,
     };
+
+    await this.storage.save({
+      threadId,
+      workspaceFolderId: options.workspaceFolderId,
+      ...(options.frontendProjectId
+        ? { frontendProjectId: options.frontendProjectId }
+        : {}),
+      ...(options.frontendProjectRootPath
+        ? { frontendProjectRootPath: options.frontendProjectRootPath }
+        : {}),
+      ...(options.previewSessionId
+        ? { previewSessionId: options.previewSessionId }
+        : {}),
+      workflowMode: options.workflowMode ?? "standard",
+      ...(options.sourceChatSessionId
+        ? { sourceChatSessionId: options.sourceChatSessionId }
+        : {}),
+      ...(options.sourceChatMessageId
+        ? { sourceChatMessageId: options.sourceChatMessageId }
+        : {}),
+      ...(options.executionBrief ? { executionBrief: options.executionBrief } : {}),
+      userStories: options.userStories,
+      currentUSIndex: 0,
+      specs: options.initialSpecs ?? {},
+      workspaceArtifactContext: options.workspaceArtifactContext ?? {},
+      humanFeedback: {},
+      agentResults: {},
+      pendingCheckpoints: [],
+      validationGates: [],
+      status: "running",
+      startedAt,
+    });
 
     this.events.emit({
       type: "status_changed",
@@ -153,6 +239,25 @@ export class WorkflowOrchestrator {
         [options.userStory.id]: options.spec,
       },
       workflowMode: "chat_code_change",
+      frontendProjectId: options.project.id,
+      frontendProjectRootPath: options.project.rootPath,
+      sourceChatSessionId: options.chatSessionId,
+      sourceChatMessageId: options.sourceMessageId,
+      executionBrief: options.executionBrief,
+      ...(options.previewSessionId
+        ? { previewSessionId: options.previewSessionId }
+        : {}),
+      ...(options.llmSettings ? { llmSettings: options.llmSettings } : {}),
+    });
+  }
+
+  async startSpecGeneration(
+    options: StartSpecGenerationOptions
+  ): Promise<{ threadId: string }> {
+    return this.start({
+      workspaceFolderId: options.workspaceFolderId,
+      userStories: [options.userStory],
+      workflowMode: "spec_generation",
       sourceChatSessionId: options.chatSessionId,
       sourceChatMessageId: options.sourceMessageId,
       executionBrief: options.executionBrief,
@@ -220,7 +325,9 @@ export class WorkflowOrchestrator {
     threadId: string,
     nodeName: string
   ): Promise<void> {
-    const snapshot = await graph.getState({ configurable: { thread_id: threadId } });
+    const snapshot = await this.workflowGraph.getState({
+      configurable: { thread_id: threadId },
+    });
     if (hasPendingCheckpoint(snapshot, nodeName)) return;
 
     const stored = await this.storage.load(threadId);
@@ -236,8 +343,12 @@ export class WorkflowOrchestrator {
     threadId: string,
     currentUserStoryId?: string
   ): Promise<void> {
-    let userStoryId = currentUserStoryId;
+    let userStoryId = currentUserStoryId ?? extractInputUserStoryId(input);
     let workspaceFolderId = await this.resolveWorkspaceFolderId(input, threadId);
+    const frontendProjectRootPath = await this.resolveFrontendProjectRootPath(
+      input,
+      threadId
+    );
     const sourceChatSessionId = await this.resolveSourceChatSessionId(
       input,
       threadId
@@ -246,10 +357,8 @@ export class WorkflowOrchestrator {
     let trackedRetryCount = 0;
 
     try {
-      for await (const chunk of await graph.stream(
-        input as Parameters<typeof graph.stream>[0],
-        config
-      )) {
+      for await (const rawChunk of await this.workflowGraph.stream(input, config)) {
+        const chunk = rawChunk as Record<string, Record<string, unknown>>;
         const nodeName = Object.keys(chunk)[0];
         if (!nodeName) continue;
 
@@ -309,6 +418,9 @@ export class WorkflowOrchestrator {
 
         // ── curatorAgent: track retryCount + emit escalation event ─────────
         if (nodeName === "curatorAgent") {
+          const resultStoryId = extractAgentResultStoryId(nodeUpdate);
+          if (resultStoryId) userStoryId = resultStoryId;
+
           const newCount = nodeUpdate?.["retryCount"] as number | undefined;
           if (newCount !== undefined) trackedRetryCount = newCount;
 
@@ -328,6 +440,15 @@ export class WorkflowOrchestrator {
               notes: pending.notes,
               missingItems: pending.missingItems,
               timestamp: new Date().toISOString(),
+            });
+          }
+
+          if (userStoryId) {
+            await this.finalizeLatestCodeChangeSetAfterCurator({
+              nodeUpdate,
+              threadId,
+              userStoryId,
+              frontendProjectRootPath,
             });
           }
         }
@@ -367,6 +488,28 @@ export class WorkflowOrchestrator {
         // ── Emit node_completed for all agent nodes ────────────────────────
         const agentName = NODE_AGENT_MAP[nodeName];
         if (agentName && userStoryId) {
+          const resultStoryId = extractAgentResultStoryId(nodeUpdate);
+          if (resultStoryId) userStoryId = resultStoryId;
+          if (nodeName === "frontAgent") {
+            await this.persistProposedCodeChangeSets(nodeUpdate);
+          }
+          if (nodeName === "qaAgent") {
+            const evidence = extractRuntimeValidationEvidence(nodeUpdate);
+            if (evidence) {
+              this.events.emit({
+                type: "validation_evidence",
+                threadId,
+                userStoryId,
+                evidence,
+                timestamp: new Date().toISOString(),
+              });
+              await this.appendChatProgress(
+                sourceChatSessionId,
+                threadId,
+                summarizeRuntimeEvidence(evidence)
+              );
+            }
+          }
           this.events.emit({
             type: "node_completed",
             threadId,
@@ -398,17 +541,19 @@ export class WorkflowOrchestrator {
         clearRuntimeLlmSettings(threadId);
       }
     } catch (err) {
-      await this.persistState(threadId, err instanceof Error ? err.message : String(err));
+      const message = toErrorMessage(err);
+      console.error(`[WorkflowOrchestrator] Graph execution failed: ${message}`);
+      await this.persistState(threadId, message);
       clearRuntimeLlmSettings(threadId);
       await this.appendChatProgress(
         sourceChatSessionId,
         threadId,
-        `A execução dos agentes falhou: ${err instanceof Error ? err.message : String(err)}`
+        `A execução dos agentes falhou: ${message}`
       );
       this.events.emit({
         type: "error",
         threadId,
-        message: err instanceof Error ? err.message : String(err),
+        message,
         timestamp: new Date().toISOString(),
       });
     }
@@ -419,11 +564,22 @@ export class WorkflowOrchestrator {
     errorMessage?: string
   ): Promise<WorkflowStatus | undefined> {
     try {
-      const snapshot = await graph.getState({ configurable: { thread_id: threadId } });
+      const snapshot = await this.workflowGraph.getState({
+        configurable: { thread_id: threadId },
+      });
       const values = snapshot.values as Record<string, unknown>;
 
       const startedAt = this.startTimes.get(threadId) ?? new Date().toISOString();
       const isError = Boolean(errorMessage);
+      const now = new Date().toISOString();
+      const status: WorkflowStatus = isError
+        ? "error"
+        : ((values["status"] as WorkflowStatus | undefined) ?? "completed");
+      const pendingCheckpoints = extractPendingCheckpoints(
+        snapshot.next,
+        values,
+        now
+      );
 
       const state: WorkflowState = {
         threadId,
@@ -447,11 +603,20 @@ export class WorkflowOrchestrator {
           {},
         humanFeedback: (values["humanFeedback"] as WorkflowState["humanFeedback"]) ?? {},
         agentResults: (values["agentResults"] as WorkflowState["agentResults"]) ?? {},
-        status: isError ? "error" : ((values["status"] as WorkflowState["status"]) ?? "completed"),
+        pendingCheckpoints,
+        validationGates:
+          (values["validationGates"] as WorkflowState["validationGates"]) ?? [],
+        status,
         startedAt,
-        completedAt: new Date().toISOString(),
+        ...(isTerminalStatus(status) ? { completedAt: now } : {}),
         ...(typeof values["workspaceFolderId"] === "string"
           ? { workspaceFolderId: values["workspaceFolderId"] }
+          : {}),
+        ...(typeof values["frontendProjectId"] === "string"
+          ? { frontendProjectId: values["frontendProjectId"] }
+          : {}),
+        ...(typeof values["frontendProjectRootPath"] === "string"
+          ? { frontendProjectRootPath: values["frontendProjectRootPath"] }
           : {}),
         ...(errorMessage ? { errorMessage } : {}),
       };
@@ -499,6 +664,24 @@ export class WorkflowOrchestrator {
     return stored?.sourceChatSessionId;
   }
 
+  private async resolveFrontendProjectRootPath(
+    input: Record<string, unknown> | Command,
+    threadId: string
+  ): Promise<string | undefined> {
+    if (
+      typeof input === "object" &&
+      input !== null &&
+      "frontendProjectRootPath" in input &&
+      typeof (input as Record<string, unknown>)["frontendProjectRootPath"] ===
+        "string"
+    ) {
+      return (input as Record<string, string>)["frontendProjectRootPath"];
+    }
+
+    const stored = await this.storage.load(threadId);
+    return stored?.frontendProjectRootPath;
+  }
+
   private async appendChatProgress(
     sessionId: string | undefined,
     threadId: string,
@@ -515,6 +698,219 @@ export class WorkflowOrchestrator {
       console.warn("[WorkflowOrchestrator] Failed to append chat progress:", err);
     }
   }
+
+  private async persistProposedCodeChangeSets(
+    nodeUpdate: Record<string, unknown> | undefined
+  ): Promise<void> {
+    if (!nodeUpdate || !this.codeChangeSets) return;
+
+    for (const proposedChangeSet of extractCodeChangeSets(nodeUpdate)) {
+      const saved = CodeChangeSetSchema.parse({
+        ...proposedChangeSet,
+        status:
+          proposedChangeSet.status === "failed"
+            ? proposedChangeSet.status
+            : "proposed",
+      });
+      await this.codeChangeSets.save(saved);
+      this.events.emit({
+        type: "patch_proposed",
+        threadId: saved.workflowThreadId,
+        userStoryId: saved.userStoryId,
+        changeSetId: saved.id,
+        filePaths: saved.operations.map((operation) => operation.targetPath),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  private async finalizeLatestCodeChangeSetAfterCurator(input: {
+    nodeUpdate: Record<string, unknown> | undefined;
+    threadId: string;
+    userStoryId: string;
+    frontendProjectRootPath: string | undefined;
+  }): Promise<void> {
+    if (!input.nodeUpdate || !this.codeChangeSets) return;
+
+    const verdict = extractCuratorVerdict(input.nodeUpdate, input.userStoryId);
+    if (!verdict) return;
+
+    const proposedChangeSet = await this.findLatestProposedCodeChangeSet(
+      input.threadId,
+      input.userStoryId
+    );
+    if (!proposedChangeSet) return;
+
+    if (!verdict.passed) {
+      await this.codeChangeSets.save(
+        CodeChangeSetSchema.parse({
+          ...proposedChangeSet,
+          status: "curator_rejected",
+          failedReason: buildCuratorRejectionReason(verdict),
+        })
+      );
+      return;
+    }
+
+    const approvedChangeSet = CodeChangeSetSchema.parse({
+      ...proposedChangeSet,
+      status: "curator_approved",
+    });
+    await this.codeChangeSets.save(approvedChangeSet);
+
+    if (!input.frontendProjectRootPath || !this.codeChangeSetApplier) return;
+
+    const appliedChangeSet = await this.codeChangeSetApplier.apply({
+      changeSet: approvedChangeSet,
+      projectRootPath: input.frontendProjectRootPath,
+    });
+    await this.codeChangeSets.save(appliedChangeSet);
+    this.events.emit({
+      type: "patch_applied",
+      threadId: appliedChangeSet.workflowThreadId,
+      userStoryId: appliedChangeSet.userStoryId,
+      changeSetId: appliedChangeSet.id,
+      filePaths: appliedChangeSet.operations.map((operation) => operation.targetPath),
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  private async findLatestProposedCodeChangeSet(
+    threadId: string,
+    userStoryId: string
+  ): Promise<CodeChangeSet | undefined> {
+    if (!this.codeChangeSets?.listByWorkflow) return undefined;
+    const changeSets = await this.codeChangeSets.listByWorkflow(threadId);
+    return changeSets
+      .filter(
+        (changeSet) =>
+          changeSet.userStoryId === userStoryId &&
+          changeSet.sourceAgent === "front" &&
+          changeSet.status === "proposed"
+      )
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
+  }
+}
+
+interface CuratorVerdict {
+  passed: boolean;
+  score?: number;
+  notes?: string;
+  missingItems?: string[];
+}
+
+function extractCodeChangeSets(
+  nodeUpdate: Record<string, unknown> | undefined
+): CodeChangeSet[] {
+  if (!nodeUpdate) return [];
+  const agentResults = nodeUpdate["agentResults"];
+  if (!agentResults || typeof agentResults !== "object") return [];
+
+  const changeSets: CodeChangeSet[] = [];
+  for (const results of Object.values(agentResults as Record<string, unknown>)) {
+    if (!Array.isArray(results)) continue;
+    for (const result of results) {
+      if (!result || typeof result !== "object") continue;
+      const output = (result as { output?: unknown }).output;
+      if (!output || typeof output !== "object") continue;
+      const rawChangeSet = (output as Record<string, unknown>)["codeChangeSet"];
+      if (!rawChangeSet) continue;
+      changeSets.push(CodeChangeSetSchema.parse(rawChangeSet));
+    }
+  }
+  return changeSets;
+}
+
+function extractAgentResultStoryId(
+  nodeUpdate: Record<string, unknown> | undefined
+): string | undefined {
+  if (!nodeUpdate) return undefined;
+  const agentResults = nodeUpdate["agentResults"];
+  if (!agentResults || typeof agentResults !== "object") return undefined;
+  const [storyId] = Object.keys(agentResults as Record<string, unknown>);
+  return storyId;
+}
+
+function extractCuratorVerdict(
+  nodeUpdate: Record<string, unknown> | undefined,
+  userStoryId: string
+): CuratorVerdict | undefined {
+  if (!nodeUpdate) return undefined;
+  const agentResults = nodeUpdate["agentResults"];
+  if (!agentResults || typeof agentResults !== "object") return undefined;
+  const results = (agentResults as Record<string, unknown>)[userStoryId];
+  if (!Array.isArray(results)) return undefined;
+  const latest = [...results].reverse().find((result) => {
+    return (
+      result &&
+      typeof result === "object" &&
+      (result as { agentName?: unknown }).agentName === "curator"
+    );
+  });
+  const output =
+    latest && typeof latest === "object"
+      ? (latest as { output?: unknown }).output
+      : undefined;
+  if (!output || typeof output !== "object") return undefined;
+  const passed = (output as Record<string, unknown>)["passed"];
+  if (typeof passed !== "boolean") return undefined;
+  const score = (output as Record<string, unknown>)["score"];
+  const notes = (output as Record<string, unknown>)["notes"];
+  const missingItems = (output as Record<string, unknown>)["missingItems"];
+  return {
+    passed,
+    ...(typeof score === "number" ? { score } : {}),
+    ...(typeof notes === "string" ? { notes } : {}),
+    ...(Array.isArray(missingItems) ? { missingItems: missingItems as string[] } : {}),
+  };
+}
+
+function extractRuntimeValidationEvidence(
+  nodeUpdate: Record<string, unknown> | undefined
+) {
+  if (!nodeUpdate) return undefined;
+  const agentResults = nodeUpdate["agentResults"];
+  if (!agentResults || typeof agentResults !== "object") return undefined;
+  for (const results of Object.values(agentResults as Record<string, unknown>)) {
+    if (!Array.isArray(results)) continue;
+    for (const result of results) {
+      if (!result || typeof result !== "object") continue;
+      const output = (result as { output?: unknown }).output;
+      if (!output || typeof output !== "object") continue;
+      const rawEvidence = (output as Record<string, unknown>)["runtimeValidation"];
+      if (rawEvidence) return RuntimeValidationEvidenceSchema.parse(rawEvidence);
+    }
+  }
+  return undefined;
+}
+
+function summarizeRuntimeEvidence(
+  evidence: RuntimeValidationEvidence
+): string {
+  const failedCommands = evidence.commands.filter(
+    (command) => command.exitCode !== 0
+  ).length;
+  return `Validação runtime: ${evidence.status}; comandos ${evidence.commands.length}; falhas ${failedCommands}; preview ${evidence.preview.status}.`;
+}
+
+function buildCuratorRejectionReason(verdict: CuratorVerdict): string {
+  return [
+    verdict.notes ?? "Curator rejected this CodeChangeSet.",
+    ...(verdict.missingItems ?? []),
+  ]
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function toErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return "Unknown workflow error";
+  }
 }
 
 function isTerminalStatus(status: WorkflowStatus | undefined): boolean {
@@ -530,4 +926,59 @@ function agentDisplayName(agentName: AgentName): string {
     curator: "Curator Agent",
   };
   return labels[agentName];
+}
+
+function extractInputUserStoryId(
+  input: Record<string, unknown> | Command
+): string | undefined {
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("userStories" in input) ||
+    !Array.isArray((input as Record<string, unknown>)["userStories"])
+  ) {
+    return undefined;
+  }
+
+  const [firstStory] = (input as { userStories: unknown[] }).userStories;
+  if (
+    typeof firstStory === "object" &&
+    firstStory !== null &&
+    typeof (firstStory as Record<string, unknown>)["id"] === "string"
+  ) {
+    return (firstStory as Record<string, string>)["id"];
+  }
+
+  return undefined;
+}
+
+function extractPendingCheckpoints(
+  next: readonly unknown[] | undefined,
+  values: Record<string, unknown>,
+  createdAt: string
+): WorkflowCheckpointNode[] {
+  if (!Array.isArray(next) || next.length === 0) return [];
+
+  const userStories = Array.isArray(values["userStories"])
+    ? (values["userStories"] as UserStory[])
+    : [];
+  const currentUSIndex =
+    typeof values["currentUSIndex"] === "number"
+      ? values["currentUSIndex"]
+      : 0;
+  const currentUserStory = userStories[currentUSIndex];
+
+  return next
+    .filter(isWorkflowCheckpointNodeName)
+    .map((nodeName) => ({
+      nodeName,
+      ...(currentUserStory?.id ? { userStoryId: currentUserStory.id } : {}),
+      createdAt,
+    }));
+}
+
+function isWorkflowCheckpointNodeName(
+  value: unknown
+): value is WorkflowCheckpointNode["nodeName"] {
+  return value === "hitlCheckpoint" || value === "retryCheckpoint";
 }
