@@ -1,0 +1,88 @@
+---
+title: Horus.AI Documentation
+description: Technical docs for the autonomous multi-agent software generation system.
+---
+
+Horus.AI is an autonomous software generation system. It turns a user story into a technical specification, routes implementation and QA work through specialist agents, validates the result with a Curator, and exposes the run through a web interface with previews, project files, chat, event streams, and auditable evidence.
+
+This documentation is written for engineers who need to run, change, debug, or deploy the project without relying on one developer's local machine. It documents runtime boundaries, persistence ownership, configuration contracts, validation commands, and the operational rules that keep the system portable across macOS, Windows, Linux, and containers.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/docs/quickstart">
+    Install dependencies, configure environment variables, and run the app locally.
+  </Card>
+  <Card title="Architecture" icon="book" href="/docs/architecture">
+    See how the web app, API, LangGraph workflow, agents, and persistence fit together.
+  </Card>
+  <Card title="Agent Workflow" icon="plug" href="/docs/workflow">
+    Follow the Spec, ODIN, Front, QA, and Curator loop from input to approved output.
+  </Card>
+  <Card title="Runbook" icon="terminal" href="/docs/runbook">
+    Operate the project, validate it, reset local state, and troubleshoot failures.
+  </Card>
+</CardGroup>
+
+## System Snapshot
+
+| Layer | Package | Responsibility |
+| --- | --- | --- |
+| Web | `apps/web` | React/Vite UI for stories, specs, previews, chat, project files, and run-flow evidence |
+| API | `apps/server` | Express routes, LangGraph orchestration, repositories, preview runtime, agents, and LLM settings |
+| Shared contracts | `packages/shared` | Zod schemas, shared entities, and ports |
+| Agent skills | `skills/agents` | Runtime instructions consumed by Horus agents |
+| Docs | `apps/docs` | Fumadocs/Unmint technical documentation site |
+
+## What Horus Persists
+
+Horus has more state than a simple web app. A reliable installation must account for each category explicitly.
+
+| State | Owner | Why It Exists |
+| --- | --- | --- |
+| Workflow state | Server repositories and LangGraph checkpointer | Resume, retry, inspect, and complete agent runs |
+| Workspace artifacts | Workspace store | User stories, specs, folders, and revisions |
+| Chat memory | Chat memory repository | Preserve Horus chat sessions and decisions |
+| Code change sets | Code change repository | Keep proposed and approved file operations auditable |
+| Workflow events | Event log repository | Power timeline, SSE streams, run-flow maps, and evidence |
+| Preview sessions | Preview session store | Track preview processes, devices, timeline, and drafts |
+| Project construction | Project construction repository | Track generated project workspaces and metadata |
+| Provider profiles | LLM settings resolver and credential store | Resolve runtime model settings without leaking secrets |
+
+<Warning>
+None of the local runtime state above belongs in Git. The repository should contain source, documentation, examples, and portable defaults only.
+</Warning>
+
+## Primary Flow
+
+<PrimaryFlowDiagram />
+
+<Info>
+Private implementation planning material stays outside the public documentation surface. This site is the public technical documentation surface.
+</Info>
+
+## Engineering Guarantees
+
+The project should preserve these guarantees when it evolves:
+
+- A clean clone can install, build, and run without machine-specific absolute paths.
+- File-mode persistence writes only below configured runtime directories.
+- Postgres mode moves durable runtime state into the configured database.
+- Provider secrets are injected by environment or saved through the backend credential store, never committed.
+- Agent output is traceable through specs, code change sets, QA evidence, Curator reports, and event logs.
+- Documentation changes are validated through the docs build, not only by reading MDX locally.
+
+## Important Links
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/docs/configuration">
+    Environment variables, provider settings, persistence, HTTP, and preview configuration.
+  </Card>
+  <Card title="Persistence" icon="book" href="/docs/persistence">
+    File-mode and Postgres-mode state ownership and operational rules.
+  </Card>
+  <Card title="Chronology" icon="book" href="/docs/chronology">
+    Chronological engineering history and milestone matrix.
+  </Card>
+  <Card title="Contributing" icon="code" href="/docs/contributing">
+    Change boundaries, validation expectations, and Git hygiene.
+  </Card>
+</CardGroup>

@@ -1,0 +1,189 @@
+---
+title: Architecture
+description: How Horus.AI is organized across web, API, workflow, agents, and persistence.
+---
+
+## Monorepo Map
+
+| Boundary | Path | Responsibility |
+| --- | --- | --- |
+| Web app | `apps/web` | React/Vite product interface |
+| Server | `apps/server` | Express API, LangGraph workflow, agents, persistence, preview runtime |
+| Shared | `packages/shared` | Zod schemas, entities, and ports |
+| Docs | `apps/docs` | Fumadocs/Unmint technical documentation |
+| Agent skills | `skills/agents` | Runtime product instructions for agents |
+
+## Architectural Principle
+
+Horus is organized around explicit boundaries:
+
+- The web app renders state and sends user intent. It should not know file paths, process commands, database schemas, or provider secret values.
+- The server owns orchestration, persistence, preview process control, and access to local project files.
+- Shared contracts define the data shape crossing process boundaries.
+- Agent skills describe behavior for LLM-backed agents, but code remains responsible for validation, routing, persistence, and safety.
+- Documentation is a standalone app so the public technical surface can evolve independently from product UI.
+
+<SystemArchitectureDiagram />
+
+## Backend Layers
+
+| Layer | Path | Owns |
+| --- | --- | --- |
+| Domain | `apps/server/src/domain` | Workflow services and domain ports |
+| Application | `apps/server/src/application` | Use cases, run-flow mapping, tool registry, validation aggregation |
+| Infrastructure | `apps/server/src/infrastructure` | HTTP, repositories, agents, LangGraph, LLM, preview, project files |
+
+<Info>
+The main process starts in `apps/server/src/main.ts`; dependency wiring happens in `apps/server/src/infrastructure/http/server.ts`.
+</Info>
+
+## Server Composition
+
+`createApp()` composes the runtime in one place:
+
+| Component | Runtime Role |
+| --- | --- |
+| `createRepositories()` | Selects file or Postgres persistence and returns repository implementations |
+| `PersistentWorkflowEventStream` | Writes workflow events and broadcasts SSE updates |
+| `PreviewRuntimeManager` | Starts, stops, reloads, and recovers browser preview sessions |
+| `QaPreviewSmokeValidationService` | Lets QA/Curator evidence include preview smoke checks |
+| `createWorkflowGraph()` | Builds the LangGraph state machine with injected dependencies |
+| `WorkflowOrchestrator` | Starts, resumes, retries, and applies approved workflow work |
+| `LlmSettingsResolver` | Resolves global or per-profile provider settings without exposing secrets |
+
+This composition is dependency-injected. Tests can pass fake repositories, fake preview adapters, fake graph dependencies, or fake agents without relying on the local filesystem layout.
+
+## Runtime Composition
+
+```text
+Browser
+  -> apps/web React UI
+  -> Express route groups
+  -> Application use cases
+  -> LangGraph workflow / preview runtime / project files
+  -> File-mode repositories or Postgres repositories
+```
+
+## Request Flow
+
+```text
+HTTP request
+  -> Express route
+  -> Application use case
+  -> Domain service or infrastructure service
+  -> Repository / preview adapter / LangGraph graph
+  -> Shared contract response
+```
+
+The route layer should stay thin. It should translate HTTP input into use-case input, map failures into responses, and avoid embedding business decisions that belong in application services or domain services.
+
+## HTTP Surface
+
+| Route group | Purpose |
+| --- | --- |
+| `/api/llm` | Provider/settings APIs |
+| `/api/workflow` | Start, resume, status, retry decision |
+| `/api/workspace` | Folders, user stories, specs |
+| `/api/chat` | Chat sessions and messages |
+| `/api/horus` | Horus chat turns and streaming |
+| `/api/preview` | Preview projects, sessions, devices, timeline |
+| `/api/agent-runs` | Run-flow snapshots and event streams |
+| `/api/project-construction` | Generated project construction runs |
+| `/api/project-files` | Safe project file tree/read/write APIs |
+| `/api/events` | Workflow event stream |
+| `/health` | Non-secret health check |
+
+## Route Ownership
+
+| Route Group | Backing Capability | Persistence Impact |
+| --- | --- | --- |
+| `/api/workflow` | `StartWorkflowUseCase`, `ResumeWorkflowUseCase`, status and retry decisions | Workflow state, events, checkpoints, code change sets |
+| `/api/workspace` | Workspace folders, stories, specs, and revisions | Workspace repository |
+| `/api/chat` | Generic chat memory APIs | Chat memory repository |
+| `/api/horus` | Horus chat turn orchestration | Chat memory, preview state, workflow state when chat triggers work |
+| `/api/preview` | Preview session lifecycle and timeline | Preview session repository and runtime process state |
+| `/api/agent-runs` | Run-flow snapshots and event replay | Workflow event log and SSE runtime stream |
+| `/api/project-construction` | Generated project construction runs | Project construction repository and generated workspace metadata |
+| `/api/project-files` | Safe project tree/read/write operations | Project construction repository and project filesystem |
+| `/api/llm` | Provider profile and credential APIs | Credential store plus non-secret profile metadata |
+| `/api/events` | Workflow event stream | Workflow event log and SSE runtime stream |
+
+## Shared Contracts
+
+The `@u-build/shared` package is the contract surface between web, server, and tests.
+
+Important schema groups:
+
+- User stories and specs
+- Workflow state and agent results
+- Code change sets
+- Preview projects, sessions, and events
+- Chat memory and Horus chat turns
+- Project construction and project files
+- LLM settings
+- Workspace artifacts
+
+Contract changes should be treated as cross-package changes. A schema update usually requires matching server route/use-case updates, frontend API client updates, and tests that cover both valid and invalid payloads.
+
+## Frontend Structure
+
+The web app keeps the main shell in `apps/web/src/App.tsx` and delegates complex state to hooks:
+
+- `useAppNavigation`
+- `useWorkspaceFolders`
+- `useWorkflowRuntime`
+- `useDisplayedWorkflowState`
+- `useProjectConstructionAction`
+
+Major UI surfaces:
+
+- Story/spec workspace
+- Workflow progress
+- Agent flow map
+- Visual preview console
+- Preview conversation panel
+- Project files editor
+- LLM settings modal
+
+## Agent Runtime Boundary
+
+Agent implementations live under `apps/server/src/infrastructure/agents`, while their product instructions live under `skills/agents`.
+
+| Agent | Code Boundary | Skill Boundary |
+| --- | --- | --- |
+| Spec Agent | Converts story and context into a structured spec | `skills/agents/spec-frontend-sdd` |
+| ODIN | Decides routing and retry targets | Code-level router plus workflow state |
+| Front Agent | Proposes frontend file operations | `skills/agents/front-design-frontend` |
+| QA Agent | Produces tests, checks, and evidence | `skills/agents/qa-frontend-testing` |
+| Curator | Validates code, QA, evidence, and spec coverage | `skills/agents/curator-quality-gate` |
+
+The skills may influence generated text and behavior, but the application must still enforce iteration limits, persistence rules, write-root policies, and validation gates in TypeScript.
+
+## Portability Model
+
+The system must avoid assumptions about the host machine:
+
+| Concern | Required Pattern |
+| --- | --- |
+| Paths | Resolve from repository root or configured environment variables |
+| Runtime state | Write below `HORUS_DATA_DIR` or to Postgres |
+| Commands | Use configured package manager and command catalog entries |
+| Secrets | Read from environment or backend credential store |
+| Preview ports | Resolve through env-driven preview configuration |
+| Generated workspaces | Use configured workspace roots, never hardcoded desktop paths |
+| OS differences | Document shell-specific commands for macOS/Linux and Windows PowerShell |
+
+## Critical Invariants
+
+<Warning>
+These rules are architecture constraints, not style preferences.
+</Warning>
+
+- Do not apply Front Agent changes before Curator approval.
+- Do not persist raw provider secrets in frontend state, workflow snapshots, event logs, or generated artifacts.
+- Do not write local runtime state outside configured persistence roots.
+- Do not bypass project write-root or command policies.
+- Do not mark a run completed unless validation gates are satisfied or explicitly recorded as skipped/unverified.
+- Do not hardcode machine-specific paths.
+- Do not add repository-coupled absolute paths to specs, docs, tests, fixtures, or generated examples.
+- Do not hide generated runtime state in package source folders unless the path is explicitly ignored and configurable.

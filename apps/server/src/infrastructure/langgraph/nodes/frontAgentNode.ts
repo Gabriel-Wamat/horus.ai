@@ -1,46 +1,104 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
-import { generateFrontend } from "../../agents/FrontAgentImpl.js";
+import type { LangGraphDependencies } from "../dependencies.js";
+import { defaultLangGraphDependencies } from "../dependencies.js";
+import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
+import { buildGeneratedHtmlChangeSet } from "../../code/buildGeneratedHtmlChangeSet.js";
+import { buildFrontendCodeChangeSet } from "../../code/buildFrontendCodeChangeSet.js";
 
-export async function frontAgentNode(
-  state: UBuildState
-): Promise<UBuildUpdate> {
-  const userStory = state.userStories[state.currentUSIndex];
+export function createFrontAgentNode(deps: LangGraphDependencies) {
+  return async function frontAgentNode(
+    state: UBuildState
+  ): Promise<UBuildUpdate> {
+    const userStory = state.userStories[state.currentUSIndex];
 
-  if (!userStory) {
-    throw new Error("frontAgentNode: missing user story");
-  }
+    if (!userStory) {
+      throw new Error("frontAgentNode: missing user story");
+    }
 
-  const spec = state.specs[userStory.id];
-  if (!spec) {
-    throw new Error(`frontAgentNode: missing spec for story ${userStory.id}`);
-  }
+    const spec = state.specs[userStory.id];
+    if (!spec) {
+      throw new Error(`frontAgentNode: missing spec for story ${userStory.id}`);
+    }
 
-  const start = Date.now();
-  const curatorFeedback = state.curatorFeedback[userStory.id];
+    const start = Date.now();
+    const curatorFeedback = state.curatorFeedback[userStory.id];
+    const artifactContext = getArtifactContext(state, userStory.id);
 
-  console.log(
-    `[frontAgentNode] Generating frontend for: ${userStory.id} (retry=${state.retryCount})`
-  );
+    console.log(
+      `[frontAgentNode] Generating frontend for: ${userStory.id} (retry=${state.retryCount})`
+    );
 
-  // Self-correction: pass curator feedback so the agent improves on retry
-  const { html } = await generateFrontend(userStory, spec, curatorFeedback);
+    const codeContext =
+      state.frontendProjectId && state.frontendProjectRootPath
+        ? await deps.buildFrontendCodeContext({
+            projectId: state.frontendProjectId,
+            projectRootPath: state.frontendProjectRootPath,
+            query: buildFrontendContextQuery(userStory.title, state.executionBrief),
+          })
+        : undefined;
 
-  console.log(
-    `[frontAgentNode] HTML generated (${html.length} chars) for: ${userStory.id}`
-  );
+    const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
+    // Self-correction: pass curator feedback so the agent improves on retry.
+    const frontendOutput = await deps.generateFrontend(
+      userStory,
+      spec,
+      curatorFeedback,
+      llmSettings,
+      state.executionBrief,
+      codeContext
+    );
+    const { html } = frontendOutput;
 
-  return {
-    agentResults: {
-      [userStory.id]: [
-        {
-          status: "success",
-          agentName: "front",
-          userStoryId: userStory.id,
-          output: { html, attempt: state.retryCount },
-          executionTimeMs: Date.now() - start,
-          completedAt: new Date().toISOString(),
-        },
-      ],
-    },
+    console.log(
+      `[frontAgentNode] HTML generated (${html.length} chars) for: ${userStory.id}`
+    );
+
+    const codeChangeSet =
+      frontendOutput.operations && frontendOutput.operations.length > 0
+        ? buildFrontendCodeChangeSet({
+            workflowThreadId: state.threadId,
+            userStory,
+            operations: frontendOutput.operations,
+            ...(codeContext ? { codeContext } : {}),
+            ...(artifactContext ? { artifactContext } : {}),
+          })
+        : buildGeneratedHtmlChangeSet({
+            workflowThreadId: state.threadId,
+            userStory,
+            html,
+            ...(artifactContext ? { artifactContext } : {}),
+          });
+
+    return {
+      agentResults: {
+        [userStory.id]: [
+          {
+            status: "success",
+            agentName: "front",
+            userStoryId: userStory.id,
+            output: {
+              html,
+              codeChangeSet,
+              attempt: state.retryCount,
+              ...(frontendOutput.inspectedFiles
+                ? { inspectedFiles: frontendOutput.inspectedFiles }
+                : {}),
+            },
+            executionTimeMs: Date.now() - start,
+            completedAt: new Date().toISOString(),
+            ...agentArtifactFields(artifactContext, state),
+          },
+        ],
+      },
+    };
   };
+}
+
+export const frontAgentNode = createFrontAgentNode(defaultLangGraphDependencies);
+
+function buildFrontendContextQuery(
+  userStoryTitle: string,
+  executionBrief: string | undefined
+): string {
+  return [userStoryTitle, executionBrief].filter(Boolean).join("\n");
 }

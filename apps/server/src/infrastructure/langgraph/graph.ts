@@ -1,13 +1,18 @@
 import { StateGraph, END, START, Send } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { UBuildStateAnnotation } from "./state.js";
 import { checkpointer } from "./checkpointer.js";
-import { specAgentNode } from "./nodes/specAgentNode.js";
+import { createSpecAgentNode } from "./nodes/specAgentNode.js";
 import { hitlCheckpointNode } from "./nodes/hitlCheckpointNode.js";
-import { odinAgentNode } from "./nodes/odinAgentNode.js";
-import { frontAgentNode } from "./nodes/frontAgentNode.js";
-import { qaAgentNode } from "./nodes/qaAgentNode.js";
-import { curatorAgentNode } from "./nodes/curatorAgentNode.js";
+import { createOdinAgentNode } from "./nodes/odinAgentNode.js";
+import { createFrontAgentNode } from "./nodes/frontAgentNode.js";
+import { createQaAgentNode } from "./nodes/qaAgentNode.js";
+import { createCuratorAgentNode } from "./nodes/curatorAgentNode.js";
 import { retryCheckpointNode } from "./nodes/retryCheckpointNode.js";
+import {
+  defaultLangGraphDependencies,
+  type LangGraphDependencies,
+} from "./dependencies.js";
 
 const SPEC_AGENT = "specAgent" as const;
 const HITL_CHECKPOINT = "hitlCheckpoint" as const;
@@ -23,7 +28,15 @@ const RETRY_CHECKPOINT = "retryCheckpoint" as const;
  */
 function routeToParallelAgents(
   state: typeof UBuildStateAnnotation.State
-): Send[] {
+): Send[] | typeof END {
+  if (
+    state.status === "completed" ||
+    state.status === "cancelled" ||
+    !state.userStories[state.currentUSIndex]
+  ) {
+    return END;
+  }
+
   const decision = state.routingDecision;
 
   if (decision.length === 0) {
@@ -36,16 +49,44 @@ function routeToParallelAgents(
   return sends;
 }
 
+function routeAfterHitlCheckpoint(
+  state: typeof UBuildStateAnnotation.State
+): typeof ODIN_AGENT | typeof END {
+  if (state.status === "cancelled") return END;
+  return ODIN_AGENT;
+}
+
+function routeAfterSpecAgent(
+  state: typeof UBuildStateAnnotation.State
+): typeof SPEC_AGENT | typeof HITL_CHECKPOINT | typeof END {
+  if (state.workflowMode !== "spec_generation") return HITL_CHECKPOINT;
+  if (state.status === "completed") return END;
+  return SPEC_AGENT;
+}
+
+function routeFromStart(
+  state: typeof UBuildStateAnnotation.State
+): typeof SPEC_AGENT | typeof ODIN_AGENT {
+  if (
+    state.workflowMode === "chat_code_change" ||
+    state.workflowMode === "project_construction"
+  ) {
+    return ODIN_AGENT;
+  }
+  return SPEC_AGENT;
+}
+
 /**
  * Reflection loop routing after curator:
- * - passed → advance to next user story (or END)
+ * - passed → advance to next user story through Odin (or Odin terminates)
  * - failed, retries remaining → back to odinAgent (self-correction)
  * - failed, max retries exceeded → retryCheckpoint (HITL escalation)
  */
 function routeAfterCurator(
   state: typeof UBuildStateAnnotation.State
 ): typeof SPEC_AGENT | typeof ODIN_AGENT | typeof RETRY_CHECKPOINT | typeof END {
-  if (state.status === "completed") return END;
+  if (state.status === "completed") return ODIN_AGENT;
+  if (state.status === "cancelled") return END;
 
   const curStory = state.userStories[state.currentUSIndex];
   if (!curStory) return END;
@@ -53,7 +94,9 @@ function routeAfterCurator(
   const feedback = state.curatorFeedback[curStory.id];
 
   // No feedback yet, or curator passed → proceed to next story
-  if (!feedback || feedback.passed) return SPEC_AGENT;
+  if (!feedback || feedback.passed) {
+    return state.workflowMode === "project_construction" ? ODIN_AGENT : SPEC_AGENT;
+  }
 
   // Max retries exceeded → escalate to human
   if (state.pendingRetryApproval !== null) return RETRY_CHECKPOINT;
@@ -72,39 +115,55 @@ function routeAfterRetryCheckpoint(
   return ODIN_AGENT;
 }
 
-const workflow = new StateGraph(UBuildStateAnnotation)
-  .addNode(SPEC_AGENT, specAgentNode)
-  .addNode(HITL_CHECKPOINT, hitlCheckpointNode)
-  .addNode(ODIN_AGENT, odinAgentNode)
-  .addNode(FRONT_AGENT, frontAgentNode)
-  .addNode(QA_AGENT, qaAgentNode)
-  .addNode(CURATOR_AGENT, curatorAgentNode)
-  .addNode(RETRY_CHECKPOINT, retryCheckpointNode)
+export function createWorkflowGraph(
+  dependencies: LangGraphDependencies = defaultLangGraphDependencies,
+  workflowCheckpointer: BaseCheckpointSaver = checkpointer
+) {
+  const workflow = new StateGraph(UBuildStateAnnotation)
+    .addNode(SPEC_AGENT, createSpecAgentNode(dependencies))
+    .addNode(HITL_CHECKPOINT, hitlCheckpointNode)
+    .addNode(ODIN_AGENT, createOdinAgentNode(dependencies))
+    .addNode(FRONT_AGENT, createFrontAgentNode(dependencies))
+    .addNode(QA_AGENT, createQaAgentNode(dependencies))
+    .addNode(CURATOR_AGENT, createCuratorAgentNode(dependencies))
+    .addNode(RETRY_CHECKPOINT, retryCheckpointNode)
 
-  // Main pipeline
-  .addEdge(START, SPEC_AGENT)
-  .addEdge(SPEC_AGENT, HITL_CHECKPOINT)
-  .addEdge(HITL_CHECKPOINT, ODIN_AGENT)
+    // Main pipeline
+    .addConditionalEdges(START, routeFromStart, [SPEC_AGENT, ODIN_AGENT])
+    .addConditionalEdges(SPEC_AGENT, routeAfterSpecAgent, [
+      SPEC_AGENT,
+      HITL_CHECKPOINT,
+      END,
+    ])
+    .addConditionalEdges(HITL_CHECKPOINT, routeAfterHitlCheckpoint, [
+      ODIN_AGENT,
+      END,
+    ])
 
-  // Fan-out: odinAgent routes to front ∥ qa based on routingDecision
-  .addConditionalEdges(ODIN_AGENT, routeToParallelAgents, [FRONT_AGENT, QA_AGENT])
-  .addEdge(FRONT_AGENT, CURATOR_AGENT)
-  .addEdge(QA_AGENT, CURATOR_AGENT)
+    // Fan-out: odinAgent routes to front ∥ qa based on routingDecision
+    .addConditionalEdges(ODIN_AGENT, routeToParallelAgents, [
+      FRONT_AGENT,
+      QA_AGENT,
+      END,
+    ])
+    .addEdge(FRONT_AGENT, CURATOR_AGENT)
+    .addEdge(QA_AGENT, CURATOR_AGENT)
 
-  // Reflection loop: curator decides retry / escalate / advance
-  .addConditionalEdges(CURATOR_AGENT, routeAfterCurator, [
-    SPEC_AGENT,
-    ODIN_AGENT,
-    RETRY_CHECKPOINT,
-    END,
-  ])
+    // Reflection loop: curator decides retry / escalate / advance
+    .addConditionalEdges(CURATOR_AGENT, routeAfterCurator, [
+      SPEC_AGENT,
+      ODIN_AGENT,
+      RETRY_CHECKPOINT,
+      END,
+    ])
 
-  // HITL escalation: user decides whether to continue retrying
-  .addConditionalEdges(RETRY_CHECKPOINT, routeAfterRetryCheckpoint, [
-    ODIN_AGENT,
-    END,
-  ]);
+    // HITL escalation: user decides whether to continue retrying
+    .addConditionalEdges(RETRY_CHECKPOINT, routeAfterRetryCheckpoint, [
+      ODIN_AGENT,
+      END,
+    ]);
 
-export const graph = workflow.compile({ checkpointer });
+  return workflow.compile({ checkpointer: workflowCheckpointer });
+}
 
 export type { UBuildState } from "./state.js";

@@ -1,7 +1,16 @@
-import { ChatAnthropic } from "@langchain/anthropic";
 import { z } from "zod";
-import type { Spec, UserStory } from "@u-build/shared";
+import { randomUUID } from "node:crypto";
+import {
+  RuntimeValidationEvidenceSchema,
+  type LlmSettings,
+  type RuntimeValidationEvidence,
+  type Spec,
+  type UserStory,
+} from "@u-build/shared";
 import type { CuratorFeedback } from "../langgraph/state.js";
+import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import { createChatModel } from "../llm/createChatModel.js";
+import { QaPreviewSmokeResultSchema } from "../preview/QaPreviewSmokeValidationService.js";
 
 const TestCaseSchema = z.object({
   id: z.string(),
@@ -12,19 +21,81 @@ const TestCaseSchema = z.object({
 
 const QaOutputSchema = z.object({
   testCases: z.array(TestCaseSchema),
+  previewSmoke: QaPreviewSmokeResultSchema.optional(),
 });
 
-export type QaOutput = z.infer<typeof QaOutputSchema>;
+export type QaOutput = z.infer<typeof QaOutputSchema> & {
+  runtimeValidation?: RuntimeValidationEvidence | undefined;
+};
 
-const model = new ChatAnthropic({
-  model: "private-model-sonnet-4-6",
-  temperature: 1,
-}).withStructuredOutput(QaOutputSchema);
+function buildFallbackQaOutput(
+  spec: Spec,
+  executionBrief?: string
+): QaOutput {
+  const criteria =
+    spec.acceptanceCriteria.length > 0
+      ? spec.acceptanceCriteria
+      : ["A alteração solicitada deve ser visível no frontend sem quebrar a spec ativa."];
+  return {
+    testCases: criteria.map((criterion, index) => ({
+      id: `TC-${String(index + 1).padStart(2, "0")}`,
+      criterion,
+      steps: [
+        "Abrir o preview do projeto selecionado.",
+        "Verificar a tela principal em viewport desktop.",
+        ...(executionBrief
+          ? [`Confirmar que o pedido do chat foi atendido: ${executionBrief}`]
+          : []),
+      ],
+      expected:
+        "A tela atende ao critério sem regressões visuais, funcionais ou de acessibilidade.",
+    })),
+  };
+}
+
+export function buildRuntimeValidationEvidenceFromPreviewSmoke(input: {
+  workflowThreadId?: string;
+  userStoryId?: string;
+  projectId?: string;
+  previewSmoke?: z.infer<typeof QaPreviewSmokeResultSchema>;
+}): RuntimeValidationEvidence | undefined {
+  if (!input.previewSmoke) return undefined;
+  const previewStatus =
+    input.previewSmoke.status === "passed"
+      ? "passed"
+      : input.previewSmoke.status === "failed"
+        ? "failed"
+        : "skipped";
+  return RuntimeValidationEvidenceSchema.parse({
+    id: randomUUID(),
+    workflowThreadId: input.workflowThreadId ?? null,
+    constructionRunId: null,
+    userStoryId: input.userStoryId ?? null,
+    projectId: input.projectId ?? null,
+    status: previewStatus,
+    skippedReason:
+      previewStatus === "skipped" ? input.previewSmoke.reason : null,
+    commands: [],
+    preview: {
+      status: previewStatus,
+      url: input.previewSmoke.previewUrl ?? null,
+      message: input.previewSmoke.reason,
+      evidence: {
+        title: null,
+        bodySnippet: null,
+        screenshotPath: null,
+      },
+    },
+    createdAt: input.previewSmoke.checkedAt,
+  });
+}
 
 export async function generateQaTests(
   userStory: UserStory,
   spec: Spec,
-  curatorFeedback?: CuratorFeedback
+  curatorFeedback?: CuratorFeedback,
+  llmSettings?: LlmSettings,
+  executionBrief?: string
 ): Promise<QaOutput> {
   const criteria = spec.acceptanceCriteria
     .map((c, i) => `${i + 1}. ${c}`)
@@ -32,6 +103,22 @@ export async function generateQaTests(
   const components = spec.components
     .map((c) => `- ${c.name}: ${c.description}`)
     .join("\n");
+  const dataModels =
+    spec.dataModels.length > 0 ? spec.dataModels.join("\n") : "N/A";
+  const apiContracts =
+    spec.apiEndpoints.length > 0
+      ? spec.apiEndpoints
+          .map((endpoint) => {
+            const requestSchema = endpoint.requestSchema
+              ? JSON.stringify(endpoint.requestSchema)
+              : "{}";
+            const responseSchema = endpoint.responseSchema
+              ? JSON.stringify(endpoint.responseSchema)
+              : "{}";
+            return `- ${endpoint.method} ${endpoint.path}: ${endpoint.description}\n  requestSchema: ${requestSchema}\n  responseSchema: ${responseSchema}`;
+          })
+          .join("\n")
+      : "N/A";
 
   const reflectionBlock =
     curatorFeedback && !curatorFeedback.passed
@@ -44,32 +131,58 @@ ${curatorFeedback.missingItems.map((m) => `- ${m}`).join("\n")}
 Garanta que os novos casos de teste cubram todos os itens acima com maior precisão.
 `
       : "";
+  const executionBriefBlock = executionBrief
+    ? `
+# Pedido de alteração vindo do chat do Horus
+${executionBrief}
 
+Valide especificamente essa alteração, além dos critérios de aceite da user story/spec ativa.
+`
+    : "";
+
+  const skill = loadAgentSkill("qa-frontend-testing");
   const prompt = `Você é um QA engineer especializado em testes de interface web. Gere casos de teste detalhados para validação manual.
+
+# Skill obrigatória do agente
+${skill}
 ${reflectionBlock}
+${executionBriefBlock}
 # História de Usuário
 ${userStory.title}
 
+# Abordagem Técnica
+${spec.technicalApproach}
+
 # Componentes da Página
 ${components}
+
+# Modelos de Dados
+${dataModels}
+
+# Contratos Futuros de API/Rotas
+${apiContracts}
 
 # Critérios de Aceite
 ${criteria}
 
 Gere um caso de teste por critério de aceite. Cada caso deve ter steps claros e objetivo com o resultado esperado.
+Se houver contratos futuros de API/Rotas, teste a prontidão do frontend por meio de boundary/adapters injetáveis, estados de loading/empty/error/success e compatibilidade de shape; não assuma que existe backend real nem peça mocks em código aplicado ao projeto.
 IDs devem ser TC-01, TC-02, etc.`;
+
+  const model = createChatModel("qa", {
+    temperature: 1,
+  }, llmSettings).withStructuredOutput(QaOutputSchema);
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return await model.invoke(prompt);
+      return QaOutputSchema.parse(await model.invoke(prompt));
     } catch (err) {
       console.warn(`[QaAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {
-        console.error("[QaAgent] All retries exhausted — returning empty test cases");
-        return { testCases: [] };
+        return buildFallbackQaOutput(spec, executionBrief);
       }
     }
   }
 
-  return { testCases: [] };
+  return buildFallbackQaOutput(spec, executionBrief);
 }

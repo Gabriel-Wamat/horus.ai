@@ -1,171 +1,282 @@
-import { useState, useEffect, useRef, type JSX } from "react";
-import type { WorkflowState, Spec, UserStory } from "@u-build/shared";
-import { workflowApi } from "./api/workflowApi.js";
-import { useEventStream } from "./hooks/useEventStream.js";
-import { UserStoryInputPage } from "./components/UserStoryInputPage.js";
-import { UserStoryList } from "./components/UserStoryList.js";
-import { SpecReview } from "./components/SpecReview.js";
-import { WorkflowProgress } from "./components/WorkflowProgress.js";
-import { RetryApproval, type RetryApprovalPayload } from "./components/RetryApproval.js";
+import { useEffect, useRef, useState, type JSX } from "react";
+import type { Spec } from "@u-build/shared";
+import { useAppNavigation } from "./app/useAppNavigation.js";
+import { useDisplayedWorkflowState } from "./app/useDisplayedWorkflowState.js";
+import { useProjectConstructionAction } from "./app/useProjectConstructionAction.js";
+import { useWorkspaceFolders } from "./app/useWorkspaceFolders.js";
+import { useWorkflowRuntime } from "./app/useWorkflowRuntime.js";
+import { RetryApproval } from "./components/RetryApproval.js";
 import { ArtifactsPanel } from "./components/ArtifactsPanel.js";
+import { Shell } from "./components/Shell.js";
+import { LlmSettingsModal } from "./components/LlmSettingsModal.js";
+import { StoryCreationDialog } from "./components/StoryCreationDialog.js";
+import { StorySpecWorkspace } from "./components/StorySpecWorkspace.js";
+import { VisualPreviewConsole } from "./components/VisualPreviewConsole.js";
+import { WorkflowProgress } from "./components/WorkflowProgress.js";
+import { Button, Panel, PanelHeader } from "./components/ui/index.js";
+import { AgentFlowPage } from "./features/agent-flow-map/AgentFlowPage.js";
+import { ProjectFilesPage } from "./features/project-files/ProjectFilesPage.js";
+
+function CancelledPanel({ onRestart }: { onRestart: () => void }): JSX.Element {
+  return (
+    <Panel>
+      <PanelHeader
+        kicker="Human review"
+        title="Workflow cancelado"
+        action={
+          <Button variant="panel" onClick={onRestart}>
+          Nova tentativa
+          </Button>
+        }
+      />
+      <div className="panel-body">
+        <div className="error-banner">
+          A especificação foi rejeitada e a execução foi encerrada.
+        </div>
+      </div>
+    </Panel>
+  );
+}
 
 export function App(): JSX.Element {
-  const [threadId, setThreadId] = useState<string | null>(null);
-  const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
+  const { appMode, setAppMode } = useAppNavigation();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const storyCreateButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Spec approval HITL
-  const [pendingSpec, setPendingSpec] = useState<{
-    userStoryId: string;
-    spec: Spec;
-  } | null>(null);
-
-  // Retry approval HITL (escalation after max retries)
-  const [pendingRetry, setPendingRetry] = useState<RetryApprovalPayload | null>(null);
-  const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
-
-  const [lastSubmittedStories, setLastSubmittedStories] = useState<UserStory[]>([]);
-
-  const { events, isConnected } = useEventStream(threadId);
-  // Track how many events have been processed to avoid re-processing on re-render.
-  // React 18 automatic batching can cause latestEvent to skip events when two SSE
-  // messages arrive in the same microtask, so we drain the events array instead.
-  const processedCountRef = useRef(0);
+  const workspace = useWorkspaceFolders();
+  const closeStoryModal = (): void => setIsStoryModalOpen(false);
+  const workflow = useWorkflowRuntime({
+    selectedWorkspaceFolderId: workspace.selectedWorkspaceFolderId,
+    selectedStoryId: workspace.selectedStoryId,
+    persistedSpecsByStoryId: workspace.persistedSpecsByStoryId,
+    setPersistedStories: workspace.setPersistedStories,
+    setPersistedSpecsByStoryId: workspace.setPersistedSpecsByStoryId,
+    setLastSubmittedStories: workspace.setLastSubmittedStories,
+    setSelectedStoryId: workspace.setSelectedStoryId,
+    setStorySpecTab: workspace.setStorySpecTab,
+    setWorkspaceFolderArtifactsById: workspace.setWorkspaceFolderArtifactsById,
+    setWorkspaceFolderError: workspace.setWorkspaceFolderError,
+    loadWorkspaceFolders: workspace.loadWorkspaceFolders,
+    closeStoryModal,
+  });
 
   useEffect(() => {
-    if (!threadId) return;
+    if (!isStoryModalOpen) return;
+    void workspace.loadWorkspaceFolders();
+  }, [isStoryModalOpen]);
 
-    const newEvents = events.slice(processedCountRef.current);
-    processedCountRef.current = events.length;
+  const submittedStories =
+    workflow.workflowState?.userStories ??
+    (workspace.persistedStories.length > 0
+      ? workspace.persistedStories
+      : workspace.lastSubmittedStories);
 
-    for (const event of newEvents) {
-      switch (event.type) {
-        case "awaiting_approval":
-          setPendingSpec({
-            userStoryId: event.userStoryId,
-            spec: event.spec,
-          });
-          break;
+  const hasTerminalWorkflowEvent = workflow.events.some(
+    (event) =>
+      event.type === "status_changed" &&
+      (event.status === "completed" ||
+        event.status === "cancelled" ||
+        event.status === "error")
+  );
+  const hasRunningWorkflowEvent = workflow.events.some(
+    (event) => event.type === "status_changed" && event.status === "running"
+  );
+  const isWorkflowRunning = Boolean(
+    workflow.threadId && hasRunningWorkflowEvent && !hasTerminalWorkflowEvent
+  );
 
-        case "awaiting_retry_approval":
-          setPendingRetry({
-            userStoryId: event.userStoryId,
-            retryCount: event.retryCount,
-            score: event.score,
-            notes: event.notes,
-            missingItems: event.missingItems,
-          });
-          break;
+  const { displayedWorkflowState, agentFlowState } = useDisplayedWorkflowState({
+    workflowState: workflow.workflowState,
+    threadId: workflow.threadId,
+    selectedWorkspaceFolderId: workspace.selectedWorkspaceFolderId,
+    selectedStoryId: workspace.selectedStoryId,
+    submittedStories,
+    persistedSpecsByStoryId: workspace.persistedSpecsByStoryId,
+    pendingSpec: workflow.pendingSpec,
+  });
 
-        case "status_changed":
-          if (event.status === "completed" || event.status === "error") {
-            void workflowApi.getStatus(threadId).then(setWorkflowState);
-          }
-          if (event.status === "running") {
-            setPendingRetry(null);
-          }
-          break;
-      }
-    }
-  }, [events, threadId]);
+  const projectConstruction = useProjectConstructionAction({
+    selectedWorkspaceFolderId: workspace.selectedWorkspaceFolderId,
+    workspaceFolders: workspace.workspaceFolders,
+    submittedStories,
+    persistedSpecsByStoryId: workspace.persistedSpecsByStoryId,
+    setWorkspaceFolderError: workspace.setWorkspaceFolderError,
+  });
 
-  const handleStart = async (stories: UserStory[]): Promise<void> => {
-    setLastSubmittedStories(stories);
-    const { threadId: id } = await workflowApi.start(stories);
-    setThreadId(id);
-  };
-
-  const handleSpecApproval = async (
-    approved: boolean,
-    editedSpec?: Spec
+  const handleUpdateWorkspaceSpec = async (
+    storyId: string,
+    spec: Spec
   ): Promise<void> => {
-    if (!threadId || !pendingSpec) return;
-
-    if (!approved) {
-      setThreadId(null);
-      setPendingSpec(null);
-      setWorkflowState(null);
-      return;
-    }
-
-    await workflowApi.resume(threadId, pendingSpec.userStoryId, {
-      approved: true,
-      editedSpec,
-      reviewedAt: new Date().toISOString(),
-    });
-
-    setPendingSpec(null);
+    const updated = await workspace.handleUpdateWorkspaceSpec(storyId, spec);
+    if (!updated) return;
+    workflow.setWorkflowState((current) =>
+      current ? { ...current, specs: { ...current.specs, [storyId]: updated } } : current
+    );
+    workflow.setPendingSpec((current) =>
+      current?.userStoryId === storyId ? { ...current, spec: updated } : current
+    );
   };
 
-  const handleRetryDecision = async (continueRetry: boolean): Promise<void> => {
-    if (!threadId || !pendingRetry) return;
+  const specWorkspace = (
+    <StorySpecWorkspace
+      stories={submittedStories}
+      workflowState={displayedWorkflowState}
+      pendingSpec={workflow.pendingSpec}
+      workspaceFolders={workspace.workspaceFolders}
+      workspaceFolderArtifactsById={workspace.workspaceFolderArtifactsById}
+      loadingWorkspaceFolderIds={workspace.loadingWorkspaceFolderIds}
+      selectedWorkspaceFolderId={workspace.selectedWorkspaceFolderId}
+      selectedStoryId={workspace.selectedStoryId}
+      activeTab={workspace.storySpecTab}
+      onCreateStory={() => setIsStoryModalOpen(true)}
+      createStoryButtonRef={storyCreateButtonRef}
+      onGenerateSpecs={() => {
+        if (!workspace.selectedWorkspaceFolderId || submittedStories.length === 0) return;
+        void workflow.handleStart(submittedStories, workspace.selectedWorkspaceFolderId, {
+          workflowMode: "spec_generation",
+        });
+      }}
+      onGenerateSpecsAndBuild={() => {
+        if (!workspace.selectedWorkspaceFolderId || submittedStories.length === 0) return;
+        void projectConstruction.startProjectConstruction();
+      }}
+      onSelectWorkspaceFolder={workspace.setSelectedWorkspaceFolderId}
+      onLoadWorkspaceFolder={(folderId) => {
+        void workspace.loadWorkspaceStoryArtifactsForFolder(folderId);
+      }}
+      onSelectStory={(storyId, folderId) => {
+        if (folderId && folderId !== workspace.selectedWorkspaceFolderId) {
+          workspace.setSelectedWorkspaceFolderId(folderId);
+        }
+        workspace.setSelectedStoryId(storyId);
+        workspace.setStorySpecTab(
+          workflow.pendingSpec?.userStoryId === storyId ? "spec" : workspace.storySpecTab
+        );
+      }}
+      onUpdateStory={(story) => workspace.handleUpdateWorkspaceStory(story, submittedStories)}
+      onDeleteStory={(storyId) => workspace.handleDeleteWorkspaceStory(storyId, submittedStories)}
+      onUpdateSpec={handleUpdateWorkspaceSpec}
+      onChangeTab={workspace.setStorySpecTab}
+      onApproveSpec={(edited) => workflow.handleSpecApproval(true, edited)}
+      onRejectSpec={() => workflow.handleSpecApproval(false)}
+      isGeneratingSpecs={workflow.isStartingWorkflow || isWorkflowRunning}
+      isLoadingStories={workspace.isLoadingWorkspaceStories}
+      constructionNotice={projectConstruction.projectConstructionNotice}
+      constructionError={projectConstruction.projectConstructionError}
+    />
+  );
 
-    setIsRetrySubmitting(true);
-    try {
-      await workflowApi.retryDecision(
-        threadId,
-        pendingRetry.userStoryId,
-        continueRetry
-      );
-      if (!continueRetry) {
-        // User stopped: fetch final state
-        const state = await workflowApi.getStatus(threadId);
-        setWorkflowState(state);
-      }
-      setPendingRetry(null);
-    } finally {
-      setIsRetrySubmitting(false);
-    }
-  };
+  const actionPanels = (
+    <>
+      {workflow.threadId && (
+        <WorkflowProgress
+          threadId={workflow.threadId}
+          events={workflow.events}
+          isConnected={workflow.isConnected}
+        />
+      )}
+      {workflow.pendingRetry && workflow.threadId && (
+        <RetryApproval
+          payload={workflow.pendingRetry}
+          onContinue={() => workflow.handleRetryDecision(true)}
+          onStop={() => workflow.handleRetryDecision(false)}
+          isSubmitting={workflow.isRetrySubmitting}
+        />
+      )}
+      {workflow.workflowState?.status === "cancelled" && (
+        <CancelledPanel onRestart={workflow.resetWorkflow} />
+      )}
+      {workflow.workflowState?.status === "completed" && workflow.threadId && (
+        <ArtifactsPanel state={workflow.workflowState} threadId={workflow.threadId} />
+      )}
+    </>
+  );
+  const hasActionPanels = Boolean(
+    workflow.threadId ||
+      workflow.pendingRetry ||
+      workflow.workflowState?.status === "cancelled" ||
+      workflow.workflowState?.status === "completed"
+  );
 
-  if (!threadId) {
-    return <UserStoryInputPage onSubmit={handleStart} initialStories={lastSubmittedStories} />;
-  }
+  const mainContent =
+    appMode === "preview" ? (
+      <VisualPreviewConsole
+        workspaceFolderId={workspace.selectedWorkspaceFolderId || undefined}
+        userStoryId={workspace.selectedStoryId}
+      />
+    ) : appMode === "files" ? (
+      <ProjectFilesPage />
+    ) : appMode === "agents" ? (
+      <AgentFlowPage workflowState={agentFlowState} events={workflow.events} />
+    ) : (
+      <div className="user-story-screen">
+        {specWorkspace}
+        {hasActionPanels && <div className="user-story-ops-grid">{actionPanels}</div>}
+      </div>
+    );
+
+  const llmStatus = workflow.isLoadingLlmProfile
+    ? "checking"
+    : workflow.llmProfile
+    ? `${workflow.llmProfile.provider} ${workflow.llmProfile.validationStatus}`
+    : "env";
+  const shellStatus = workflow.threadId
+    ? [
+        {
+          label: "thread",
+          value: `${workflow.threadId.slice(0, 8)}…${workflow.threadId.slice(-4)}`,
+        },
+        {
+          label: "stream",
+          value: workflow.isConnected ? "live" : "offline",
+          live: workflow.isConnected,
+        },
+        { label: "events", value: String(workflow.events.length) },
+        { label: "llm", value: llmStatus },
+      ]
+    : [
+        { label: "mode", value: appMode === "stories" ? "draft" : appMode },
+        { label: "stories", value: String(submittedStories.length) },
+        { label: "llm", value: llmStatus },
+      ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <div className="size-8 rounded-lg bg-violet-600 flex items-center justify-center">
-            <svg className="size-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-            </svg>
-          </div>
-          <span className="font-semibold text-white tracking-tight">
-            horus<span className="text-violet-400">.ai</span>
-          </span>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-6 py-10 flex flex-col gap-6">
-        <WorkflowProgress
-          threadId={threadId}
-          events={events}
-          isConnected={isConnected}
-        />
-
-        {workflowState && <UserStoryList state={workflowState} />}
-
-        {workflowState?.status === "completed" && threadId && (
-          <ArtifactsPanel state={workflowState} threadId={threadId} />
-        )}
-
-        {pendingSpec && (
-          <SpecReview
-            spec={pendingSpec.spec}
-            onApprove={(edited) => handleSpecApproval(true, edited)}
-            onReject={() => handleSpecApproval(false)}
-          />
-        )}
-
-        {pendingRetry && (
-          <RetryApproval
-            payload={pendingRetry}
-            onContinue={() => handleRetryDecision(true)}
-            onStop={() => handleRetryDecision(false)}
-            isSubmitting={isRetrySubmitting}
-          />
-        )}
-      </main>
-    </div>
+    <>
+      <Shell
+        title="horus.ai"
+        subtitle="Agentic software delivery console"
+        activeMode={appMode}
+        onChangeMode={setAppMode}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        status={shellStatus}
+      >
+        {mainContent}
+      </Shell>
+      <LlmSettingsModal
+        isOpen={isSettingsOpen}
+        profile={workflow.llmProfile}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={async (settings) => {
+          await workflow.saveLlmSettings(settings);
+          setIsSettingsOpen(false);
+        }}
+        onTest={workflow.testLlmSettings}
+        onDelete={workflow.deleteLlmSettings}
+      />
+      <StoryCreationDialog
+        isOpen={isStoryModalOpen}
+        triggerRef={storyCreateButtonRef}
+        initialStories={workspace.lastSubmittedStories}
+        workspaceFolders={workspace.workspaceFolders}
+        selectedWorkspaceFolderId={workspace.selectedWorkspaceFolderId}
+        isLoadingWorkspaceFolders={workspace.isLoadingWorkspaceFolders}
+        workspaceFolderError={workspace.workspaceFolderError}
+        onClose={closeStoryModal}
+        onSubmit={workflow.handleStart}
+        onSelectWorkspaceFolder={workspace.setSelectedWorkspaceFolderId}
+        onCreateWorkspaceFolder={workspace.handleCreateWorkspaceFolder}
+      />
+    </>
   );
 }

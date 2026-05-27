@@ -2,7 +2,9 @@ import { createRequire } from "node:module";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
-import type { AgentResult } from "@u-build/shared";
+import { WorkflowResumeUnavailableError } from "../../../domain/services/resumeCheckpoint.js";
+import { buildWorkflowArtifactFiles } from "../artifacts.js";
+import { WorkspaceFolderNotFoundError } from "../../workspace/FileWorkspaceStore.js";
 
 // archiver is CJS — use createRequire for ESM interop
 const _require = createRequire(import.meta.url);
@@ -31,6 +33,10 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
         res.status(400).json({ error: "Validation failed", issues: err.issues });
         return;
       }
+      if (err instanceof WorkspaceFolderNotFoundError) {
+        res.status(404).json({ error: "Workspace folder not found", message: err.message });
+        return;
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -42,6 +48,13 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
     } catch (err) {
       if (err instanceof ZodError) {
         res.status(400).json({ error: "Validation failed", issues: err.issues });
+        return;
+      }
+      if (err instanceof WorkflowResumeUnavailableError) {
+        res.status(409).json({
+          error: "Workflow checkpoint unavailable",
+          message: err.message,
+        });
         return;
       }
       res.status(500).json({ error: "Internal server error" });
@@ -56,6 +69,13 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
     } catch (err) {
       if (err instanceof ZodError) {
         res.status(400).json({ error: "Validation failed", issues: err.issues });
+        return;
+      }
+      if (err instanceof WorkflowResumeUnavailableError) {
+        res.status(409).json({
+          error: "Workflow checkpoint unavailable",
+          message: err.message,
+        });
         return;
       }
       res.status(500).json({ error: "Internal server error" });
@@ -91,13 +111,6 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
         return;
       }
 
-      const slugify = (text: string) =>
-        text
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")
-          .slice(0, 40) || "story";
-
       res.setHeader("Content-Type", "application/zip");
       res.setHeader(
         "Content-Disposition",
@@ -107,31 +120,8 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
       const archive = archiver("zip", { zlib: { level: 9 } });
       archive.pipe(res);
 
-      for (const story of state.userStories) {
-        const folder = slugify(story.title);
-        const results = state.agentResults[story.id] ?? [];
-
-        const frontResult = results.find(
-          (r: AgentResult) => r.status === "success" && r.agentName === "front"
-        );
-        const frontHtml =
-          frontResult?.status === "success"
-            ? (frontResult.output["html"] as string | undefined)
-            : undefined;
-        if (frontHtml) {
-          archive.append(frontHtml, { name: `${folder}/page.html` });
-        }
-
-        const qaResult = results.find(
-          (r: AgentResult) => r.status === "success" && r.agentName === "qa"
-        );
-        const testCases =
-          qaResult?.status === "success" ? qaResult.output["testCases"] : undefined;
-        if (testCases) {
-          archive.append(JSON.stringify(testCases, null, 2), {
-            name: `${folder}/test-cases.json`,
-          });
-        }
+      for (const file of buildWorkflowArtifactFiles(state)) {
+        archive.append(file.content, { name: file.name });
       }
 
       await archive.finalize();

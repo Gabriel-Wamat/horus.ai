@@ -1,0 +1,58 @@
+---
+title: Testing And Quality Gates
+description: Validation commands, what each suite covers, and which checks are required for common change types.
+---
+
+## Validation Layers
+
+| Command | Scope | Use |
+| --- | --- | --- |
+| `pnpm type-check` | Workspace packages with type-check scripts | Catch TypeScript contract and package boundary errors |
+| `pnpm build` | Turbo build across packages | Verify production build output for server, web, shared, and docs |
+| `pnpm test` | Workspace build plus shared/server Node tests | Main repository validation gate |
+| `pnpm --filter @u-build/web test:guards` | Frontend regression guards | Validate frontend-specific invariants |
+| `pnpm --filter @u-build/docs build` | Documentation app | Validate MDX, routes, generated source, and Next build |
+
+## Required Checks By Change Type
+
+| Change Type | Required Checks |
+| --- | --- |
+| Shared schemas | `pnpm type-check`, `pnpm build`, `pnpm test` |
+| Server routes/use cases | `pnpm --filter @u-build/server type-check`, `pnpm test` |
+| Persistence repositories | `pnpm test`, plus targeted repository tests |
+| LangGraph workflow routing | `pnpm test`, plus orchestrator/routing tests |
+| Web UI | `pnpm --filter @u-build/web type-check`, `pnpm --filter @u-build/web build`, `pnpm --filter @u-build/web test:guards` |
+| Documentation | `pnpm --filter @u-build/docs build` |
+| Visual documentation shell | Docs build plus local browser review at `http://localhost:3002/docs` |
+
+## Quality Gate Semantics
+
+Horus should not treat a generated result as successful because an agent response sounds persuasive. Success should be supported by:
+
+- Accepted spec.
+- Proposed code change set.
+- QA expectations and evidence.
+- Curator pass/fail report.
+- Preview smoke evidence when preview is involved.
+- Persisted workflow events.
+- Inspectable run-flow state.
+
+## Test Gaps To Watch
+
+| Area | Risk |
+| --- | --- |
+| Postgres mode | File-mode tests do not automatically prove database behavior |
+| Preview runtime | Process lifecycle and port conflicts are environment-sensitive |
+| LLM providers | Build/tests can pass without real provider credentials |
+| Generated workspaces | Command policy and filesystem boundaries need targeted tests |
+| Documentation visuals | Build passing does not prove layout quality; use local visual review |
+
+## Handoff Checklist
+
+Before handing off a change:
+
+1. Run the smallest package-specific check while iterating.
+2. Run the broader workspace checks before final handoff.
+3. Note any skipped checks and why.
+4. Include the command output summary in the handoff.
+5. Do not imply runtime validation that was not actually performed.

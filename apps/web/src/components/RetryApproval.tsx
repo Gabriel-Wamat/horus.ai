@@ -25,125 +25,98 @@ export function RetryApproval({
 }: RetryApprovalProps): JSX.Element {
   const scoreColor =
     payload.score >= 70
-      ? "text-emerald-400"
+      ? "var(--p)"
       : payload.score >= 50
-      ? "text-amber-400"
-      : "text-rose-400";
+      ? "var(--warn)"
+      : "var(--danger)";
 
   return (
-    <div className="bg-slate-900 border border-amber-700/60 rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-800 flex items-center gap-3 bg-amber-950/30">
-        <div className="size-8 rounded-lg bg-amber-600/20 border border-amber-700 flex items-center justify-center shrink-0">
-          <svg
-            className="size-4 text-amber-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-            />
-          </svg>
-        </div>
+    <section className="panel">
+      <div className="panel-head" style={{ background: "rgba(240, 180, 41, 0.05)" }}>
         <div>
-          <h2 className="text-sm font-semibold text-white">
+          <p className="panel-kicker">Curator escalation</p>
+          <h2 className="panel-title">
             Curadoria não aprovada após {MAX_RETRIES} tentativas
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="workflow-meta">
             Deseja continuar com mais {MAX_RETRIES} tentativas?
           </p>
         </div>
       </div>
 
-      <div className="p-6 flex flex-col gap-5">
-        {/* Score */}
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center justify-center size-16 rounded-xl bg-slate-800 border border-slate-700 shrink-0">
-            <span className={`text-xl font-bold tabular-nums ${scoreColor}`}>
+      <div className="panel-body form-grid">
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div className="story-card" style={{ width: 72, textAlign: "center" }}>
+            <span className="panel-title" style={{ color: scoreColor }}>
               {payload.score}
             </span>
-            <span className="text-[10px] text-slate-500">/100</span>
+            <span className="workflow-meta">/100</span>
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
+            <p className="panel-kicker">
               Avaliação do Curador
             </p>
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="message-body">
               {payload.notes}
             </p>
           </div>
         </div>
 
-        {/* Missing items */}
         {payload.missingItems.length > 0 && (
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+            <p className="panel-kicker">
               Itens Faltando ({payload.missingItems.length})
             </p>
-            <div className="flex flex-col gap-1.5">
+            <div className="form-grid" style={{ gap: 8 }}>
               {payload.missingItems.map((item, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-rose-500 mt-0.5 shrink-0">
-                    <svg
-                      className="size-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18 18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </span>
-                  <p className="text-sm text-slate-400">{item}</p>
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span className="step-dot failed" style={{ width: 7, height: 7, marginTop: 6 }} />
+                  <p className="message-body">{item}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Attempt counter */}
-        <div className="flex items-center gap-2">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {Array.from({ length: MAX_RETRIES }, (_, i) => (
             <div
               key={i}
-              className={`h-1.5 flex-1 rounded-full ${
-                i < payload.retryCount % MAX_RETRIES || payload.retryCount >= MAX_RETRIES
-                  ? "bg-amber-500"
-                  : "bg-slate-700"
-              }`}
+              style={{
+                height: 6,
+                flex: 1,
+                borderRadius: 999,
+                background:
+                  i < payload.retryCount % MAX_RETRIES || payload.retryCount >= MAX_RETRIES
+                    ? "var(--warn)"
+                    : "var(--s3)",
+              }}
             />
           ))}
-          <span className="text-xs text-slate-500 shrink-0 ml-1">
+          <span className="workflow-meta">
             {payload.retryCount} tentativa{payload.retryCount !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between gap-4">
-        <p className="text-xs text-slate-500">
+      <div className="panel-head" style={{ borderTop: "1px solid var(--bd)", borderBottom: 0 }}>
+        <p className="workflow-meta">
           Se continuar, os agentes receberão o feedback do curador para corrigir os problemas.
         </p>
-        <div className="flex items-center gap-3 shrink-0">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
+            type="button"
             onClick={onStop}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ghost-button"
           >
             Encerrar
           </button>
           <button
+            type="button"
             onClick={onContinue}
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="primary-button"
           >
             {isSubmitting ? (
               <>
@@ -185,6 +158,6 @@ export function RetryApproval({
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
