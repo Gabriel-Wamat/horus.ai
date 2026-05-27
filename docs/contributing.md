@@ -177,7 +177,7 @@ Never commit:
 - `output/`
 - `spec/`
 - `docs/specs/`
-- root local reference files such as `AGENTS.md`, `private-model.md`, `ID_VISUAL.md`, `UNPROTECT.md`
+- local-only operator notes and machine-specific reference files
 
 `README.md` and public files under `docs/` are intended to be tracked.
 
