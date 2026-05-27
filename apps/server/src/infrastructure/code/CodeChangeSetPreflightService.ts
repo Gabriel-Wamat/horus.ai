@@ -20,6 +20,7 @@ export interface CodeChangeSetPreflightResult {
 }
 
 const VALIDATION_COMMAND_PRIORITY = [
+  "install",
   "type-check",
   "check",
   "test",
@@ -36,6 +37,7 @@ export class CodeChangeSetPreflightService {
   async validate(input: {
     changeSet: CodeChangeSet;
     projectRootPath: string;
+    constructionRunId?: string | null;
     workflowThreadId?: string | null;
     userStoryId?: string | null;
     projectId?: string | null;
@@ -61,6 +63,7 @@ export class CodeChangeSetPreflightService {
         ],
         runtimeEvidence: buildRuntimeEvidence({
           workflowThreadId: input.workflowThreadId,
+          constructionRunId: input.constructionRunId,
           userStoryId: input.userStoryId,
           projectId: input.projectId,
           status: "failed",
@@ -110,6 +113,7 @@ export class CodeChangeSetPreflightService {
           ],
           runtimeEvidence: buildRuntimeEvidence({
             workflowThreadId: input.workflowThreadId,
+            constructionRunId: input.constructionRunId,
             userStoryId: input.userStoryId,
             projectId: input.projectId,
             status: "skipped",
@@ -123,7 +127,8 @@ export class CodeChangeSetPreflightService {
       }
 
       const commandRuns = await this.executionService.executeCommandRequests({
-        constructionRunId: input.changeSet.workflowThreadId,
+        constructionRunId:
+          input.constructionRunId ?? input.changeSet.workflowThreadId,
         roleName: "curator",
         plan: {
           summary: "Run terminal preflight for candidate CodeChangeSet",
@@ -145,7 +150,7 @@ export class CodeChangeSetPreflightService {
         stderr: run.stderrTail,
       }));
       const issues = failedRuns.map((run) => {
-        const detail = run.stderrTail || run.stdoutTail || "Command failed.";
+        const detail = formatCommandFailureDetail(run);
         return `[terminal] ${run.commandId} failed with exit ${String(run.exitCode)}: ${detail}`;
       });
 
@@ -155,6 +160,7 @@ export class CodeChangeSetPreflightService {
         validation,
         runtimeEvidence: buildRuntimeEvidence({
           workflowThreadId: input.workflowThreadId,
+          constructionRunId: input.constructionRunId,
           userStoryId: input.userStoryId,
           projectId: input.projectId,
           status: issues.length === 0 ? "passed" : "failed",
@@ -190,6 +196,7 @@ export class CodeChangeSetPreflightService {
         ],
         runtimeEvidence: buildRuntimeEvidence({
           workflowThreadId: input.workflowThreadId,
+          constructionRunId: input.constructionRunId,
           userStoryId: input.userStoryId,
           projectId: input.projectId,
           status: "failed",
@@ -225,6 +232,28 @@ function commandPriority(commandId: string): number {
   return index === -1 ? VALIDATION_COMMAND_PRIORITY.length : index;
 }
 
+function formatCommandFailureDetail(run: {
+  stdoutTail: string;
+  stderrTail: string;
+}): string {
+  const stdout = run.stdoutTail.trim();
+  const stderr = run.stderrTail.trim();
+  if (!stdout && !stderr) return "Command failed.";
+
+  const stderrOnlyWarnings =
+    stderr.length > 0 &&
+    stderr
+      .split(/\r?\n/u)
+      .every((line) => /^(npm|pnpm|yarn)\s+warn\b/i.test(line.trim()));
+
+  if (stdout && (!stderr || stderrOnlyWarnings)) {
+    return stderr ? `${stdout}\n${stderr}` : stdout;
+  }
+
+  if (stdout && stderr) return `${stderr}\n${stdout}`;
+  return stderr || stdout;
+}
+
 async function rollbackAppliedOperations(
   appliedOperations: Array<{
     targetPath: string;
@@ -242,6 +271,7 @@ async function rollbackAppliedOperations(
 
 function buildRuntimeEvidence(input: {
   workflowThreadId?: string | null | undefined;
+  constructionRunId?: string | null | undefined;
   userStoryId?: string | null | undefined;
   projectId?: string | null | undefined;
   status: RuntimeValidationEvidence["status"];
@@ -252,7 +282,7 @@ function buildRuntimeEvidence(input: {
   return RuntimeValidationEvidenceSchema.parse({
     id: uuidv4(),
     workflowThreadId: input.workflowThreadId ?? null,
-    constructionRunId: null,
+    constructionRunId: input.constructionRunId ?? null,
     userStoryId: input.userStoryId ?? null,
     projectId: input.projectId ?? null,
     status: input.status,

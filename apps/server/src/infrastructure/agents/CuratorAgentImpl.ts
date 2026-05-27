@@ -1,8 +1,14 @@
 import { z } from "zod";
-import type { CodeChangeSet, LlmSettings, Spec } from "@u-build/shared";
+import type {
+  CodeChangeSet,
+  DesignContextBundle,
+  LlmSettings,
+  Spec,
+} from "@u-build/shared";
 import type { QaOutput } from "./QaAgentImpl.js";
 import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
+import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
 
 const CuratorOutputSchema = z.object({
   passed: z.boolean(),
@@ -21,7 +27,8 @@ export async function validateOutput(
   qaOutput: QaOutput = { testCases: [] },
   codeChangeSet: CodeChangeSet | undefined,
   llmSettings?: LlmSettings,
-  executionBrief?: string
+  executionBrief?: string,
+  designContext?: DesignContextBundle
 ): Promise<CuratorOutput> {
   if (!codeChangeSet) {
     return {
@@ -95,7 +102,8 @@ export async function validateOutput(
     qaOutput,
     codeChangeSet,
     skill,
-    executionBrief
+    executionBrief,
+    designContext
   );
 
   const model = createChatModel("curator", {
@@ -142,7 +150,8 @@ export function buildCuratorPrompt(
   qaOutput: QaOutput = { testCases: [] },
   codeChangeSet: CodeChangeSet | undefined,
   skill: string,
-  executionBrief?: string
+  executionBrief?: string,
+  designContext?: DesignContextBundle
 ): string {
   const components = spec.components
     .map((c) => `- ${c.name} (${c.type}): ${c.description}`)
@@ -217,12 +226,17 @@ ${executionBrief}
 Além da spec ativa, avalie se o HTML e os testes respondem especificamente a esse pedido.
 `
     : "";
+  const visualContractPreview = spec.visualContract
+    ? JSON.stringify(spec.visualContract, null, 2)
+    : "N/A";
 
   return `Você é um curador de qualidade de software. Analise o HTML gerado e os casos de teste de QA. Verifique se ambos atendem à especificação técnica completa.
 
 # Skill obrigatória do agente
 ${skill}
 ${executionBriefBlock}
+
+${formatDesignContextForPrompt(designContext)}
 
 # Especificação Técnica
 
@@ -243,6 +257,11 @@ ${apiContracts}
 
 **Critérios de Aceite:**
 ${criteria}
+
+**VisualContract:**
+\`\`\`json
+${visualContractPreview}
+\`\`\`
 
 # HTML Gerado
 \`\`\`html
@@ -273,7 +292,7 @@ ${changeSetPreview}
 - score: 0–100 indicando cobertura combinada da spec pelo HTML e pelos testes
 - passed: true se score >= 70, houver CodeChangeSet auditável, houver casos de QA e não houver lacuna crítica no HTML nem nos testes
 - notes: resumo objetivo da avaliação em 1–2 frases
-- missingItems: lista dos itens da spec ausentes, incompletos ou sem cobertura de teste (array vazio se passou). Use prefixos curtos quando possível: [front], [qa], [data], [route], [accessibility], [responsive]
+- missingItems: lista dos itens da spec ausentes, incompletos ou sem cobertura de teste (array vazio se passou). Use prefixos curtos quando possível: [front], [front:pattern], [front:component], [front:visual], [qa], [data], [route], [accessibility], [responsive]
 - fixTarget: se falhou, indique qual agente deve corrigir:
   - "front" → problema visual/estrutural no HTML/CSS/JS
   - "qa" → HTML adequado, mas testes ausentes, fracos ou desalinhados aos critérios de aceite
@@ -284,6 +303,9 @@ ${changeSetPreview}
 - Se o CodeChangeSet usar mock/fake adapter, Math.random ou arquivo solto não alcançável pelo entrypoint do app, passed deve ser false.
 - Se dataModels existir, avalie se campos, formatação e fallbacks aparecem no HTML e nos testes.
 - Se a abordagem técnica define loading, empty, error, success, acessibilidade ou responsividade, avalie tanto implementação quanto cobertura de QA.
+- Se visualContract existir, avalie tokens, densidade, componentes existentes, estados, responsividade, acessibilidade e antiPatterns. Violacao clara do contrato visual deve falhar.
+- Se a spec/technicalApproach/visualContract indicar um frontend pattern, avalie se HTML e CodeChangeSet respeitam a hierarquia, estados, component-policy e anti-patterns desse pattern. Violacao clara deve falhar com [front:pattern], [front:component] ou [front:visual].
+- Falhe layouts genericos quando a spec pede ferramenta operacional, workbench de chat/preview, mapa de workflow ou CRUD; pattern errado e visivel nao e preferencia subjetiva.
 - Se CodeChangeSet estiver ausente, vazio, sem diff ou sem operação de arquivo, passed deve ser false.
 - Se a validação smoke do preview existir e status não for "passed", passed deve ser false.
 - Se a evidência runtime executável existir e status for "failed", passed deve ser false.

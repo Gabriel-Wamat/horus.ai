@@ -111,6 +111,19 @@ test("Preview chat uses the streaming turn endpoint with optimistic local messag
   assert.doesNotMatch(consoleSource, /\.submitTurn\(\{/);
 });
 
+test("Spec review renders visualContract compactly without verbose prompt blocks", () => {
+  const review = read("src/components/SpecReview.tsx");
+  const workspace = read("src/components/StorySpecWorkspace.tsx");
+  const css = read("src/index.css");
+
+  assert.match(review, /VisualContractSummary/);
+  assert.match(review, /Contrato visual/);
+  assert.match(review, /visualContract\.colorPolicy/);
+  assert.match(workspace, /<VisualContractSummary visualContract=\{spec\.visualContract\}/);
+  assert.match(css, /\.visual-contract-summary/);
+  assert.doesNotMatch(review, /JSON\.stringify\(visualContract/);
+});
+
 test("Agent flow marks manual viewport movement and allows node drag autopan", () => {
   const canvas = read("src/features/agent-flow-map/components/AgentFlowCanvas.tsx");
   assert.match(canvas, /onMoveStart=\{handleViewportMoveStart\}/);

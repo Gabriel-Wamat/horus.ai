@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type JSX, type KeyboardEvent, type Ref } from "react";
 import type { Spec, UserStory, WorkflowState, WorkspaceFolder } from "@u-build/shared";
-import { SpecReview } from "./SpecReview.js";
+import { SpecReview, VisualContractSummary } from "./SpecReview.js";
 import { useFolderExpansionState } from "./story-spec/useFolderExpansionState.js";
 
 type DetailTab = "story" | "spec";
@@ -544,6 +544,8 @@ function ReadOnlySpecDetail({ spec }: { spec: Spec }): JSX.Element {
         <h2>Abordagem técnica</h2>
         <p className="document-body">{spec.technicalApproach}</p>
       </section>
+
+      <VisualContractSummary visualContract={spec.visualContract} />
 
       {spec.components.length > 0 && (
         <section className="document-preview-section">

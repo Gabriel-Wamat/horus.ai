@@ -79,7 +79,12 @@ function curatorResult(passed) {
   };
 }
 
-function createHarness({ graphChunks, projectRoot, applier = new ProjectCodeChangeSetApplier() }) {
+function createHarness({
+  graphChunks,
+  projectRoot,
+  applier = new ProjectCodeChangeSetApplier(),
+  projectConstructionRuns,
+}) {
   let initialInput;
   let savedState;
   const savedChangeSets = [];
@@ -144,7 +149,8 @@ function createHarness({ graphChunks, projectRoot, applier = new ProjectCodeChan
     undefined,
     undefined,
     sink,
-    applier
+    applier,
+    projectConstructionRuns
   );
 
   return {
@@ -343,4 +349,79 @@ test("WorkflowOrchestrator does not emit patch_applied when final applier return
       ),
     true
   );
+});
+
+test("WorkflowOrchestrator marks project construction run as passed when workflow completes", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-workflow-project-"));
+  const constructionRunId = "88888888-8888-4888-8888-888888888888";
+  let constructionRun = {
+    id: constructionRunId,
+    projectWorkspaceId: "99999999-9999-4999-8999-999999999999",
+    workflowRunId: null,
+    status: "running",
+    workspacePath: projectRoot,
+    branchName: "main",
+    baseRef: "main",
+    selectedUserStoryIds: [userStory.id],
+    selectedSpecIds: [spec.id],
+    startedAt: "2026-05-27T00:00:00.000Z",
+    finishedAt: null,
+    error: null,
+  };
+  const updates = [];
+  const waiters = [];
+  const harness = createHarness({
+    projectRoot,
+    projectConstructionRuns: {
+      getConstructionRun: async () => constructionRun,
+      updateConstructionRun: async (run) => {
+        constructionRun = run;
+        updates.push(run);
+        for (const waiter of waiters.splice(0)) waiter();
+        return run;
+      },
+    },
+    graphChunks: (input) => [
+      {
+        frontAgent: {
+          agentResults: {
+            [userStory.id]: [{ output: { codeChangeSet: codeChangeSet(input.threadId) } }],
+          },
+        },
+      },
+      {
+        curatorAgent: {
+          agentResults: {
+            [userStory.id]: [curatorResult(true)],
+          },
+          status: "completed",
+        },
+      },
+    ],
+  });
+
+  await harness.orchestrator.start({
+    workspaceFolderId,
+    userStories: [userStory],
+    workspaceArtifactContext: {
+      [userStory.id]: {
+        workspaceFolderId,
+        constructionRunId,
+      },
+    },
+    initialSpecs: {
+      [userStory.id]: spec,
+    },
+    workflowMode: "project_construction",
+    frontendProjectId: project.id,
+    frontendProjectRootPath: projectRoot,
+  });
+
+  while (!updates.some((run) => run.status === "passed")) {
+    await new Promise((resolve) => waiters.push(resolve));
+  }
+
+  assert.equal(constructionRun.status, "passed");
+  assert.equal(constructionRun.error, null);
+  assert.ok(constructionRun.finishedAt);
 });

@@ -396,7 +396,14 @@ function summarizeAgentResult(result: AgentResult): string {
   if (result.agentName === "spec") return `Spec gerada: ${String(result.output["specId"] ?? "")}`;
   if (result.agentName === "front") return "HTML/interface gerada para a história.";
   if (result.agentName === "qa") return "Casos de teste e validações gerados.";
-  if (result.agentName === "curator") return `Score: ${String(result.output["score"] ?? "n/a")}`;
+  if (result.agentName === "curator") {
+    const visualGate = result.output["visualGate"];
+    if (visualGate && typeof visualGate === "object") {
+      const record = visualGate as Record<string, unknown>;
+      return `Visual: ${String(record["status"] ?? "n/a")} · Score: ${String(record["score"] ?? "n/a")}`;
+    }
+    return `Score: ${String(result.output["score"] ?? "n/a")}`;
+  }
   return "Execução registrada.";
 }
 

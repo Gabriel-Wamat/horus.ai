@@ -73,6 +73,7 @@ export const WorkflowModeSchema = z.enum([
 
 export const WorkspaceArtifactContextSchema = z.object({
   workspaceFolderId: z.string().uuid(),
+  constructionRunId: z.string().uuid().optional(),
   userStoryRevisionId: z.string().optional(),
   specRevisionId: z.string().optional(),
 });

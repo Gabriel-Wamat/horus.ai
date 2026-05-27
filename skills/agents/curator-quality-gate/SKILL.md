@@ -8,7 +8,7 @@ description: Use this skill when the Curator Agent must evaluate generated front
 ```yaml
 id: "curator-quality-gate"
 agent: "curator"
-version: "0.2.0"
+version: "0.4.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into CuratorAgent prompt before evaluation rules."
@@ -61,6 +61,8 @@ input_contract:
     - "generated index.html artifact"
     - "generated test-cases.json artifact"
     - "approved Spec object with summary, technicalApproach, components, dataModels, apiEndpoints, and acceptanceCriteria"
+    - "visualContract and DesignContextBundle when available"
+    - "selected frontend pattern id when declared in technicalApproach or visualContract.layoutArchetype"
   target_stack:
     frontend:
       - "HTML"
@@ -92,12 +94,14 @@ principles:
     - "Evaluate the full spec: summary, technicalApproach, components, dataModels, apiEndpoints, and acceptanceCriteria."
     - "Treat future apiEndpoints as route-readiness contracts, not proof that a backend exists."
     - "Treat generated artifacts as the source of evaluation evidence."
+    - "Treat visualContract as a required contract: implementation and QA must preserve or intentionally satisfy it."
+    - "Treat the selected frontend pattern as a required architecture contract when the spec declares one."
   architecture:
     - "Keep verdict, score, notes, missingItems, and fixTarget cohesive."
     - "Make feedback actionable for the retry loop."
   code_quality:
     - "Prefer concise, concrete missing items."
-    - "Prefix missingItems when useful with [front], [qa], [data], [route], [accessibility], or [responsive]."
+    - "Prefix missingItems when useful with [front], [front:pattern], [front:component], [front:visual], [qa], [data], [route], [accessibility], or [responsive]."
     - "Avoid vague notes such as 'improve design' without evidence."
   validation:
     - "Only pass when both implementation and QA coverage satisfy the spec."
@@ -143,16 +147,21 @@ evaluation_matrix:
   implementation:
     - "Required components present"
     - "Acceptance criteria implemented"
+    - "Selected frontend pattern is respected without hiding required nodes, states, or workflows"
+    - "Component policy is respected: existing components/tokens first, installed libraries only when present, no invented dependencies"
     - "Data and interactions represented"
     - "Data models represented with correct fields, formatting, and fallbacks"
     - "Future route contracts represented through safe adapter/mock behavior when present"
     - "Responsive/accessibility basics present"
+    - "VisualContract constraints respected: tokens, density, components, states, antiPatterns"
+    - "Pattern anti-patterns absent: excessive frames, nested cards, high-light colors, one-note palettes, text overflow, generic landing pages for tools, style drift"
   qa:
     - "Each criterion has test coverage"
     - "Primary journey covered"
     - "Data model rendering and fallback coverage included when relevant"
     - "Route-readiness and adapter-state coverage included when apiEndpoints exist"
     - "Responsive/accessibility checks included where relevant"
+    - "Pattern/component policy checks included when the spec declares a pattern"
   routing:
     - "front when implementation is missing or broken"
     - "qa when implementation is acceptable but tests are weak"
@@ -182,6 +191,12 @@ Missing items must be:
 - grouped enough for Horus/Odin to route;
 - short enough for Front/QA agents to act on.
 
+Use pattern-specific prefixes:
+
+- `[front:pattern]` when the layout pattern is wrong or the UI behaves like a generic template.
+- `[front:component]` when the output ignores existing components, tokens, or installed libraries and invents a parallel implementation.
+- `[front:visual]` when visualContract anti-patterns are present.
+
 ### Step 5 - Final Output
 
 Return only the structured curator verdict expected by the runtime schema.
@@ -199,6 +214,9 @@ Return only the structured curator verdict expected by the runtime schema.
 9. Check that QA cases map to acceptance criteria and include primary journey, responsive, interaction, accessibility, data, and route-readiness checks where relevant.
 10. Preserve the self-correction loop by routing narrowly when only one agent needs repair and broadly when both do.
 11. Never claim live execution, browser rendering, or automated test results unless those checks actually ran.
+12. Fail outputs that visibly violate explicit visualContract constraints, even if functional criteria are present.
+13. Fail outputs that violate the selected frontend pattern in a way a user would see, such as turning an operational tool into a hero landing page.
+14. Fail outputs that invent dependencies, duplicate existing components, or ignore the component policy without explicit spec permission.
 
 ## Agent Error Mitigation
 
@@ -219,6 +237,12 @@ agent_error_mitigation:
     - "Do not pass if QA cases are absent or generic."
     - "Do not pass if critical frontend acceptance criteria are absent."
     - "Do not claim route integration works; only assess adapter/mock readiness unless runtime evidence exists."
+  anti_generic_frontend:
+    - "Do not pass operational tools that use marketing hero structure."
+    - "Do not pass chat/preview workbenches where messages overlap, progress floods the chat, or input history is unstable."
+    - "Do not pass workflow maps where nodes remain but edges become unreadable or semantically misleading."
+    - "Do not pass forms/settings where labels, validation states, dirty/saving/saved states, or destructive action separation are missing."
+    - "Do not pass visual changes that use high-light colors, excessive frames, nested cards, one-note palettes, or text overflow contrary to visualContract."
 ```
 
 ## Architecture Checklist
@@ -246,6 +270,10 @@ testing_checklist:
     - "Score and fixTarget are consistent."
   workflow:
     - "Feedback can drive Horus/Odin retry routing."
+  pattern_library:
+    - "Selected pattern id is present in the spec when expected."
+    - "Implementation respects the selected pattern's information hierarchy and states."
+    - "QA covers at least the pattern-specific primary journey or anti-pattern guard."
 ```
 
 ## Final Report Contract

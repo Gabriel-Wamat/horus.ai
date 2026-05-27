@@ -20,6 +20,7 @@ import type {
   WorkspaceArtifactContext,
   WorkflowMode,
   WorkflowCheckpointNode,
+  ProjectConstructionRun,
 } from "@u-build/shared";
 import type { PendingRetryApproval } from "../../infrastructure/langgraph/state.js";
 import {
@@ -107,6 +108,11 @@ export interface WorkflowCodeChangeSetApplier {
   }): Promise<CodeChangeSet>;
 }
 
+export interface ProjectConstructionRunSink {
+  getConstructionRun(runId: string): Promise<ProjectConstructionRun>;
+  updateConstructionRun(run: ProjectConstructionRun): Promise<ProjectConstructionRun>;
+}
+
 export interface WorkflowGraphRunner {
   stream(
     input: unknown,
@@ -133,7 +139,8 @@ export class WorkflowOrchestrator {
     private readonly workspaceArtifacts?: WorkspaceArtifactStore,
     private readonly chatProgress?: ChatProgressSink,
     private readonly codeChangeSets?: WorkflowCodeChangeSetSink,
-    private readonly codeChangeSetApplier?: WorkflowCodeChangeSetApplier
+    private readonly codeChangeSetApplier?: WorkflowCodeChangeSetApplier,
+    private readonly projectConstructionRuns?: ProjectConstructionRunSink
   ) {}
 
   async start(options: StartWorkflowOptions): Promise<{ threadId: string }> {
@@ -603,11 +610,53 @@ export class WorkflowOrchestrator {
       };
 
       await this.storage.save(state);
+      await this.syncProjectConstructionRun(state, errorMessage);
       return state.status;
     } catch (saveErr) {
       console.error("[WorkflowOrchestrator] Failed to persist state:", saveErr);
       return undefined;
     }
+  }
+
+  private async syncProjectConstructionRun(
+    state: WorkflowState,
+    errorMessage?: string
+  ): Promise<void> {
+    if (
+      state.workflowMode !== "project_construction" ||
+      !this.projectConstructionRuns
+    ) {
+      return;
+    }
+
+    const constructionRunId = Object.values(state.workspaceArtifactContext)
+      .map((context) => context.constructionRunId)
+      .find((value): value is string => typeof value === "string");
+    if (!constructionRunId) return;
+
+    const nextStatus =
+      state.status === "completed"
+        ? "passed"
+        : state.status === "cancelled"
+          ? "cancelled"
+          : state.status === "error"
+            ? "failed"
+            : undefined;
+    if (!nextStatus) return;
+
+    const current = await this.projectConstructionRuns.getConstructionRun(
+      constructionRunId
+    );
+    const finishedAt = state.completedAt ?? new Date().toISOString();
+    await this.projectConstructionRuns.updateConstructionRun({
+      ...current,
+      status: nextStatus,
+      finishedAt,
+      error:
+        nextStatus === "failed"
+          ? errorMessage ?? state.errorMessage ?? current.error
+          : null,
+    });
   }
 
   private async resolveWorkspaceFolderId(

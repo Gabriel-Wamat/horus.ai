@@ -304,6 +304,10 @@ test("StartProjectConstructionUseCase delegates selected specs to project constr
   assert.deepEqual(workflowInput.initialSpecs, {
     [constructionStory.id]: constructionSpec,
   });
+  assert.equal(
+    workflowInput.workspaceArtifactContext[constructionStory.id].constructionRunId,
+    result.constructionRun.id
+  );
   assert.equal(workflowInput.frontendProjectRootPath, projectRoot);
   assert.equal(workflowInput.frontendProjectId, result.frontendProject.id);
   assert.equal(result.constructionRun.workflowRunId, "66666666-6666-4666-8666-666666666666");

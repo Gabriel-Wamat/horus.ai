@@ -2,6 +2,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import {
   RuntimeValidationEvidenceSchema,
+  type DesignContextBundle,
   type LlmSettings,
   type RuntimeValidationEvidence,
   type Spec,
@@ -11,6 +12,7 @@ import type { CuratorFeedback } from "../langgraph/state.js";
 import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
 import { QaPreviewSmokeResultSchema } from "../preview/QaPreviewSmokeValidationService.js";
+import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
 
 const TestCaseSchema = z.object({
   id: z.string(),
@@ -95,7 +97,8 @@ export async function generateQaTests(
   spec: Spec,
   curatorFeedback?: CuratorFeedback,
   llmSettings?: LlmSettings,
-  executionBrief?: string
+  executionBrief?: string,
+  designContext?: DesignContextBundle
 ): Promise<QaOutput> {
   const criteria = spec.acceptanceCriteria
     .map((c, i) => `${i + 1}. ${c}`)
@@ -139,6 +142,9 @@ ${executionBrief}
 Valide especificamente essa alteração, além dos critérios de aceite da user story/spec ativa.
 `
     : "";
+  const visualContractBlock = spec.visualContract
+    ? `# VisualContract da SPEC\n${JSON.stringify(spec.visualContract, null, 2)}`
+    : "# VisualContract da SPEC\nNao informado; valide preservacao da identidade local pelo contexto visual quando disponivel.";
 
   const skill = loadAgentSkill("qa-frontend-testing");
   const prompt = `Você é um QA engineer especializado em testes de interface web. Gere casos de teste detalhados para validação manual.
@@ -147,6 +153,10 @@ Valide especificamente essa alteração, além dos critérios de aceite da user 
 ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
+${visualContractBlock}
+
+${formatDesignContextForPrompt(designContext)}
+
 # História de Usuário
 ${userStory.title}
 
@@ -167,6 +177,7 @@ ${criteria}
 
 Gere um caso de teste por critério de aceite. Cada caso deve ter steps claros e objetivo com o resultado esperado.
 Se houver contratos futuros de API/Rotas, teste a prontidão do frontend por meio de boundary/adapters injetáveis, estados de loading/empty/error/success e compatibilidade de shape; não assuma que existe backend real nem peça mocks em código aplicado ao projeto.
+Inclua cobertura visual para visualContract quando existir: tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns.
 IDs devem ser TC-01, TC-02, etc.`;
 
   const model = createChatModel("qa", {

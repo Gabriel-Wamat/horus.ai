@@ -157,6 +157,7 @@ export class PostgresProjectConstructionRepository
       )
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11,$12)
       ON CONFLICT (id) DO UPDATE SET
+        workflow_run_id = EXCLUDED.workflow_run_id,
         status = EXCLUDED.status,
         workspace_path = EXCLUDED.workspace_path,
         branch_name = EXCLUDED.branch_name,

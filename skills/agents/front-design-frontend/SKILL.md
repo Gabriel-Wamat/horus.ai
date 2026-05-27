@@ -8,7 +8,7 @@ description: Use this skill when the Front Agent must generate or revise fronten
 ```yaml
 id: "front-design-frontend"
 agent: "front"
-version: "0.4.0"
+version: "0.6.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into FrontAgent prompt before implementation rules."
@@ -69,6 +69,7 @@ input_contract:
     - "No external CDNs"
     - "No standalone HTML implementation when a framework project root exists"
     - "Return ProjectExecutionPlan operations for real projects"
+    - "Follow Spec.visualContract and DesignContextBundle when provided"
   validation_expected:
     - "Curator validates generated source changes against spec, QA cases, and architecture gates"
 ```
@@ -85,6 +86,7 @@ principles:
     - "Do not change acceptance criteria."
   evidence_first:
     - "Use the user story, spec summary, components, data models, and acceptance criteria as source of truth."
+    - "Use visualContract and DesignContextBundle as mandatory visual constraints, not optional inspiration."
     - "Treat curator feedback as a correction contract on retries."
     - "Do not claim support for a state or interaction unless implemented."
   architecture:
@@ -97,6 +99,12 @@ principles:
     - "Use stable dimensions for controls and repeated UI elements."
     - "Every visible button must follow the icon+name pattern: a meaningful icon plus a short visible text label."
     - "Avoid layout shifts caused by dynamic labels, hover states, or long text."
+  visual_identity:
+    - "Select exactly one frontend pattern before implementation: operational-dashboard, chat-preview-workbench, workflow-map, form-crud-tool, content-landing, or custom-product-surface."
+    - "Preserve detected project tokens, typography, surfaces, spacing, density, and component patterns."
+    - "Do not create a parallel palette, high-saturation highlight scheme, or generic landing-page styling when project identity exists."
+    - "Do not add excessive frames, nested cards, or decorative UI that conflicts with the visualContract."
+    - "If the user requests a visual change, apply it through the existing identity unless visualContract.mode is guided_redesign."
   validation:
     - "Ensure the document opens directly in a browser."
     - "Ensure the UI can be checked manually by QA cases."
@@ -137,6 +145,28 @@ Rules:
 
 ### Step 2 - Plan The UI
 
+Choose the frontend pattern before writing code. Use the reference `pattern-library.md` as the source of truth.
+
+```yaml
+pattern_selection:
+  selectedPatternId: "operational-dashboard | chat-preview-workbench | workflow-map | form-crud-tool | content-landing | custom-product-surface"
+  why: "One sentence tied to the user story and product surface."
+  primaryTask: "The main job the user needs to complete."
+  requiredStates:
+    - "States from the pattern, spec, visualContract, and execution brief."
+  antiPatternsToAvoid:
+    - "Observable failures from anti-patterns.md."
+```
+
+Rules:
+
+- Do not default to `content-landing` unless the story is explicitly public/marketing/portfolio/product storytelling.
+- For SaaS/admin/monitoring/file/project/control surfaces, default to `operational-dashboard` unless another pattern fits better.
+- For chat plus preview or agent progress, prefer `chat-preview-workbench`.
+- For agent graphs or execution maps, prefer `workflow-map`.
+- For settings, credentials, CRUD, forms, and configuration, prefer `form-crud-tool`.
+- If a user asks for a visual change inside an existing product, keep the existing pattern unless the requested change clearly changes the product surface.
+
 Identify:
 
 ```yaml
@@ -175,6 +205,8 @@ implementation_strategy:
 Implementation rules:
 
 - In project mode, inspect existing entrypoints before creating files.
+- Apply the selected pattern through structure, density, states, controls, and information hierarchy; do not copy a fixed template.
+- Follow `component-policy.md`: existing components/tokens first, installed proven libraries second, native primitives third, no invented dependency.
 - In React/Vite/TypeScript mode, implement through TSX components, typed data/contracts, CSS, and imports reachable from `src/main.tsx` or `src/App.tsx`.
 - Do not write `generated/horus/*.html` as the implementation for a framework project.
 - Do not create parallel apps, orphan components, or unmounted files.
@@ -188,6 +220,7 @@ Implementation rules:
 - Icon-only buttons are allowed only for globally familiar chrome/navigation controls and must have `aria-label`.
 - Button labels must be short, visible, and action-oriented, such as `Editar`, `Excluir`, `Criar`, `Gerar specs`, `Salvar`, or `Cancelar`.
 - Button icons must use `currentColor`, fixed dimensions, and must not shift layout on hover or active states.
+- The structured summary should include the selected pattern id and touched files in one concise sentence.
 
 ### Step 4 - Self-Check Before Returning
 
@@ -219,6 +252,9 @@ Return only the structured output requested by the runtime. In project mode, ret
 8. Implement complete interactive behavior expected by the spec, including empty, loading, selected, hover, focus, and error states when relevant.
 9. Standardize action buttons as `icon + visible name`, preserving accessible labels, stable dimensions, and consistent hover/active states.
 10. Return project file operations for real generated projects; return a directly runnable HTML document only when the selected stack is explicit static artifact mode.
+11. Choose and follow one frontend pattern before implementation; never let a generic layout override the product surface.
+12. Use component-policy.md priority order; never import a UI library or component that is not proven to exist in the project.
+13. Apply anti-patterns.md as a reject list during self-check, especially high-saturation highlights, excessive frames, nested cards, text overflow, and generic landing pages.
 
 ## Agent Error Mitigation
 

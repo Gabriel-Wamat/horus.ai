@@ -51,6 +51,42 @@ const spec = {
     "A grade deve renderizar produtos com nome, preço e categoria.",
     "A UI deve exibir estado de erro quando o adapter falhar.",
   ],
+  visualContract: {
+    mode: "preserve_identity",
+    designSource: "project_files",
+    layoutArchetype: "dark operational console",
+    density: "compact",
+    tone: "Escuro, tecnico e discreto.",
+    colorPolicy: {
+      background: ["#0b0e0c"],
+      surface: ["#151a17"],
+      text: ["#e5ece8"],
+      accent: ["#14c77b"],
+      forbidden: ["cores high-light saturadas"],
+      usageRules: ["Use verde somente para estados e acoes primarias."],
+    },
+    typography: {
+      families: ["Inter"],
+      scaleRules: ["Headings contidos em paineis compactos."],
+    },
+    spacingAndShape: {
+      spacingScale: ["8px", "12px", "16px"],
+      radiusRules: ["Cards com raio de ate 8px."],
+      strokeRules: ["Strokes cinza sutis."],
+      shadowRules: ["Sem glow decorativo."],
+    },
+    componentPolicy: {
+      preferExistingComponents: true,
+      allowedLibraries: ["lucide-react"],
+      requiredPatterns: ["botoes com icone e label"],
+      forbiddenPatterns: ["cards aninhados"],
+    },
+    states: ["default", "loading", "error", "success"],
+    responsiveRules: ["Texto nao deve vazar no mobile."],
+    accessibilityRules: ["Foco visivel nos controles."],
+    antiPatterns: ["Nao criar excesso de frames."],
+    referenceFiles: ["ID_VISUAL.md", "src/index.css"],
+  },
   generatedAt: "2026-05-26T00:00:00.000Z",
 };
 
@@ -132,7 +168,19 @@ test("buildCuratorPrompt includes complete spec, HTML, QA, data, and route contr
       },
     },
     codeChangeSet,
-    "CURATOR_SKILL_TEXT"
+    "CURATOR_SKILL_TEXT",
+    undefined,
+    {
+      projectId: "project-1",
+      sourceFiles: ["ID_VISUAL.md", "src/index.css"],
+      tokens: { "--accent": "#14c77b" },
+      components: [],
+      visualSummary: "Dark operational context.",
+      constraints: ["Use gray surfaces."],
+      antiPatterns: ["Avoid high saturation highlights."],
+      warnings: [],
+      generatedAt: "2026-05-27T00:00:00.000Z",
+    }
   );
 
   assert.match(prompt, /CURATOR_SKILL_TEXT/);
@@ -150,8 +198,17 @@ test("buildCuratorPrompt includes complete spec, HTML, QA, data, and route contr
   assert.match(prompt, /type-check-root-type-check/);
   assert.match(prompt, /"status": "passed"/);
   assert.match(prompt, /CodeChangeSet Produzido Pelo Front Agent/);
+  assert.match(prompt, /VisualContract/);
+  assert.match(prompt, /preserve_identity/);
+  assert.match(prompt, /# Contexto visual do projeto/);
+  assert.match(prompt, /--accent: #14c77b/);
   assert.match(prompt, /generated\/horus\/11111111-1111-4111-8111-111111111111\.html/);
-  assert.match(prompt, /\[front\], \[qa\], \[data\], \[route\]/);
+  assert.match(prompt, /\[front:pattern\]/);
+  assert.match(prompt, /\[front:component\]/);
+  assert.match(prompt, /\[front:visual\]/);
+  assert.match(prompt, /frontend pattern/i);
+  assert.match(prompt, /component-policy/);
+  assert.match(prompt, /layouts genericos/);
   assert.match(prompt, /houver CodeChangeSet auditável/);
 });
 

@@ -47,9 +47,18 @@ export function createSpecAgentNode(deps: LangGraphDependencies) {
     const start = Date.now();
     const specSkill = deps.loadAgentSkill(SPEC_AGENT_SKILL_ID);
     const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
+    const designContext = state.frontendProjectRootPath && deps.buildDesignContext
+      ? await deps.buildDesignContext({
+          ...(state.frontendProjectId
+            ? { projectId: state.frontendProjectId }
+            : {}),
+          projectRootPath: state.frontendProjectRootPath,
+        })
+      : undefined;
     const spec = await deps.generateSpec(userStory, {
       skill: specSkill,
       llmSettings,
+      ...(designContext ? { designContext } : {}),
     });
     const artifactContext = mergeSpecRevisionContext(state, userStory.id, spec);
 
