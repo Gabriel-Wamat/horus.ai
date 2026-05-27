@@ -479,6 +479,7 @@ export function VisualPreviewConsole({
 }): JSX.Element {
   const [projects, setProjects] = useState<FrontendProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [showAllProjects, setShowAllProjects] = useState(false);
   const [route, setRoute] = useState("/");
   const [session, setSession] = useState<PreviewSession | null>(null);
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -657,7 +658,7 @@ export function VisualPreviewConsole({
     let cancelled = false;
 
     void previewApi
-      .listProjects()
+      .listProjects({ visibility: showAllProjects ? "all" : "visible" })
       .then((items) => {
         if (cancelled) return;
         const defaultProject = hasUserSelectedProjectRef.current
@@ -679,7 +680,7 @@ export function VisualPreviewConsole({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showAllProjects]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -883,6 +884,11 @@ export function VisualPreviewConsole({
   const handleSelectProject = (projectId: string): void => {
     hasUserSelectedProjectRef.current = true;
     setSelectedProjectId(projectId);
+  };
+
+  const handleToggleAllProjects = (enabled: boolean): void => {
+    hasUserSelectedProjectRef.current = false;
+    setShowAllProjects(enabled);
   };
 
   const handleCreateDraft = (): void => {
@@ -1106,7 +1112,9 @@ export function VisualPreviewConsole({
         isSubmittingInstruction={isSubmittingInstruction}
         isChatReady={Boolean(!chatDisabledReason)}
         chatDisabledReason={chatDisabledReason}
+        showAllProjects={showAllProjects}
         onSelectProject={handleSelectProject}
+        onToggleAllProjects={handleToggleAllProjects}
         onChangeRoute={setRoute}
         onChangeInstructionMessage={setInstructionMessage}
         onChangeInstructionMode={setInstructionMode}

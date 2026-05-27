@@ -38,9 +38,14 @@ interface PreviewRouteDeps {
 export function createPreviewRouter(deps: PreviewRouteDeps): Router {
   const router = Router();
 
-  router.get("/projects", async (_req: Request, res: Response) => {
+  router.get("/projects", async (req: Request, res: Response) => {
     try {
-      const projects = await deps.listProjectsUseCase.execute();
+      const rawVisibility = String(req.query["visibility"] ?? "visible");
+      const visibility =
+        rawVisibility === "all" || rawVisibility === "archived"
+          ? rawVisibility
+          : "visible";
+      const projects = await deps.listProjectsUseCase.execute({ visibility });
       res.json({ projects });
     } catch (err) {
       handlePreviewRouteError(err, res);

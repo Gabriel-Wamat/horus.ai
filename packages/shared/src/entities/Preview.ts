@@ -28,6 +28,45 @@ export const PreviewStatusSchema = z.enum([
   "error",
 ]);
 
+export const FrontendProjectKindSchema = z.enum([
+  "seed",
+  "generated",
+  "legacy_static",
+]);
+
+export const FrontendProjectLifecycleStatusSchema = z.enum([
+  "draft",
+  "running",
+  "published",
+  "failed",
+  "archived",
+  "superseded",
+]);
+
+export const FrontendProjectVisibilitySchema = z.enum(["visible", "hidden"]);
+
+export const FrontendProjectHealthStatusSchema = z.enum([
+  "unknown",
+  "healthy",
+  "warning",
+  "blocked",
+]);
+
+export const FrontendProjectHealthReasonSchema = z.enum([
+  "root_missing",
+  "manifest_missing",
+  "preview_command_missing",
+  "preview_url_missing",
+  "preview_url_collision",
+  "wrong_owner_port",
+  "scaffold_only",
+  "duplicate_app_hash",
+  "superseded_by_canonical",
+  "stale_running_run",
+  "legacy_static",
+  "seed_project",
+]);
+
 export const FrontendProjectSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(1).max(100),
@@ -39,6 +78,17 @@ export const FrontendProjectSchema = z.object({
   commandCatalog: z.array(PreviewCommandSchema).default([]),
   previewUrl: z.string().url().nullable(),
   createdAt: z.string().datetime(),
+  projectKind: FrontendProjectKindSchema.default("generated"),
+  lifecycleStatus: FrontendProjectLifecycleStatusSchema.default("published"),
+  visibility: FrontendProjectVisibilitySchema.default("visible"),
+  healthStatus: FrontendProjectHealthStatusSchema.default("unknown"),
+  healthReasons: z.array(FrontendProjectHealthReasonSchema).default([]),
+  canonicalProjectId: z.string().uuid().nullable().default(null),
+  projectWorkspaceId: z.string().uuid().nullable().default(null),
+  appFingerprint: z.string().trim().min(1).nullable().default(null),
+  lastHealthCheckedAt: z.string().datetime().nullable().default(null),
+  archivedAt: z.string().datetime().nullable().default(null),
+  archivedReason: z.string().trim().min(1).nullable().default(null),
 });
 
 export const CreatePreviewSessionInputSchema = z.object({
@@ -112,6 +162,19 @@ export type PreviewDeviceName = z.infer<typeof PreviewDeviceNameSchema>;
 export type PreviewDevice = z.infer<typeof PreviewDeviceSchema>;
 export type PreviewCommand = z.infer<typeof PreviewCommandSchema>;
 export type PreviewStatus = z.infer<typeof PreviewStatusSchema>;
+export type FrontendProjectKind = z.infer<typeof FrontendProjectKindSchema>;
+export type FrontendProjectLifecycleStatus = z.infer<
+  typeof FrontendProjectLifecycleStatusSchema
+>;
+export type FrontendProjectVisibility = z.infer<
+  typeof FrontendProjectVisibilitySchema
+>;
+export type FrontendProjectHealthStatus = z.infer<
+  typeof FrontendProjectHealthStatusSchema
+>;
+export type FrontendProjectHealthReason = z.infer<
+  typeof FrontendProjectHealthReasonSchema
+>;
 export type FrontendProject = z.infer<typeof FrontendProjectSchema>;
 export type CreatePreviewSessionInput = z.infer<
   typeof CreatePreviewSessionInputSchema

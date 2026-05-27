@@ -313,3 +313,117 @@ test("StartProjectConstructionUseCase delegates selected specs to project constr
   assert.equal(result.constructionRun.workflowRunId, "66666666-6666-4666-8666-666666666666");
   assert.equal(savedRuns.at(-1).workflowRunId, "66666666-6666-4666-8666-666666666666");
 });
+
+test("StartProjectConstructionUseCase assigns a project-scoped preview port by default", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-preview-port-project-"));
+  const now = "2026-05-26T10:00:00.000Z";
+  const projectWorkspace = {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    workspaceFolderId,
+    name: "Port Scoped Project",
+    slug: "port-scoped-project",
+    targetMode: "new_project",
+    rootPath: projectRoot,
+    configPath: join(projectRoot, ".horus-project.yaml"),
+    gitRepositoryPath: projectRoot,
+    currentBranch: "main",
+    baseRef: "main",
+    projectStack: "typescript-react",
+    createdAt: now,
+    updatedAt: now,
+  };
+  let registeredProjectInput;
+
+  const projectConstruction = {
+    listProjectWorkspaces: async () => [],
+    getProjectWorkspace: async () => null,
+    saveProjectWorkspace: async (project) => project,
+    saveConstructionRun: async (run) => run,
+    updateConstructionRun: async (run) => run,
+  };
+  const workspaceStore = {
+    getActiveStoryContext: async () => ({
+      story: constructionStory,
+      spec: constructionSpec,
+      artifactContext: {
+        workspaceFolderId,
+        userStoryRevisionId: "story-r1",
+        specRevisionId: "spec-r1",
+      },
+    }),
+  };
+  const frontendProjects = {
+    registerProject: async (input) => {
+      registeredProjectInput = input;
+      return {
+        id: "44444444-4444-4444-8444-444444444444",
+        slug: "port-scoped-project",
+        createdAt: now,
+        ...input,
+      };
+    },
+  };
+  const projectWorkspaceService = {
+    createNewProject: async () => projectWorkspace,
+    prepareWorkspace: async () => ({
+      workspacePath: projectRoot,
+      branchName: "main",
+      created: false,
+    }),
+  };
+  const projectConfigService = {
+    load: async () => ({
+      version: 1,
+      projectName: "Port Scoped Project",
+      projectStack: "typescript-react",
+      baseRef: "main",
+      writeRoots: ["."],
+      commandCatalog: [
+        {
+          id: "run-root-dev",
+          executable: "npm",
+          args: ["run", "dev"],
+          cwd: ".",
+          env: {},
+        },
+      ],
+      roleProfiles: {},
+      testRunnerIds: [],
+      bootstrapCommandIds: [],
+    }),
+  };
+  const projectExecutionService = {
+    executePlan: async () => ({ changedFiles: [], commandRuns: [] }),
+  };
+  const workflowStarter = {
+    start: async () => ({ threadId: "66666666-6666-4666-8666-666666666666" }),
+  };
+
+  const useCase = new StartProjectConstructionUseCase(
+    projectConstruction,
+    workspaceStore,
+    frontendProjects,
+    projectWorkspaceService,
+    projectConfigService,
+    projectExecutionService,
+    {},
+    workflowStarter
+  );
+
+  await useCase.execute({
+    workspaceFolderId,
+    projectName: "Port Scoped Project",
+    userStoryIds: [constructionStory.id],
+  });
+
+  assert.ok(registeredProjectInput);
+  const previewUrl = new URL(registeredProjectInput.previewUrl);
+  const port = Number(previewUrl.port);
+  assert.notEqual(port, 5184);
+  assert.ok(port >= 5184 && port < 6184);
+  const previewCommand = registeredProjectInput.commandCatalog.find(
+    (command) => command.id === "preview-dev"
+  );
+  assert.ok(previewCommand);
+  assert.ok(previewCommand.args.includes(String(port)));
+});

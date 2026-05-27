@@ -38,6 +38,7 @@ import { createAgentRunFlowRouter } from "./routes/agentRunFlowRoutes.js";
 import { createProjectConstructionRouter } from "./routes/projectConstructionRoutes.js";
 import { createProjectFileRouter } from "./routes/projectFileRoutes.js";
 import { createLlmSettingsRouter } from "./routes/llmSettingsRoutes.js";
+import { createAgentSkillRouter } from "./routes/agentSkillRoutes.js";
 import { ProcessBrowserPreviewAdapter } from "../preview/ProcessBrowserPreviewAdapter.js";
 import type { BrowserPreviewAdapter } from "../preview/NoopBrowserPreviewAdapter.js";
 import { PreviewRuntimeManager } from "../preview/PreviewRuntimeManager.js";
@@ -62,6 +63,8 @@ import {
 import { FileLlmCredentialStore } from "../llm/LlmCredentialStore.js";
 import { LlmSettingsResolver } from "../llm/LlmSettingsResolver.js";
 import { getRuntimeLlmSettings } from "../llm/runtimeLlmSettings.js";
+import { AgentSkillValidationService } from "../agentSkills/AgentSkillValidationService.js";
+import { AgentSkillRegistryService } from "../agentSkills/AgentSkillRegistryService.js";
 
 export interface CreateAppOptions {
   env?: Record<string, string | undefined>;
@@ -108,6 +111,12 @@ export async function createApp(
     repositories.projectConstruction
   );
   const projectArchiveService = new ProjectArchiveService(projectFileBrowser);
+  const agentSkillRegistry = new AgentSkillRegistryService(
+    repositories.agentSkills,
+    new AgentSkillValidationService(),
+    { repositoryRoot: repositories.runtimeConfig.repositoryRoot }
+  );
+  await agentSkillRegistry.ensureSeeded();
   const previewRuntime = new PreviewRuntimeManager(
     repositories.frontendProjects,
     repositories.previewSessions,
@@ -269,6 +278,10 @@ export async function createApp(
       fileBrowser: projectFileBrowser,
       archiveService: projectArchiveService,
     })
+  );
+  app.use(
+    "/api/agent-skills",
+    createAgentSkillRouter({ registry: agentSkillRegistry })
   );
   app.use("/api/events", createEventRouter(eventStream));
 

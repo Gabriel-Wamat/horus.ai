@@ -12,9 +12,11 @@ import { FilePreviewSessionStore } from "../preview/FilePreviewSessionStore.js";
 import { FileWorkspaceStore } from "../workspace/FileWorkspaceStore.js";
 import { PostgresChatMemoryRepository } from "./PostgresChatMemoryRepository.js";
 import { FileCodeChangeSetRepository } from "./FileCodeChangeSetRepository.js";
+import { FileAgentSkillRepository } from "./FileAgentSkillRepository.js";
 import { FileProjectConstructionRepository } from "./FileProjectConstructionRepository.js";
 import { FileWorkflowEventLogRepository } from "./FileWorkflowEventLogRepository.js";
 import { PostgresCodeChangeSetRepository } from "./PostgresCodeChangeSetRepository.js";
+import { PostgresAgentSkillRepository } from "./PostgresAgentSkillRepository.js";
 import { PostgresFrontendProjectRepository } from "./PostgresFrontendProjectRepository.js";
 import { PostgresPreviewSessionRepository } from "./PostgresPreviewSessionRepository.js";
 import { PostgresProjectConstructionRepository } from "./PostgresProjectConstructionRepository.js";
@@ -24,6 +26,7 @@ import { PostgresWorkspaceRepository } from "./PostgresWorkspaceRepository.js";
 import type {
   ChatMemoryRepository,
   CodeChangeSetRepository,
+  AgentSkillRepository,
   FrontendProjectRepository,
   ProjectConstructionRepository,
   PreviewSessionRepository,
@@ -44,6 +47,7 @@ export interface PersistenceRepositories {
   codeChangeSets: CodeChangeSetRepository;
   workflowEvents: WorkflowEventLogRepository;
   projectConstruction: ProjectConstructionRepository;
+  agentSkills: AgentSkillRepository;
 }
 
 export async function createRepositories(
@@ -76,6 +80,7 @@ export async function createRepositories(
       codeChangeSets: new PostgresCodeChangeSetRepository(pool),
       workflowEvents: new PostgresWorkflowEventLogRepository(pool),
       projectConstruction: new PostgresProjectConstructionRepository(pool),
+      agentSkills: new PostgresAgentSkillRepository(pool),
     };
   }
 
@@ -113,5 +118,6 @@ export async function createRepositories(
     projectConstruction: new FileProjectConstructionRepository(
       runtimeConfig.paths.projectConstructionDir
     ),
+    agentSkills: new FileAgentSkillRepository(runtimeConfig.paths.agentSkillsDir),
   };
 }

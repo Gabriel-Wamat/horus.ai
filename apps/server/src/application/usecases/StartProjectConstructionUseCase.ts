@@ -290,7 +290,7 @@ export class StartProjectConstructionUseCase {
     config: HorusProjectConfig
   ): Promise<FrontendProject | null> {
     if (!this.frontendProjects.registerProject) return null;
-    const port = this.env["HORUS_GENERATED_PROJECT_PREVIEW_PORT"]?.trim() || "5184";
+    const port = resolveGeneratedPreviewPort(this.env, project.id);
     const host =
       this.env["HORUS_GENERATED_PROJECT_PREVIEW_HOST"]?.trim() || "127.0.0.1";
     const previewCommand = buildPreviewCommand(config, host, port);
@@ -308,8 +308,33 @@ export class StartProjectConstructionUseCase {
       previewCommandId: previewCommand?.id ?? null,
       commandCatalog,
       previewUrl: `http://${host}:${port}`,
+      projectKind: "generated",
+      lifecycleStatus: "published",
+      visibility: "visible",
+      healthStatus: "unknown",
+      healthReasons: [],
+      projectWorkspaceId: project.id,
     });
   }
+}
+
+function resolveGeneratedPreviewPort(
+  env: Record<string, string | undefined>,
+  projectId: string
+): string {
+  const configured = env["HORUS_GENERATED_PROJECT_PREVIEW_PORT"]?.trim();
+  if (configured) return configured;
+
+  const basePort = Number.parseInt(
+    env["HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT"]?.trim() || "5184",
+    10
+  );
+  const safeBasePort = Number.isFinite(basePort) && basePort > 0 ? basePort : 5184;
+  const hash = Array.from(projectId).reduce(
+    (acc, char) => (acc * 31 + char.charCodeAt(0)) % 1000,
+    0
+  );
+  return String(safeBasePort + hash);
 }
 
 function buildPreviewCommand(

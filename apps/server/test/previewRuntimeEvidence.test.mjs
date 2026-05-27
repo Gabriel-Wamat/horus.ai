@@ -17,7 +17,15 @@ function projectFixture(rootPath) {
     defaultRoute: "/",
     devCommand: null,
     previewCommandId: "dev",
-    commandCatalog: [],
+    commandCatalog: [
+      {
+        id: "dev",
+        executable: "pnpm",
+        args: ["dev"],
+        cwd: ".",
+        env: {},
+      },
+    ],
     previewUrl: "http://localhost:5174",
     createdAt: "2026-05-26T00:00:00.000Z",
   };
@@ -129,4 +137,3 @@ test("PreviewRuntimeManager stores preview_error with sanitized runtime evidence
   assert.doesNotMatch(started.event.data.runtimeEvidence.stderrTail, /super-secret/);
   assert.match(started.event.data.runtimeEvidence.stderrTail, /\[redacted\]/);
 });
-

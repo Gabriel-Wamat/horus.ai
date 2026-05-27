@@ -142,6 +142,17 @@ export class FileFrontendProjectRegistry {
     previewUrl?: string | null;
     previewCommandId?: string | null;
     commandCatalog?: FrontendProject["commandCatalog"];
+    projectKind?: FrontendProject["projectKind"];
+    lifecycleStatus?: FrontendProject["lifecycleStatus"];
+    visibility?: FrontendProject["visibility"];
+    healthStatus?: FrontendProject["healthStatus"];
+    healthReasons?: FrontendProject["healthReasons"];
+    canonicalProjectId?: string | null;
+    projectWorkspaceId?: string | null;
+    appFingerprint?: string | null;
+    lastHealthCheckedAt?: string | null;
+    archivedAt?: string | null;
+    archivedReason?: string | null;
   }): Promise<FrontendProject> {
     const projects = await this.readProjects();
     const rootPath = await this.canonicalizeProjectRoot(input.rootPath);
@@ -158,6 +169,21 @@ export class FileFrontendProjectRegistry {
       commandCatalog: input.commandCatalog ?? [],
       previewUrl: input.previewUrl ?? null,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
+      projectKind: input.projectKind ?? existing?.projectKind ?? "generated",
+      lifecycleStatus:
+        input.lifecycleStatus ?? existing?.lifecycleStatus ?? "published",
+      visibility: input.visibility ?? existing?.visibility ?? "visible",
+      healthStatus: input.healthStatus ?? existing?.healthStatus ?? "unknown",
+      healthReasons: input.healthReasons ?? existing?.healthReasons ?? [],
+      canonicalProjectId:
+        input.canonicalProjectId ?? existing?.canonicalProjectId ?? null,
+      projectWorkspaceId:
+        input.projectWorkspaceId ?? existing?.projectWorkspaceId ?? null,
+      appFingerprint: input.appFingerprint ?? existing?.appFingerprint ?? null,
+      lastHealthCheckedAt:
+        input.lastHealthCheckedAt ?? existing?.lastHealthCheckedAt ?? null,
+      archivedAt: input.archivedAt ?? existing?.archivedAt ?? null,
+      archivedReason: input.archivedReason ?? existing?.archivedReason ?? null,
     });
 
     await this.writeProjects([

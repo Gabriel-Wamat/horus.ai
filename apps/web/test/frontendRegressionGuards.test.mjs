@@ -104,6 +104,11 @@ test("Preview chat uses the streaming turn endpoint with optimistic local messag
   assert.match(css, /\.preview-chat-message p[\s\S]*white-space: pre-wrap/);
   assert.match(css, /preview-workflow-meter/);
   assert.match(css, /preview-workflow-pulse/);
+  assert.match(css, /\.preview-conversation-panel > \*/);
+  assert.match(css, /\.preview-project-identity > div[\s\S]*min-width: 0/);
+  assert.match(css, /\.preview-conversation-config[\s\S]*min-width: 0/);
+  assert.match(css, /\.preview-conversation-config \.input,[\s\S]*\.preview-conversation-config \.select[\s\S]*min-width: 0/);
+  assert.match(css, /\.visual-composer[\s\S]*width: calc\(100% - 28px\)/);
   assert.doesNotMatch(
     consoleSource,
     /function replaceChatMessage[\s\S]*return mergeChatMessages/
@@ -148,4 +153,17 @@ test("Agent flow does not treat idle runs as live animated execution", () => {
   assert.doesNotMatch(runData, /"idle", "running"/);
   assert.doesNotMatch(runEvents, /"idle", "running"/);
   assert.match(derive, /if \(state\.status === "idle"\) return null/);
+});
+
+test("Skills screen is backed by the registry API and not static local data", () => {
+  const page = read("src/features/agent-skills/AgentSkillsPage.tsx");
+  const hook = read("src/features/agent-skills/useAgentSkills.ts");
+  const api = read("src/api/agentSkillsApi.ts");
+
+  assert.match(page, /useAgentSkills/);
+  assert.match(hook, /agentSkillsApi\.listSkills/);
+  assert.match(hook, /agentSkillsApi\.listAgentProfiles/);
+  assert.match(hook, /agentSkillsApi\.publishRevision/);
+  assert.match(api, /\/agent-profiles/);
+  assert.doesNotMatch(page, /sample|mock|placeholder/i);
 });

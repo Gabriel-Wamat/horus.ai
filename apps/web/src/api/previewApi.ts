@@ -29,8 +29,15 @@ export interface VisualInstructionDraftResponse {
 }
 
 export const previewApi = {
-  listProjects: async (): Promise<FrontendProject[]> => {
-    const res = await fetch(`${BASE}/projects`, { cache: "no-store" });
+  listProjects: async (
+    input: { visibility?: "visible" | "all" | "archived" } = {}
+  ): Promise<FrontendProject[]> => {
+    const params = new URLSearchParams();
+    if (input.visibility) params.set("visibility", input.visibility);
+    const query = params.toString();
+    const res = await fetch(`${BASE}/projects${query ? `?${query}` : ""}`, {
+      cache: "no-store",
+    });
     await requireOk(res, "Listar projetos de preview");
     const body = (await res.json()) as { projects: FrontendProject[] };
     return body.projects;

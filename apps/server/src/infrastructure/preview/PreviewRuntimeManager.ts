@@ -21,6 +21,11 @@ import {
   type BrowserPreviewAdapter,
 } from "./NoopBrowserPreviewAdapter.js";
 import { buildPreviewRuntimeEvidence } from "./PreviewRuntimeEvidence.js";
+import {
+  PreviewProjectHealthError,
+  PreviewProjectHealthService,
+  type PreviewProjectListVisibility,
+} from "./PreviewProjectHealthService.js";
 import type {
   FrontendProjectRepository,
   PreviewSessionRepository,
@@ -61,11 +66,17 @@ export class PreviewRuntimeManager {
     private readonly registry: FrontendProjectRepository,
     private readonly store: PreviewSessionRepository,
     private readonly adapter: BrowserPreviewAdapter,
-    private readonly eventStream: IPreviewEventStream
+    private readonly eventStream: IPreviewEventStream,
+    private readonly projectHealth = new PreviewProjectHealthService()
   ) {}
 
-  async listProjects(): Promise<FrontendProject[]> {
-    return this.registry.listProjects();
+  async listProjects(
+    visibility: PreviewProjectListVisibility = "visible"
+  ): Promise<FrontendProject[]> {
+    return this.projectHealth.listProjects(
+      await this.registry.listProjects(),
+      visibility
+    );
   }
 
   async getSession(sessionId: string): Promise<PreviewSession> {
@@ -146,7 +157,10 @@ export class PreviewRuntimeManager {
 
   async startSession(sessionId: string): Promise<PreviewActionResult> {
     const session = await this.store.getSession(sessionId);
-    const project = await this.registry.getProject(session.projectId);
+    const project = await this.projectHealth.auditProject(
+      await this.registry.getProject(session.projectId),
+      await this.registry.listProjects()
+    );
     const now = new Date().toISOString();
     const starting = await this.store.saveSession({
       ...session,
@@ -156,10 +170,14 @@ export class PreviewRuntimeManager {
     });
     let started;
     try {
+      this.projectHealth.assertStartable(project);
       started = await this.adapter.start(project, starting);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Preview session failed to start";
-      const evidence = err instanceof BrowserPreviewStartError ? err.evidence : {};
+      const evidence =
+        err instanceof BrowserPreviewStartError || err instanceof PreviewProjectHealthError
+          ? err.evidence
+          : {};
       const runtimeEvidence = buildPreviewRuntimeEvidence(evidence);
       const failed = await this.store.saveSession({
         ...starting,

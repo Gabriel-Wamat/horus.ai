@@ -11,7 +11,7 @@ import {
 const manifest = {
   schemaVersion: 1,
   projectId: "project-1",
-  projectName: "Apuana Monitor",
+  projectName: "Operations Monitor",
   rootPathPolicy: {
     writeRoots: ["src"],
     deniedPaths: [".env", "node_modules"],
