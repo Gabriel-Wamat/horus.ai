@@ -21,7 +21,7 @@ test("LlmSettingsSchema rejects unsupported providers", () => {
     () =>
       LlmSettingsSchema.parse({
         provider: "anthropic",
-        model: "private-model-test",
+        model: "unsupported-model",
         apiKey: "secret",
       }),
     /Invalid enum value/

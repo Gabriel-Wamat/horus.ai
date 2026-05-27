@@ -5,7 +5,6 @@ This folder is reserved for project-owned tools and reusable tool documentation.
 Current status:
 
 - Runtime CLI execution is not implemented here yet.
-- The copied Zup reference snapshot stays under `reference/reference-agents-cli-tools/`.
 - Production runtime code must remain inside the owning app/package boundary unless a spec explicitly promotes a reusable tool from this folder.
 
 Mandatory rule:
