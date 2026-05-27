@@ -65,15 +65,6 @@ pnpm test
 | `skills/agents/**` | `spec/` |
 | `.env.example` | `output/` |
 
-Root-local files that must stay ignored:
-
-```text
-AGENTS.md
-private-model.md
-ID_VISUAL.md
-UNPROTECT.md
-```
-
 ## Reading Paths
 
 ### New Contributor
