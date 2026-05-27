@@ -10,7 +10,8 @@ test("loadAgentSkill loads the Front Agent skill from the project skills folder"
   assert.match(skill, /## 10 Foundations/);
   assert.match(skill, /## Agent Error Mitigation/);
   assert.match(skill, /## Final Report Contract/);
-  assert.match(skill, /Return one complete, directly runnable HTML document/);
+  assert.match(skill, /Return ProjectExecutionPlan operations for real projects/);
+  assert.match(skill, /complete HTML document/);
 });
 
 test("loadAgentSkill loads the Spec Agent skill from the project skills folder", () => {

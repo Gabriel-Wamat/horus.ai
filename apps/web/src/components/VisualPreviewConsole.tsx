@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import type {
   ChatMessage,
   ChatSession,
   FrontendProject,
+  HorusChatOutcome,
   PreviewDeviceName,
   PreviewEvent,
   PreviewSession,
@@ -32,12 +33,21 @@ function normalizeRoute(route: string): string {
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
-function mapChatMessage(message: ChatMessage): PreviewChatMessage {
+function mapChatMessage(
+  message: ChatMessage,
+  outcome?: HorusChatOutcome
+): PreviewChatMessage {
   return {
     id: message.id,
     role: message.role,
     body: message.body,
     createdAt: message.createdAt,
+    ...(message.role === "agent" && outcome?.evidenceSources
+      ? { evidenceSources: outcome.evidenceSources }
+      : {}),
+    ...(message.role === "agent" && outcome?.groundingStatus
+      ? { groundingStatus: outcome.groundingStatus }
+      : {}),
     ...(message.contextSnapshot.projectId
       ? { projectId: message.contextSnapshot.projectId }
       : {}),
@@ -58,6 +68,30 @@ function mergeChatMessages(
   return [...byId.values()].sort((a, b) =>
     a.createdAt.localeCompare(b.createdAt)
   );
+}
+
+function selectDefaultProject(
+  projects: FrontendProject[],
+  currentProjectId: string
+): FrontendProject | null {
+  const currentProject = projects.find((project) => project.id === currentProjectId);
+  if (currentProject) return currentProject;
+
+  return [...projects].sort((a, b) => {
+    const byCreatedAt =
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (byCreatedAt !== 0) return byCreatedAt;
+    return a.name.localeCompare(b.name);
+  })[0] ?? null;
+}
+
+function selectNewestProject(projects: FrontendProject[]): FrontendProject | null {
+  return [...projects].sort((a, b) => {
+    const byCreatedAt =
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (byCreatedAt !== 0) return byCreatedAt;
+    return a.name.localeCompare(b.name);
+  })[0] ?? null;
 }
 
 export function VisualPreviewConsole({
@@ -82,6 +116,7 @@ export function VisualPreviewConsole({
   const [instructionMessage, setInstructionMessage] = useState("");
   const [isSubmittingInstruction, setIsSubmittingInstruction] = useState(false);
   const [chatMessages, setChatMessages] = useState<PreviewChatMessage[]>([]);
+  const hasUserSelectedProjectRef = useRef(false);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -99,9 +134,12 @@ export function VisualPreviewConsole({
       .listProjects()
       .then((items) => {
         if (cancelled) return;
+        const defaultProject = hasUserSelectedProjectRef.current
+          ? selectDefaultProject(items, selectedProjectId)
+          : selectNewestProject(items);
         setProjects(items);
-        setSelectedProjectId((current) => current || items[0]?.id || "");
-        setRoute((current) => current || items[0]?.defaultRoute || "/");
+        setSelectedProjectId(defaultProject?.id ?? "");
+        setRoute(defaultProject?.defaultRoute ?? "/");
       })
       .catch((err) => {
         if (!cancelled) {
@@ -152,7 +190,7 @@ export function VisualPreviewConsole({
         setChatSession(nextSession);
         const messages = await horusChatApi.listMessages(nextSession.id);
         if (cancelled) return;
-        setChatMessages(messages.map(mapChatMessage));
+        setChatMessages(messages.map((message) => mapChatMessage(message)));
       })
       .catch((err) => {
         if (!cancelled) {
@@ -286,6 +324,11 @@ export function VisualPreviewConsole({
     });
   };
 
+  const handleSelectProject = (projectId: string): void => {
+    hasUserSelectedProjectRef.current = true;
+    setSelectedProjectId(projectId);
+  };
+
   const handleCreateDraft = (): void => {
     if (!chatSession || !workspaceFolderId || !userStoryId || !selectedProject) {
       setError("Selecione uma user story e um projeto antes de enviar para Horus.");
@@ -305,13 +348,14 @@ export function VisualPreviewConsole({
         ...(session ? { previewSessionId: session.id } : {}),
       })
       .then((result) => {
+        const nextMessages = [
+          mapChatMessage(result.userMessage),
+          result.assistantMessage
+            ? mapChatMessage(result.assistantMessage, result.outcome)
+            : null,
+        ].filter((item): item is PreviewChatMessage => Boolean(item));
         setChatMessages((current) =>
-          mergeChatMessages(
-            current,
-            [result.userMessage, result.assistantMessage]
-              .filter((item): item is ChatMessage => Boolean(item))
-              .map(mapChatMessage)
-          )
+          mergeChatMessages(current, nextMessages)
         );
         if (result.outcome.previewSessionId) {
           void previewApi
@@ -357,7 +401,7 @@ export function VisualPreviewConsole({
         isSubmittingInstruction={isSubmittingInstruction}
         isChatReady={Boolean(!chatDisabledReason)}
         chatDisabledReason={chatDisabledReason}
-        onSelectProject={setSelectedProjectId}
+        onSelectProject={handleSelectProject}
         onChangeRoute={setRoute}
         onChangeInstructionMessage={setInstructionMessage}
         onChangeInstructionMode={setInstructionMode}

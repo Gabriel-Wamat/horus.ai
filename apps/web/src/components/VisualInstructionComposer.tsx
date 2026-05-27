@@ -8,7 +8,6 @@ export function VisualInstructionComposer({
   disabled,
   isSubmitting,
   placeholder,
-  submitLabel = "Enviar",
   onChangeMessage,
   onChangeMode,
   onSubmit,
@@ -23,6 +22,13 @@ export function VisualInstructionComposer({
   readonly onChangeMode: (mode: VisualInstructionMode) => void;
   readonly onSubmit: () => void;
 }): JSX.Element {
+  const canSubmit = !disabled && !isSubmitting && message.trim().length > 0;
+
+  const handleSubmit = (): void => {
+    if (!canSubmit) return;
+    onSubmit();
+  };
+
   return (
     <section className="visual-composer" aria-label="Instrução visual">
       <div className="composer-input-row">
@@ -31,6 +37,11 @@ export function VisualInstructionComposer({
           value={message}
           disabled={disabled || isSubmitting}
           onChange={(event) => onChangeMessage(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey) return;
+            event.preventDefault();
+            handleSubmit();
+          }}
           placeholder={placeholder ?? "Ask Horus... ex: reduza a densidade"}
         />
         <div className="composer-control-row">
@@ -48,11 +59,12 @@ export function VisualInstructionComposer({
           <button
             className="primary-button composer-send-button"
             type="button"
-            disabled={disabled || isSubmitting || message.trim().length === 0}
-            onClick={onSubmit}
+            aria-label={isSubmitting ? "Enviando mensagem" : "Enviar mensagem"}
+            title={isSubmitting ? "Enviando" : "Enviar"}
+            disabled={!canSubmit}
+            onClick={handleSubmit}
           >
-            <PreviewIcon name="send" />
-            <span>{isSubmitting ? "Enviando" : submitLabel}</span>
+            <PreviewIcon name="sendUp" />
           </button>
         </div>
       </div>

@@ -10,6 +10,7 @@ export type PreviewIconName =
   | "play"
   | "refresh"
   | "send"
+  | "sendUp"
   | "tablet"
   | "terminal";
 
@@ -71,6 +72,15 @@ export function PreviewIcon({ name }: { name: PreviewIconName }): JSX.Element {
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="m4 11.5 16-7-7 16-2.5-7-6.5-2Z" />
         <path d="m10.5 13.5 3.5-3.5" />
+      </svg>
+    );
+  }
+
+  if (name === "sendUp") {
+    return (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 19V5" />
+        <path d="m5 12 7-7 7 7" />
       </svg>
     );
   }

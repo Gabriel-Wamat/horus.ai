@@ -22,6 +22,58 @@ async function setupProject() {
     "utf-8"
   );
   await writeFile(
+    join(projectRoot, "horus.project.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      projectId,
+      projectName: "user_stories",
+      rootPathPolicy: {
+        writeRoots: ["."],
+        deniedPaths: [".env", ".git", "node_modules"],
+        generatedPaths: ["dist"],
+      },
+      stack: {
+        frontend: "react",
+        language: "typescript",
+        packageManager: "pnpm",
+      },
+      entrypoints: ["src/App.tsx"],
+      commandCatalog: [
+        {
+          id: "run-root-dev",
+          executable: "pnpm",
+          args: ["run", "dev"],
+          cwd: ".",
+          env: {},
+        },
+      ],
+      architecture: {
+        summary: "Test manifest",
+        sourceRoots: ["src"],
+        routeFiles: ["src/App.tsx"],
+        componentRoots: ["src/components"],
+      },
+      designSystem: {
+        referenceFiles: ["ID_VISUAL.md"],
+        notes: ["Use Horus identity."],
+      },
+      agentRules: {
+        codingStyle: ["Read files before claims."],
+        uiStyle: ["Use project typography."],
+        forbiddenPatterns: ["No fake runtime."],
+        testingExpectations: ["Run typecheck."],
+      },
+      security: {
+        denyPaths: [".env", ".git", "node_modules"],
+        secretPatterns: ["token"],
+        rulesCannotGrantPermissions: true,
+      },
+      lastValidatedAt: null,
+      updatedAt: "2026-05-26T10:00:00.000Z",
+    }),
+    "utf-8"
+  );
+  await writeFile(
     join(projectRoot, "src", "App.tsx"),
     "export function App() { return <main>Preview chat</main>; }",
     "utf-8"
@@ -98,7 +150,36 @@ test("ReadOnlyCodeContextService builds bounded context inside the selected proj
   assert.ok(
     context.inspectedFiles.some((path) => path.includes("PreviewChat.tsx"))
   );
+  assert.equal(context.retrievalStatus, "matched");
+  assert.equal(context.manifest.projectName, "user_stories");
+  assert.equal(context.manifest.security.rulesCannotGrantPermissions, true);
+  assert.ok(
+    context.excerpts.some(
+      (excerpt) =>
+        excerpt.filePath === "src/components/PreviewChat.tsx" &&
+        excerpt.startLine === 1 &&
+        excerpt.content.includes("Horus chat")
+    )
+  );
   assert.ok(context.totalBytes > 0);
+});
+
+test("ReadOnlyCodeContextService prioritizes explicit code paths and returns line-scoped excerpts", async () => {
+  const { project } = await setupProject();
+  const service = new ReadOnlyCodeContextService();
+
+  const context = await service.buildContext({
+    project,
+    chatContext,
+    query: "Me mostre o trecho de src/App.tsx que renderiza Preview chat",
+  });
+
+  assert.equal(context.retrievalStatus, "matched");
+  assert.equal(context.excerpts[0].filePath, "src/App.tsx");
+  assert.equal(context.excerpts[0].startLine, 1);
+  assert.equal(context.excerpts[0].endLine, 1);
+  assert.match(context.excerpts[0].content, /Preview chat/);
+  assert.deepEqual(context.files[0].matchedTerms.includes("preview"), true);
 });
 
 test("ReadOnlyCodeContextService rejects paths outside the project root", async () => {

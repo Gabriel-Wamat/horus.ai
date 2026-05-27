@@ -22,7 +22,7 @@ export class HorusChatAgentImpl implements HorusChatResponder {
   async answer(input: HorusChatAnswerInput): Promise<string> {
     const model = createChatModel("horus", {
       temperature: 0.2,
-      maxTokens: 700,
+      maxTokens: input.codeContext?.excerpts.length ? 1400 : 700,
     });
     const response = await model.invoke([
       new SystemMessage(buildHorusSystemPrompt(input)),
@@ -46,6 +46,7 @@ function buildHorusSystemPrompt(input: HorusChatAnswerInput): string {
     codeContext && codeContext.inspectedFiles.length > 0
       ? codeContext.inspectedFiles.join(", ")
       : "nenhum arquivo inspecionado";
+  const codeExcerpts = formatCodeExcerpts(codeContext);
 
   return `# Identidade
 Voce e Horus, o orquestrador conversacional do projeto. Voce e a camada de
@@ -111,10 +112,35 @@ selected_project_name: ${project?.name ?? "nenhum"}
 selected_project_root: ${project?.rootPath ?? "nenhum"}
 selected_project_route: ${project?.defaultRoute ?? "nenhuma"}
 read_only_files_consulted: ${inspectedFiles}
+retrieval_status: ${codeContext?.retrievalStatus ?? "sem consulta"}
+
+${codeExcerpts}
 
 # Historico recente do chat isolado
 ${chatHistory || "sem mensagens anteriores"}
 `;
+}
+
+function formatCodeExcerpts(codeContext: CodeContextBundle | undefined): string {
+  if (!codeContext) return "# Codigo consultado em modo somente leitura\nnenhum";
+  if (codeContext.retrievalStatus === "no_match" || codeContext.excerpts.length === 0) {
+    return `# Codigo consultado em modo somente leitura
+Nenhum trecho de codigo compativel foi encontrado. Se a pergunta exigir codigo real,
+diga isso explicitamente e nao invente implementacoes.`;
+  }
+  const blocks = codeContext.excerpts
+    .map((excerpt) => `## Arquivo: ${excerpt.filePath}
+linhas: ${excerpt.startLine}-${excerpt.endLine}
+motivo: ${excerpt.reason}
+\`\`\`
+${excerpt.content}
+\`\`\``)
+    .join("\n\n");
+  return `# Codigo consultado em modo somente leitura
+Use estes trechos como fonte primaria. Ao responder sobre codigo, cite arquivo e linhas.
+Nao invente codigo que nao esteja nos trechos.
+
+${blocks}`;
 }
 
 function buildHorusUserPrompt(input: HorusChatAnswerInput): string {

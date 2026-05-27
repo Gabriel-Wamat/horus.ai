@@ -11,6 +11,8 @@ import { FilePreviewSessionStore } from "../dist/infrastructure/preview/FilePrev
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 import { PreviewEventStreamAdapter } from "../dist/infrastructure/preview/PreviewEventStreamAdapter.js";
 import { PreviewRuntimeManager } from "../dist/infrastructure/preview/PreviewRuntimeManager.js";
+import { HorusOdinIntentRouter } from "../dist/application/services/HorusOdinIntentRouter.js";
+import { ReadOnlyCodeContextService } from "../dist/application/services/ReadOnlyCodeContextService.js";
 
 const userStory = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -48,6 +50,100 @@ function workflowStorage() {
     load: async () => null,
     list: async () => [],
     delete: async () => {},
+  };
+}
+
+function testIntentClassifier(overrides = {}) {
+  const byMessage = new Map([
+    [
+      "Rode o projeto.",
+      {
+        kind: "run_project",
+        mode: "executor",
+        confidence: 0.9,
+        rationale: "Test classifier selected controlled preview start.",
+        previewAction: "start",
+      },
+    ],
+    [
+      "Pare o projeto.",
+      {
+        kind: "run_project",
+        mode: "executor",
+        confidence: 0.9,
+        rationale: "Test classifier selected controlled preview stop.",
+        previewAction: "stop",
+      },
+    ],
+    [
+      "Recarregue o projeto.",
+      {
+        kind: "run_project",
+        mode: "executor",
+        confidence: 0.9,
+        rationale: "Test classifier selected controlled preview reload.",
+        previewAction: "reload",
+      },
+    ],
+    [
+      "Execute pnpm install pelo terminal.",
+      {
+        kind: "unsupported",
+        mode: "executor",
+        confidence: 0.95,
+        rationale: "Test classifier blocked arbitrary terminal execution.",
+      },
+    ],
+    [
+      "olá",
+      {
+        kind: "answer_question",
+        mode: "chat",
+        confidence: 0.95,
+        rationale: "Test classifier selected chat for greeting.",
+      },
+    ],
+    [
+      "Explique rapidamente o contexto desta user story.",
+      {
+        kind: "answer_question",
+        mode: "chat",
+        confidence: 0.91,
+        rationale: "Test classifier selected chat for explanation.",
+      },
+    ],
+    [
+      "Crie uma spec para esta user story.",
+      {
+        kind: "generate_spec",
+        mode: "executor",
+        confidence: 0.9,
+        rationale: "Test classifier selected spec generation.",
+      },
+    ],
+    [
+      "Ajuste esse botão para ficar mais claro.",
+      {
+        kind: "code_change",
+        mode: "executor",
+        confidence: 0.9,
+        rationale: "Test classifier selected code change.",
+      },
+    ],
+  ]);
+
+  for (const [message, intent] of Object.entries(overrides)) {
+    byMessage.set(message, intent);
+  }
+
+  return {
+    classify: async ({ message }) => {
+      const intent = byMessage.get(message);
+      if (!intent) {
+        throw new Error(`No test intent configured for message: ${message}`);
+      }
+      return intent;
+    },
   };
 }
 
@@ -104,10 +200,11 @@ async function setup(options = {}) {
   const useCase = new SubmitHorusChatTurnUseCase(
     chat,
     previewRuntime,
-    undefined,
-    undefined,
+    new HorusOdinIntentRouter(options.intentClassifier ?? testIntentClassifier()),
+    new ReadOnlyCodeContextService(),
     chatResponder,
-    options.chatCodeChangeExecutor
+    options.chatCodeChangeExecutor,
+    options.specGenerationExecutor
   );
 
   return {
@@ -275,8 +372,54 @@ test("SubmitHorusChatTurnUseCase treats user story explanation as a question, no
   assert.ok(result.outcome.contextSources?.includes("package.json"));
 });
 
+test("SubmitHorusChatTurnUseCase grounds code questions with file excerpts and evidence sources", async () => {
+  let received;
+  const { chatSession, folder, project, useCase } = await setup({
+    intentClassifier: testIntentClassifier({
+      "Mostre o trecho de src/App.tsx que renderiza User stories.": {
+        kind: "answer_question",
+        mode: "chat",
+        confidence: 0.96,
+        rationale: "Test classifier selected grounded code question.",
+      },
+    }),
+    chatResponder: {
+      answer: async (input) => {
+        received = input;
+        const excerpt = input.codeContext?.excerpts[0];
+        return `O trecho está em ${excerpt?.filePath}:${excerpt?.startLine}-${excerpt?.endLine}.`;
+      },
+    },
+  });
+
+  const result = await useCase.execute({
+    chatSessionId: chatSession.id,
+    message: "Mostre o trecho de src/App.tsx que renderiza User stories.",
+    projectId: project.id,
+    workspaceFolderId: folder.id,
+    userStoryId: userStory.id,
+  });
+
+  assert.equal(result.intent.kind, "answer_question");
+  assert.equal(result.outcome.action, "answer");
+  assert.equal(result.outcome.groundingStatus, "grounded");
+  assert.equal(result.outcome.evidenceSources?.[0]?.type, "code_file");
+  assert.equal(result.outcome.evidenceSources?.[0]?.path, "src/App.tsx");
+  assert.match(result.outcome.evidenceSources?.[0]?.excerpt ?? "", /User stories/);
+  assert.equal(received?.codeContext?.retrievalStatus, "matched");
+  assert.equal(received?.codeContext?.excerpts[0]?.filePath, "src/App.tsx");
+});
+
 test("SubmitHorusChatTurnUseCase only requests spec generation when the user explicitly asks for it", async () => {
-  const { chatSession, folder, project, useCase } = await setup();
+  let received;
+  const { chat, chatSession, folder, project, useCase } = await setup({
+    specGenerationExecutor: {
+      startSpecGeneration: async (input) => {
+        received = input;
+        return { threadId: "88888888-8888-4888-8888-888888888888" };
+      },
+    },
+  });
 
   const result = await useCase.execute({
     chatSessionId: chatSession.id,
@@ -289,11 +432,24 @@ test("SubmitHorusChatTurnUseCase only requests spec generation when the user exp
   assert.equal(result.intent.kind, "generate_spec");
   assert.equal(result.intent.mode, "executor");
   assert.equal(result.outcome.action, "spec_requested");
+  assert.equal(result.outcome.status, "accepted");
+  assert.equal(result.outcome.workflowThreadId, "88888888-8888-4888-8888-888888888888");
+  assert.equal(received?.workspaceFolderId, folder.id);
+  assert.equal(received?.userStory.id, userStory.id);
+  assert.equal(received?.chatSessionId, chatSession.id);
+  assert.equal(received?.sourceMessageId, result.userMessage.id);
+  assert.equal(received?.executionBrief, "Crie uma spec para esta user story.");
+
+  const messages = await chat.listMessages(chatSession.id);
+  assert.equal(
+    messages[1].contextSnapshot.workflowThreadId,
+    "88888888-8888-4888-8888-888888888888"
+  );
 });
 
 test("SubmitHorusChatTurnUseCase starts chat code-change orchestration without SpecAgent", async () => {
   let received;
-  const { chat, chatSession, folder, project, useCase } = await setup({
+  const { chat, chatSession, folder, preview, project, useCase } = await setup({
     saveSpec: true,
     chatCodeChangeExecutor: {
       startChatCodeChange: async (input) => {
@@ -307,6 +463,7 @@ test("SubmitHorusChatTurnUseCase starts chat code-change orchestration without S
     chatSessionId: chatSession.id,
     message: "Ajuste esse botão para ficar mais claro.",
     projectId: project.id,
+    previewSessionId: preview.session.id,
     workspaceFolderId: folder.id,
     userStoryId: userStory.id,
   });
@@ -318,6 +475,9 @@ test("SubmitHorusChatTurnUseCase starts chat code-change orchestration without S
   assert.equal(received?.chatSessionId, chatSession.id);
   assert.equal(received?.userStory.id, userStory.id);
   assert.equal(received?.spec.id, spec.id);
+  assert.equal(received?.project.id, project.id);
+  assert.equal(received?.project.rootPath, project.rootPath);
+  assert.equal(received?.previewSessionId, preview.session.id);
   assert.equal(received?.executionBrief, "Ajuste esse botão para ficar mais claro.");
 
   const messages = await chat.listMessages(chatSession.id);
@@ -326,6 +486,7 @@ test("SubmitHorusChatTurnUseCase starts chat code-change orchestration without S
     messages[1].contextSnapshot.workflowThreadId,
     "99999999-9999-4999-8999-999999999999"
   );
+  assert.equal(messages[1].contextSnapshot.previewSessionId, preview.session.id);
 });
 
 test("SubmitHorusChatTurnUseCase rejects workspace context from another chat scope", async () => {

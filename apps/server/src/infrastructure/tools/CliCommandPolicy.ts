@@ -40,6 +40,8 @@ const DEFAULT_ALLOWED_EXECUTABLES = [
   "bun",
 ] as const;
 
+const DENIED_EXECUTABLES = new Set(["curl", "wget", "nc", "netcat"]);
+
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_TIMEOUT_MS = 120_000;
 
@@ -134,6 +136,10 @@ export class CliCommandPolicy {
     }
 
     const executable = spec.executable.trim();
+    if (DENIED_EXECUTABLES.has(executableName(executable))) {
+      return `network transfer executable is not allowed: ${executable}`;
+    }
+
     if (
       !this.allowedExecutables.has(executable) &&
       !this.allowedExecutables.has(executableName(executable))
@@ -182,4 +188,3 @@ export class CliCommandPolicy {
     return { allowed: true, cwd: canonicalCwd, reason: null };
   }
 }
-

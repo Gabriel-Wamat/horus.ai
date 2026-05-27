@@ -1,10 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import type { FrontendProject, PreviewSession } from "@u-build/shared";
+import type { NormalizedCliCommandSpec } from "../tools/CliCommandPolicy.js";
 import {
-  CliCommandPolicy,
-  type NormalizedCliCommandSpec,
-} from "../tools/CliCommandPolicy.js";
+  PreviewCommandResolutionError,
+  resolvePreviewCommand,
+} from "./PreviewCommandResolver.js";
 import {
   BrowserPreviewStartError,
   type BrowserPreviewAdapter,
@@ -28,6 +29,7 @@ export interface ProcessBrowserPreviewAdapterOptions {
   outputTailLimit?: number;
   killGraceMs?: number;
   fetchTimeoutMs?: number;
+  readinessStabilityMs?: number;
   allowedExecutables?: readonly string[];
   killProcessGroup?: boolean;
   readinessProbe?: (previewUrl: string) => Promise<boolean>;
@@ -38,6 +40,7 @@ const DEFAULT_READINESS_POLL_MS = 250;
 const DEFAULT_OUTPUT_TAIL_LIMIT = 16_384;
 const DEFAULT_KILL_GRACE_MS = 500;
 const DEFAULT_FETCH_TIMEOUT_MS = 1_000;
+const DEFAULT_READINESS_STABILITY_MS = 250;
 
 function appendTail(current: string, chunk: Buffer, limit: number): string {
   const next = current + chunk.toString("utf-8");
@@ -58,49 +61,6 @@ function killProcessGroup(pid: number, signal: NodeJS.Signals): void {
       // Process may already have exited.
     }
   }
-}
-
-function splitCommandLine(command: string): string[] {
-  const tokens: string[] = [];
-  let current = "";
-  let quote: "'" | "\"" | null = null;
-
-  for (let index = 0; index < command.length; index += 1) {
-    const char = command[index];
-    if (!char) continue;
-
-    if (quote) {
-      if (char === quote) {
-        quote = null;
-      } else {
-        current += char;
-      }
-      continue;
-    }
-
-    if (char === "'" || char === "\"") {
-      quote = char;
-      continue;
-    }
-
-    if (/\s/.test(char)) {
-      if (current) {
-        tokens.push(current);
-        current = "";
-      }
-      continue;
-    }
-
-    current += char;
-  }
-
-  if (quote) {
-    throw new BrowserPreviewStartError("Preview command has an unclosed quote", {
-      reason: "unclosed_quote",
-    });
-  }
-  if (current) tokens.push(current);
-  return tokens;
 }
 
 function evidenceForProcess(processInfo: ManagedPreviewProcess): Record<string, unknown> {
@@ -125,6 +85,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   private readonly outputTailLimit: number;
   private readonly killGraceMs: number;
   private readonly fetchTimeoutMs: number;
+  private readonly readinessStabilityMs: number;
   private readonly allowedExecutables: readonly string[] | undefined;
   private readonly killProcessGroupEnabled: boolean;
   private readonly readinessProbe: ((previewUrl: string) => Promise<boolean>) | undefined;
@@ -135,6 +96,8 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     this.outputTailLimit = options.outputTailLimit ?? DEFAULT_OUTPUT_TAIL_LIMIT;
     this.killGraceMs = options.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
     this.fetchTimeoutMs = options.fetchTimeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
+    this.readinessStabilityMs =
+      options.readinessStabilityMs ?? DEFAULT_READINESS_STABILITY_MS;
     this.allowedExecutables = options.allowedExecutables;
     this.killProcessGroupEnabled = options.killProcessGroup ?? true;
     this.readinessProbe = options.readinessProbe;
@@ -145,12 +108,6 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     session: PreviewSession
   ): Promise<BrowserPreviewStartResult> {
     const previewUrl = session.previewUrl ?? project.previewUrl;
-    if (!project.devCommand) {
-      throw new BrowserPreviewStartError("Frontend project has no dev command", {
-        projectId: project.id,
-        reason: "missing_dev_command",
-      });
-    }
     if (!previewUrl) {
       throw new BrowserPreviewStartError("Frontend project has no preview URL", {
         projectId: project.id,
@@ -165,6 +122,17 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
         previewUrl,
         processId: existing.child.pid ?? null,
         evidence: evidenceForProcess(existing),
+      };
+    }
+
+    if (!this.readinessProbe && await this.isReachable(previewUrl)) {
+      return {
+        previewUrl,
+        processId: null,
+        evidence: {
+          previewUrl,
+          reason: "preview_already_reachable",
+        },
       };
     }
 
@@ -203,38 +171,17 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   }
 
   private async resolveCommand(project: FrontendProject): Promise<NormalizedCliCommandSpec> {
-    const tokens = splitCommandLine(project.devCommand ?? "");
-    const executable = tokens[0];
-    if (!executable) {
-      throw new BrowserPreviewStartError("Preview command is empty", {
-        projectId: project.id,
-        reason: "empty_command",
-      });
-    }
-
-    const policy = new CliCommandPolicy({
-      ...(this.allowedExecutables ? { allowedExecutables: this.allowedExecutables } : {}),
-      allowedRoot: project.rootPath,
-      maxTimeoutMs: Math.max(this.startupTimeoutMs, 1_000),
-    });
-    const decision = await policy.evaluate({
-      id: `preview:${project.id}`,
-      executable,
-      args: tokens.slice(1),
-      cwd: project.rootPath,
+    try {
+      return await resolvePreviewCommand(project, {
+        ...(this.allowedExecutables ? { allowedExecutables: this.allowedExecutables } : {}),
       timeoutMs: this.startupTimeoutMs,
-    });
-
-    if (!decision.allowed || !decision.normalized) {
-      throw new BrowserPreviewStartError("Preview command rejected by policy", {
-        projectId: project.id,
-        commandId: `preview:${project.id}`,
-        reason: decision.reason,
-        cwd: project.rootPath,
       });
+    } catch (err) {
+      if (err instanceof PreviewCommandResolutionError) {
+        throw new BrowserPreviewStartError(err.message, err.evidence);
+      }
+      throw err;
     }
-
-    return decision.normalized;
   }
 
   private spawnManagedProcess(
@@ -295,7 +242,17 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
         });
       }
 
-      if (await this.isReachable(previewUrl)) return;
+      if (await this.isReachable(previewUrl)) {
+        await delay(this.readinessStabilityMs);
+        if (managed.exited) {
+          throw new BrowserPreviewStartError("Preview process exited after readiness", {
+            ...evidenceForProcess(managed),
+            previewUrl,
+            reason: "process_exited_after_ready",
+          });
+        }
+        return;
+      }
       await delay(this.readinessPollMs);
     }
 

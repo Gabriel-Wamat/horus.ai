@@ -1,10 +1,12 @@
 import { useState, type JSX, type ReactNode } from "react";
 
-export type ShellMode = "stories" | "preview";
+export type ShellMode = "stories" | "files" | "preview" | "agents";
 type SidebarIconName =
   | "menu"
   | "stories"
+  | "files"
   | "preview"
+  | "agents"
   | "settings";
 
 interface ShellProps {
@@ -40,6 +42,26 @@ function Icon({ name }: { name: SidebarIconName }): JSX.Element {
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="3" y="4" width="18" height="12" rx="2" />
         <path d="M8 20h8M12 16v4" />
+      </svg>
+    );
+  }
+
+  if (name === "files") {
+    return (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5Z" />
+        <path d="M7 11h10M7 15h7" />
+      </svg>
+    );
+  }
+
+  if (name === "agents") {
+    return (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="6" cy="7" r="2.5" />
+        <circle cx="18" cy="7" r="2.5" />
+        <circle cx="12" cy="17" r="2.5" />
+        <path d="M8.2 8.7 10.5 14M15.8 8.7 13.5 14M8.5 7h7" />
       </svg>
     );
   }
@@ -92,6 +114,16 @@ export function Shell({
           <span className="sidebar-label">User Stories</span>
         </button>
         <button
+          className={`sidebar-icon-button ${activeMode === "files" ? "active" : ""}`}
+          type="button"
+          aria-label="Arquivos"
+          title="Arquivos"
+          onClick={() => onChangeMode("files")}
+        >
+          <Icon name="files" />
+          <span className="sidebar-label">Arquivos</span>
+        </button>
+        <button
           className={`sidebar-icon-button ${activeMode === "preview" ? "active" : ""}`}
           type="button"
           aria-label="Preview"
@@ -100,6 +132,16 @@ export function Shell({
         >
           <Icon name="preview" />
           <span className="sidebar-label">Preview</span>
+        </button>
+        <button
+          className={`sidebar-icon-button ${activeMode === "agents" ? "active" : ""}`}
+          type="button"
+          aria-label="Agents"
+          title="Agents"
+          onClick={() => onChangeMode("agents")}
+        >
+          <Icon name="agents" />
+          <span className="sidebar-label">Agents</span>
         </button>
         <div className="sidebar-spacer" />
         <div className="sidebar-separator" />
