@@ -14,7 +14,7 @@ const CuratorOutputSchema = z.object({
 export type CuratorOutput = z.infer<typeof CuratorOutputSchema>;
 
 const model = new ChatAnthropic({
-  model: "private-model-sonnet-4-6",
+  model: "gpt-4.1-mini",
   temperature: 1,
 }).withStructuredOutput(CuratorOutputSchema);
 

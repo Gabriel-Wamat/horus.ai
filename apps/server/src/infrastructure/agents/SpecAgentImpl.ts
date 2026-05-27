@@ -12,7 +12,7 @@ const LlmSpecSchema = SpecSchema.omit({
 });
 
 const model = new ChatAnthropic({
-  model: "private-model-haiku-4-5-20251001",
+  model: "gpt-4.1-mini",
 }).withStructuredOutput(LlmSpecSchema);
 
 export async function generateSpec(userStory: UserStory): Promise<Spec> {
