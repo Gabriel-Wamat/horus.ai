@@ -18,6 +18,14 @@ import type {
   ProjectConstructionRun,
   ProjectQualityGate,
   ProjectWorkspace,
+  AgentSkill,
+  AgentSkillBinding,
+  AgentSkillFile,
+  AgentSkillRevision,
+  AgentSkillSourceType,
+  AgentSkillStatus,
+  AgentSkillUsageEvent,
+  AgentSkillValidationReport,
 } from "@u-build/shared";
 import type { WorkflowEvent } from "@u-build/shared";
 import type {
@@ -90,6 +98,17 @@ export interface FrontendProjectRepository {
     previewUrl?: string | null;
     previewCommandId?: string | null;
     commandCatalog?: FrontendProject["commandCatalog"];
+    projectKind?: FrontendProject["projectKind"];
+    lifecycleStatus?: FrontendProject["lifecycleStatus"];
+    visibility?: FrontendProject["visibility"];
+    healthStatus?: FrontendProject["healthStatus"];
+    healthReasons?: FrontendProject["healthReasons"];
+    canonicalProjectId?: string | null;
+    projectWorkspaceId?: string | null;
+    appFingerprint?: string | null;
+    lastHealthCheckedAt?: string | null;
+    archivedAt?: string | null;
+    archivedReason?: string | null;
   }): Promise<FrontendProject>;
 }
 
@@ -140,4 +159,37 @@ export interface ProjectConstructionRepository {
   listCommandRuns(runId: string): Promise<ProjectCommandRun[]>;
   appendQualityGate(qualityGate: ProjectQualityGate): Promise<ProjectQualityGate>;
   listQualityGates(runId: string): Promise<ProjectQualityGate[]>;
+}
+
+export interface AgentSkillRepository {
+  saveSkill(skill: AgentSkill): Promise<AgentSkill>;
+  updateSkill(skill: AgentSkill): Promise<AgentSkill>;
+  getSkill(skillId: string): Promise<AgentSkill>;
+  findSkillBySlug(slug: string): Promise<AgentSkill | null>;
+  listSkills(filter?: {
+    status?: AgentSkillStatus | undefined;
+    sourceType?: AgentSkillSourceType | undefined;
+    search?: string | undefined;
+    agentProfileId?: string | undefined;
+  }): Promise<AgentSkill[]>;
+  saveRevision(revision: AgentSkillRevision): Promise<AgentSkillRevision>;
+  getRevision(revisionId: string): Promise<AgentSkillRevision>;
+  listRevisions(skillId: string): Promise<AgentSkillRevision[]>;
+  saveFile(file: AgentSkillFile): Promise<AgentSkillFile>;
+  listFiles(revisionId: string): Promise<AgentSkillFile[]>;
+  saveBinding(binding: AgentSkillBinding): Promise<AgentSkillBinding>;
+  listBindings(skillId?: string): Promise<AgentSkillBinding[]>;
+  replaceBindings(
+    skillId: string,
+    bindings: AgentSkillBinding[]
+  ): Promise<AgentSkillBinding[]>;
+  saveValidationReport(
+    report: AgentSkillValidationReport
+  ): Promise<AgentSkillValidationReport>;
+  listValidationReports(revisionId: string): Promise<AgentSkillValidationReport[]>;
+  appendUsageEvent(event: AgentSkillUsageEvent): Promise<AgentSkillUsageEvent>;
+  listUsageEvents(filter?: {
+    skillId?: string;
+    workflowThreadId?: string;
+  }): Promise<AgentSkillUsageEvent[]>;
 }

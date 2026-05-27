@@ -18,6 +18,7 @@ export interface RuntimeConfig {
     codeChangeSetsDir: string;
     workflowEventsDir: string;
     projectConstructionDir: string;
+    agentSkillsDir: string;
     projectWorkspacesDir: string;
     projectRunWorktreesDir: string;
     langgraphCheckpointsDir: string;
@@ -98,6 +99,7 @@ export function loadRuntimeConfig(
       codeChangeSetsDir: resolveFromDataDir(dataDir, "code-change-sets"),
       workflowEventsDir: resolveFromDataDir(dataDir, "workflow-events"),
       projectConstructionDir: resolveFromDataDir(dataDir, "project-construction"),
+      agentSkillsDir: resolveFromDataDir(dataDir, "agent-skills"),
       projectWorkspacesDir,
       projectRunWorktreesDir,
       langgraphCheckpointsDir: resolveFromDataDir(dataDir, "langgraph-checkpoints"),

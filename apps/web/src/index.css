@@ -1987,8 +1987,15 @@ code,
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
+.preview-conversation-panel > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .preview-conversation-head {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -2002,6 +2009,10 @@ code,
   min-width: 0;
   align-items: center;
   gap: 12px;
+}
+
+.preview-project-identity > div {
+  min-width: 0;
 }
 
 .preview-project-icon {
@@ -2036,6 +2047,7 @@ code,
 .preview-conversation-config {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(72px, 92px);
+  min-width: 0;
   align-items: end;
   gap: 8px;
   border-bottom: 1px solid var(--bd);
@@ -2057,6 +2069,7 @@ code,
 
 .preview-conversation-config .input,
 .preview-conversation-config .select {
+  min-width: 0;
   height: 34px;
   border-radius: 8px;
   padding: 0 10px;
@@ -2067,6 +2080,62 @@ code,
 .preview-conversation-config .form-error {
   grid-column: 1 / -1;
   margin-top: 0;
+}
+
+.preview-project-health-row {
+  grid-column: 1 / -1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.preview-project-debug-toggle {
+  height: 26px;
+  border: 1px solid var(--bd-soft);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.026);
+  color: var(--t3);
+  padding: 0 9px;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.preview-project-debug-toggle.is-active {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--t);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.preview-project-health-badge {
+  max-width: 150px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: var(--t3);
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-project-health-badge.health-healthy {
+  border-color: rgba(35, 235, 152, 0.16);
+  color: var(--p);
+}
+
+.preview-project-health-badge.health-blocked {
+  border-color: rgba(240, 85, 108, 0.22);
+  color: var(--danger);
+}
+
+.preview-project-health-badge.health-warning {
+  border-color: rgba(148, 163, 184, 0.18);
+  color: var(--t2);
 }
 
 .preview-chat-thread-section {
@@ -2752,6 +2821,8 @@ code,
 
 .visual-composer {
   display: grid;
+  width: calc(100% - 28px);
+  max-width: calc(100% - 28px);
   gap: 8px;
   margin: 0 14px 14px;
   border: 1px solid rgba(255, 255, 255, 0.105);

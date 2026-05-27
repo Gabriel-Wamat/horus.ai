@@ -15,6 +15,7 @@ import { VisualPreviewConsole } from "./components/VisualPreviewConsole.js";
 import { WorkflowProgress } from "./components/WorkflowProgress.js";
 import { Button, Panel, PanelHeader } from "./components/ui/index.js";
 import { AgentFlowPage } from "./features/agent-flow-map/AgentFlowPage.js";
+import { AgentSkillsPage } from "./features/agent-skills/AgentSkillsPage.js";
 import { ProjectFilesPage } from "./features/project-files/ProjectFilesPage.js";
 
 function CancelledPanel({ onRestart }: { onRestart: () => void }): JSX.Element {
@@ -209,6 +210,8 @@ export function App(): JSX.Element {
       <ProjectFilesPage />
     ) : appMode === "agents" ? (
       <AgentFlowPage workflowState={agentFlowState} events={workflow.events} />
+    ) : appMode === "skills" ? (
+      <AgentSkillsPage />
     ) : (
       <div className="user-story-screen">
         {specWorkspace}

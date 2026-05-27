@@ -46,6 +46,28 @@ function getStatusLabel(session: PreviewSession | null): string {
   return labels[session.status];
 }
 
+const projectHealthReasonLabels: Record<string, string> = {
+  root_missing: "pasta ausente",
+  manifest_missing: "sem manifesto",
+  preview_command_missing: "sem comando",
+  preview_url_missing: "sem URL",
+  preview_url_collision: "URL duplicada",
+  wrong_owner_port: "porta ocupada",
+  scaffold_only: "scaffold",
+  duplicate_app_hash: "front duplicado",
+  superseded_by_canonical: "substituído",
+  stale_running_run: "execução antiga",
+  legacy_static: "legado",
+  seed_project: "seed",
+};
+
+function projectHealthLabel(project: FrontendProject): string {
+  if (project.healthStatus === "healthy") return "ok";
+  const reason = project.healthReasons[0];
+  if (reason) return projectHealthReasonLabels[reason] ?? reason;
+  return project.healthStatus;
+}
+
 function formatMessageTime(createdAt: string): string {
   return new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
@@ -227,7 +249,9 @@ export function PreviewConversationPanel({
   isSubmittingInstruction,
   isChatReady,
   chatDisabledReason,
+  showAllProjects,
   onSelectProject,
+  onToggleAllProjects,
   onChangeRoute,
   onChangeInstructionMessage,
   onChangeInstructionMode,
@@ -247,7 +271,9 @@ export function PreviewConversationPanel({
   readonly isSubmittingInstruction: boolean;
   readonly isChatReady: boolean;
   readonly chatDisabledReason: string | undefined;
+  readonly showAllProjects: boolean;
   readonly onSelectProject: (projectId: string) => void;
+  readonly onToggleAllProjects: (enabled: boolean) => void;
   readonly onChangeRoute: (route: string) => void;
   readonly onChangeInstructionMessage: (message: string) => void;
   readonly onChangeInstructionMode: (mode: VisualInstructionMode) => void;
@@ -305,6 +331,11 @@ export function PreviewConversationPanel({
               projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
+                  {project.visibility === "hidden" ||
+                  project.healthStatus === "blocked" ||
+                  project.lifecycleStatus === "superseded"
+                    ? ` · ${projectHealthLabel(project)}`
+                    : ""}
                 </option>
               ))
             )}
@@ -326,6 +357,31 @@ export function PreviewConversationPanel({
         </div>
 
         {error && <div className="form-error">{error}</div>}
+
+        <div className="preview-project-health-row">
+          <button
+            type="button"
+            className={`preview-project-debug-toggle${showAllProjects ? " is-active" : ""}`}
+            onClick={() => onToggleAllProjects(!showAllProjects)}
+            aria-pressed={showAllProjects}
+          >
+            {showAllProjects ? "Ocultar inválidos" : "Ver inválidos"}
+          </button>
+          {selectedProject ? (
+            <span
+              className={`preview-project-health-badge health-${selectedProject.healthStatus}`}
+              title={
+                selectedProject.healthReasons
+                  .map((reason) => projectHealthReasonLabels[reason] ?? reason)
+                  .join(", ") || selectedProject.healthStatus
+              }
+            >
+              {selectedProject.visibility === "hidden"
+                ? "oculto"
+                : projectHealthLabel(selectedProject)}
+            </span>
+          ) : null}
+        </div>
       </section>
 
       <section className="preview-chat-thread-section">

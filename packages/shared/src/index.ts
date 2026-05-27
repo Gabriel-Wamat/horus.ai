@@ -12,6 +12,7 @@ export * from "./entities/AgentResult.js";
 export * from "./entities/WorkflowState.js";
 export * from "./entities/ProjectConstruction.js";
 export * from "./entities/ProjectFiles.js";
+export * from "./entities/AgentSkill.js";
 
 export type { IAgentProvider, AgentRunContext } from "./ports/IAgentProvider.js";
 export type { IStorageProvider } from "./ports/IStorageProvider.js";

@@ -25,6 +25,17 @@ interface ProjectRow {
   command_catalog: unknown;
   preview_url: string | null;
   created_at: Date;
+  project_kind?: string;
+  lifecycle_status?: string;
+  visibility?: string;
+  health_status?: string;
+  health_reasons?: unknown;
+  canonical_project_id?: string | null;
+  project_workspace_id?: string | null;
+  app_fingerprint?: string | null;
+  last_health_checked_at?: Date | null;
+  archived_at?: Date | null;
+  archived_reason?: string | null;
 }
 
 export class PostgresFrontendProjectRepository
@@ -65,6 +76,17 @@ export class PostgresFrontendProjectRepository
     previewUrl?: string | null;
     previewCommandId?: string | null;
     commandCatalog?: FrontendProject["commandCatalog"];
+    projectKind?: FrontendProject["projectKind"];
+    lifecycleStatus?: FrontendProject["lifecycleStatus"];
+    visibility?: FrontendProject["visibility"];
+    healthStatus?: FrontendProject["healthStatus"];
+    healthReasons?: FrontendProject["healthReasons"];
+    canonicalProjectId?: string | null;
+    projectWorkspaceId?: string | null;
+    appFingerprint?: string | null;
+    lastHealthCheckedAt?: string | null;
+    archivedAt?: string | null;
+    archivedReason?: string | null;
   }): Promise<FrontendProject> {
     const rootPath = await canonicalizeProjectRoot(this.repositoryRoot, input.rootPath);
     const slug = slugify(input.name, "frontend-project");
@@ -80,6 +102,21 @@ export class PostgresFrontendProjectRepository
       commandCatalog: input.commandCatalog ?? [],
       previewUrl: input.previewUrl ?? null,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
+      projectKind: input.projectKind ?? existing?.projectKind ?? "generated",
+      lifecycleStatus:
+        input.lifecycleStatus ?? existing?.lifecycleStatus ?? "published",
+      visibility: input.visibility ?? existing?.visibility ?? "visible",
+      healthStatus: input.healthStatus ?? existing?.healthStatus ?? "unknown",
+      healthReasons: input.healthReasons ?? existing?.healthReasons ?? [],
+      canonicalProjectId:
+        input.canonicalProjectId ?? existing?.canonicalProjectId ?? null,
+      projectWorkspaceId:
+        input.projectWorkspaceId ?? existing?.projectWorkspaceId ?? null,
+      appFingerprint: input.appFingerprint ?? existing?.appFingerprint ?? null,
+      lastHealthCheckedAt:
+        input.lastHealthCheckedAt ?? existing?.lastHealthCheckedAt ?? null,
+      archivedAt: input.archivedAt ?? existing?.archivedAt ?? null,
+      archivedReason: input.archivedReason ?? existing?.archivedReason ?? null,
     });
     await this.upsertProject(project);
     return project;
@@ -107,9 +144,15 @@ export class PostgresFrontendProjectRepository
       `
       INSERT INTO frontend_projects (
         id, name, slug, root_path, default_route, dev_command,
-        preview_command_id, command_catalog, preview_url, created_at
+        preview_command_id, command_catalog, preview_url, created_at,
+        project_kind, lifecycle_status, visibility, health_status, health_reasons,
+        canonical_project_id, project_workspace_id, app_fingerprint,
+        last_health_checked_at, archived_at, archived_reason
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10)
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10,
+        $11, $12, $13, $14, $15::jsonb, $16, $17, $18, $19, $20, $21
+      )
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         slug = EXCLUDED.slug,
@@ -118,7 +161,18 @@ export class PostgresFrontendProjectRepository
         dev_command = EXCLUDED.dev_command,
         preview_command_id = EXCLUDED.preview_command_id,
         command_catalog = EXCLUDED.command_catalog,
-        preview_url = EXCLUDED.preview_url
+        preview_url = EXCLUDED.preview_url,
+        project_kind = EXCLUDED.project_kind,
+        lifecycle_status = EXCLUDED.lifecycle_status,
+        visibility = EXCLUDED.visibility,
+        health_status = EXCLUDED.health_status,
+        health_reasons = EXCLUDED.health_reasons,
+        canonical_project_id = EXCLUDED.canonical_project_id,
+        project_workspace_id = EXCLUDED.project_workspace_id,
+        app_fingerprint = EXCLUDED.app_fingerprint,
+        last_health_checked_at = EXCLUDED.last_health_checked_at,
+        archived_at = EXCLUDED.archived_at,
+        archived_reason = EXCLUDED.archived_reason
       `,
       [
         project.id,
@@ -131,6 +185,17 @@ export class PostgresFrontendProjectRepository
         json(project.commandCatalog),
         project.previewUrl,
         project.createdAt,
+        project.projectKind,
+        project.lifecycleStatus,
+        project.visibility,
+        project.healthStatus,
+        json(project.healthReasons),
+        project.canonicalProjectId,
+        project.projectWorkspaceId,
+        project.appFingerprint,
+        project.lastHealthCheckedAt,
+        project.archivedAt,
+        project.archivedReason,
       ]
     );
   }
@@ -149,5 +214,18 @@ function projectFromRow(row: ProjectRow): FrontendProject {
     commandCatalog: row.command_catalog,
     previewUrl: row.preview_url,
     createdAt: toIso(row.created_at),
+    projectKind: row.project_kind,
+    lifecycleStatus: row.lifecycle_status,
+    visibility: row.visibility,
+    healthStatus: row.health_status,
+    healthReasons: row.health_reasons,
+    canonicalProjectId: row.canonical_project_id ?? null,
+    projectWorkspaceId: row.project_workspace_id ?? null,
+    appFingerprint: row.app_fingerprint ?? null,
+    lastHealthCheckedAt: row.last_health_checked_at
+      ? toIso(row.last_health_checked_at)
+      : null,
+    archivedAt: row.archived_at ? toIso(row.archived_at) : null,
+    archivedReason: row.archived_reason ?? null,
   });
 }

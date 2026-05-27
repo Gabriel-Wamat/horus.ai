@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { promises as fs } from "node:fs";
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { FrontendProject, PreviewSession } from "@u-build/shared";
 import type { NormalizedCliCommandSpec } from "../tools/CliCommandPolicy.js";
@@ -15,6 +17,7 @@ import {
 interface ManagedPreviewProcess {
   child: ChildProcess;
   command: NormalizedCliCommandSpec;
+  project: FrontendProject;
   stdoutTail: string;
   stderrTail: string;
   exited: boolean;
@@ -117,7 +120,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
 
     const existing = this.processes.get(session.id);
     if (existing && !existing.exited) {
-      await this.waitForReadiness(previewUrl, existing);
+      await this.waitForReadiness(previewUrl, existing, project);
       return {
         previewUrl,
         processId: existing.child.pid ?? null,
@@ -125,21 +128,24 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       };
     }
 
-    if (!this.readinessProbe && await this.isReachable(previewUrl)) {
-      return {
-        previewUrl,
-        processId: null,
-        evidence: {
+    if (!this.readinessProbe) {
+      await this.assertPreviewUrlIsNotWrongOwner(previewUrl, project);
+      if (await this.isReadyForProject(previewUrl, project)) {
+        return {
           previewUrl,
-          reason: "preview_already_reachable",
-        },
-      };
+          processId: null,
+          evidence: {
+            previewUrl,
+            reason: "preview_already_reachable",
+          },
+        };
+      }
     }
 
     const command = await this.resolveCommand(project);
-    const managed = this.spawnManagedProcess(session.id, command);
+    const managed = this.spawnManagedProcess(session.id, command, project);
     try {
-      await this.waitForReadiness(previewUrl, managed);
+      await this.waitForReadiness(previewUrl, managed, project);
     } catch (err) {
       await this.stopManagedProcess(managed);
       this.processes.delete(session.id);
@@ -167,7 +173,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   async reload(session: PreviewSession): Promise<void> {
     const managed = this.processes.get(session.id);
     if (!managed || managed.exited || !session.previewUrl) return;
-    await this.waitForReadiness(session.previewUrl, managed);
+    await this.waitForReadiness(session.previewUrl, managed, managed.project);
   }
 
   private async resolveCommand(project: FrontendProject): Promise<NormalizedCliCommandSpec> {
@@ -186,7 +192,8 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
 
   private spawnManagedProcess(
     sessionId: string,
-    command: NormalizedCliCommandSpec
+    command: NormalizedCliCommandSpec,
+    project: FrontendProject
   ): ManagedPreviewProcess {
     const child = spawn(command.executable, command.args, {
       cwd: command.cwd,
@@ -199,6 +206,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     const managed: ManagedPreviewProcess = {
       child,
       command,
+      project,
       stdoutTail: "",
       stderrTail: "",
       exited: false,
@@ -231,7 +239,8 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
 
   private async waitForReadiness(
     previewUrl: string,
-    managed: ManagedPreviewProcess
+    managed: ManagedPreviewProcess,
+    project: FrontendProject
   ): Promise<void> {
     const deadline = nowMs() + this.startupTimeoutMs;
     while (nowMs() < deadline) {
@@ -242,7 +251,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
         });
       }
 
-      if (await this.isReachable(previewUrl)) {
+      if (await this.isReadyForProject(previewUrl, project)) {
         await delay(this.readinessStabilityMs);
         if (managed.exited) {
           throw new BrowserPreviewStartError("Preview process exited after readiness", {
@@ -252,6 +261,11 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
           });
         }
         return;
+      }
+      if (!this.readinessProbe) {
+        await this.assertPreviewUrlIsNotWrongOwner(previewUrl, project, {
+          ignoreMissingRemoteManifest: true,
+        });
       }
       await delay(this.readinessPollMs);
     }
@@ -279,6 +293,95 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       return response.status >= 200 && response.status < 500;
     } catch {
       return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async isReadyForProject(
+    previewUrl: string,
+    project: FrontendProject
+  ): Promise<boolean> {
+    if (this.readinessProbe) {
+      return this.readinessProbe(previewUrl);
+    }
+
+    const expectedProjectId = await this.readProjectManifestId(project.rootPath);
+    if (!expectedProjectId) {
+      return this.isReachable(previewUrl);
+    }
+
+    const remoteProjectId = await this.readRemoteProjectManifestId(previewUrl);
+    return remoteProjectId === expectedProjectId;
+  }
+
+  private async assertPreviewUrlIsNotWrongOwner(
+    previewUrl: string,
+    project: FrontendProject,
+    options: { ignoreMissingRemoteManifest?: boolean } = {}
+  ): Promise<void> {
+    const expectedProjectId = await this.readProjectManifestId(project.rootPath);
+    if (!expectedProjectId) return;
+
+    const remoteProjectId = await this.readRemoteProjectManifestId(previewUrl);
+    if (remoteProjectId && remoteProjectId !== expectedProjectId) {
+      throw new BrowserPreviewStartError(
+        `Preview URL is serving project ${remoteProjectId}, not selected project ${expectedProjectId}`,
+        {
+          projectId: project.id,
+          projectName: project.name,
+          previewUrl,
+          expectedProjectId,
+          remoteProjectId,
+          reason: "wrong_owner_port",
+        }
+      );
+    }
+
+    if (!remoteProjectId && !options.ignoreMissingRemoteManifest && await this.isReachable(previewUrl)) {
+      throw new BrowserPreviewStartError(
+        "Preview URL is reachable but does not expose the selected project manifest",
+        {
+          projectId: project.id,
+          projectName: project.name,
+          previewUrl,
+          expectedProjectId,
+          reason: "wrong_owner_port",
+        }
+      );
+    }
+  }
+
+  private async readProjectManifestId(rootPath: string): Promise<string | null> {
+    try {
+      const raw = await fs.readFile(join(rootPath, "horus.project.json"), "utf-8");
+      const parsed = JSON.parse(raw) as { projectId?: unknown };
+      return typeof parsed.projectId === "string" && parsed.projectId.trim()
+        ? parsed.projectId
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async readRemoteProjectManifestId(previewUrl: string): Promise<string | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.fetchTimeoutMs);
+    try {
+      const manifestUrl = new URL("/horus.project.json", previewUrl);
+      manifestUrl.searchParams.set("_horusPreviewCheck", String(Date.now()));
+      const response = await fetch(manifestUrl, {
+        method: "GET",
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return null;
+      const parsed = (await response.json()) as { projectId?: unknown };
+      return typeof parsed.projectId === "string" && parsed.projectId.trim()
+        ? parsed.projectId
+        : null;
+    } catch {
+      return null;
     } finally {
       clearTimeout(timeout);
     }

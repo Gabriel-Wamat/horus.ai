@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, realpath } from "node:fs/promises";
+import { createServer } from "node:http";
+import { mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -52,6 +53,20 @@ function sessionFixture(project, previewUrl) {
     updatedAt: "2026-05-26T00:00:00.000Z",
     errorMessage: null,
   };
+}
+
+async function listen(server) {
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.equal(typeof address, "object");
+  assert.ok(address);
+  return `http://127.0.0.1:${address.port}/`;
+}
+
+function closeServer(server) {
+  return new Promise((resolve, reject) => {
+    server.close((err) => (err ? reject(err) : resolve()));
+  });
 }
 
 test("ProcessBrowserPreviewAdapter starts a real managed preview process and stops it", async () => {
@@ -113,6 +128,82 @@ test("ProcessBrowserPreviewAdapter rejects missing dev commands", async () => {
   );
 });
 
+test("ProcessBrowserPreviewAdapter reuses reachable URL only when project identity matches", async () => {
+  const rootPath = await mkdtemp(join(tmpdir(), "horus-preview-owned-"));
+  const project = projectFixture(rootPath, "/bin/sleep 30", "http://127.0.0.1:1/");
+  await writeFile(
+    join(rootPath, "horus.project.json"),
+    `${JSON.stringify({ projectId: project.id })}\n`,
+    "utf8"
+  );
+  const server = createServer((req, res) => {
+    if (req.url?.startsWith("/horus.project.json")) {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ projectId: project.id }));
+      return;
+    }
+    res.end("<html><body>owned project</body></html>");
+  });
+  const previewUrl = await listen(server);
+  const adapter = new ProcessBrowserPreviewAdapter({
+    startupTimeoutMs: 250,
+    readinessPollMs: 25,
+    allowedExecutables: ["/bin/sleep", "sleep"],
+  });
+
+  try {
+    const started = await adapter.start(
+      { ...project, previewUrl },
+      sessionFixture(project, previewUrl)
+    );
+    assert.equal(started.processId, null);
+    assert.equal(started.evidence.reason, "preview_already_reachable");
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("ProcessBrowserPreviewAdapter refuses a reachable URL owned by another project", async () => {
+  const rootPath = await mkdtemp(join(tmpdir(), "horus-preview-wrong-owner-"));
+  const project = projectFixture(rootPath, "/bin/sleep 30", "http://127.0.0.1:1/");
+  await writeFile(
+    join(rootPath, "horus.project.json"),
+    `${JSON.stringify({ projectId: project.id })}\n`,
+    "utf8"
+  );
+  const server = createServer((req, res) => {
+    if (req.url?.startsWith("/horus.project.json")) {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ projectId: "99999999-9999-4999-8999-999999999999" }));
+      return;
+    }
+    res.end("<html><body>wrong project</body></html>");
+  });
+  const previewUrl = await listen(server);
+  const adapter = new ProcessBrowserPreviewAdapter({
+    startupTimeoutMs: 250,
+    readinessPollMs: 25,
+    killGraceMs: 25,
+    allowedExecutables: ["/bin/sleep", "sleep"],
+  });
+
+  try {
+    await assert.rejects(
+      () =>
+        adapter.start(
+          { ...project, previewUrl },
+          sessionFixture(project, previewUrl)
+        ),
+      (err) =>
+        err instanceof BrowserPreviewStartError &&
+        err.evidence.reason === "wrong_owner_port" &&
+        /serving project/.test(err.message)
+    );
+  } finally {
+    await closeServer(server);
+  }
+});
+
 test("PreviewRuntimeManager records preview_error when adapter startup fails", async () => {
   class FailingRegistry {
     constructor(project) {
@@ -144,7 +235,11 @@ test("PreviewRuntimeManager records preview_error when adapter startup fails", a
 
   assert.equal(started.session.status, "error");
   assert.equal(started.event.type, "preview_error");
-  assert.match(started.session.errorMessage, /command id was not found/i);
+  assert.match(started.session.errorMessage, /comando de preview/i);
+  assert.equal(
+    started.event.data.runtimeEvidence.reason,
+    "preview_command_missing"
+  );
   assert.deepEqual(
     timeline.map((event) => event.type),
     ["preview_created", "preview_error"]

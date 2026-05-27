@@ -1,12 +1,13 @@
 import { useState, type JSX, type ReactNode } from "react";
 
-export type ShellMode = "stories" | "files" | "preview" | "agents";
+export type ShellMode = "stories" | "files" | "preview" | "agents" | "skills";
 type SidebarIconName =
   | "menu"
   | "stories"
   | "files"
   | "preview"
   | "agents"
+  | "skills"
   | "settings";
 
 interface ShellProps {
@@ -62,6 +63,15 @@ function Icon({ name }: { name: SidebarIconName }): JSX.Element {
         <circle cx="18" cy="7" r="2.5" />
         <circle cx="12" cy="17" r="2.5" />
         <path d="M8.2 8.7 10.5 14M15.8 8.7 13.5 14M8.5 7h7" />
+      </svg>
+    );
+  }
+
+  if (name === "skills") {
+    return (
+      <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 4.5h9.5L19 9v10.5H5Z" />
+        <path d="M14.5 4.5V9H19M8 13h8M8 16h6" />
       </svg>
     );
   }
@@ -142,6 +152,16 @@ export function Shell({
         >
           <Icon name="agents" />
           <span className="sidebar-label">Agents</span>
+        </button>
+        <button
+          className={`sidebar-icon-button ${activeMode === "skills" ? "active" : ""}`}
+          type="button"
+          aria-label="Skills"
+          title="Skills"
+          onClick={() => onChangeMode("skills")}
+        >
+          <Icon name="skills" />
+          <span className="sidebar-label">Skills</span>
         </button>
         <div className="sidebar-spacer" />
         <div className="sidebar-separator" />

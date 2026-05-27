@@ -53,3 +53,39 @@ test("FileFrontendProjectRegistry rejects project roots outside repository", asy
     FrontendProjectRootError
   );
 });
+
+test("FileFrontendProjectRegistry persists preview hygiene metadata", async () => {
+  const baseDir = await mkdtemp(join(tmpdir(), "horus-preview-projects-"));
+  const repoRoot = join(baseDir, "repo");
+  const appRoot = join(repoRoot, "generated");
+  await mkdir(join(repoRoot, "apps", "web"), { recursive: true });
+  await mkdir(appRoot, { recursive: true });
+  const registry = new FileFrontendProjectRegistry(
+    join(baseDir, "registry"),
+    repoRoot
+  );
+
+  const project = await registry.registerProject({
+    name: "Generated App",
+    rootPath: "generated",
+    previewUrl: "http://127.0.0.1:5184",
+    projectKind: "generated",
+    lifecycleStatus: "published",
+    visibility: "hidden",
+    healthStatus: "blocked",
+    healthReasons: ["scaffold_only"],
+    projectWorkspaceId: "33333333-3333-4333-8333-333333333333",
+    appFingerprint: "abc123",
+    lastHealthCheckedAt: "2026-05-27T10:00:00.000Z",
+    archivedAt: "2026-05-27T10:00:00.000Z",
+    archivedReason: "scaffold",
+  });
+
+  const loaded = await registry.getProject(project.id);
+
+  assert.equal(loaded.visibility, "hidden");
+  assert.equal(loaded.healthStatus, "blocked");
+  assert.deepEqual(loaded.healthReasons, ["scaffold_only"]);
+  assert.equal(loaded.projectWorkspaceId, "33333333-3333-4333-8333-333333333333");
+  assert.equal(loaded.appFingerprint, "abc123");
+});

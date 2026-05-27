@@ -58,6 +58,11 @@ test("Preview schemas accept valid project, session, event, and inputs", () => {
   assert.equal(project.slug, "user-stories");
   assert.equal(project.previewCommandId, "dev");
   assert.equal(project.commandCatalog[0].executable, "pnpm");
+  assert.equal(project.projectKind, "generated");
+  assert.equal(project.lifecycleStatus, "published");
+  assert.equal(project.visibility, "visible");
+  assert.equal(project.healthStatus, "unknown");
+  assert.deepEqual(project.healthReasons, []);
   assert.equal(session.device.name, "pc");
   assert.deepEqual(event.data, {});
   assert.equal(

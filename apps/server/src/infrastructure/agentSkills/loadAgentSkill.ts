@@ -1,5 +1,6 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { RuntimeAgentSkill } from "@u-build/shared";
 
 const cache = new Map<string, string>();
 const MAX_REFERENCE_BYTES = 12_000;
@@ -20,6 +21,35 @@ export function loadAgentSkill(skillId: string): string {
     .join("\n\n");
   cache.set(skillId, content);
   return content;
+}
+
+export function appendRuntimeAgentSkills(
+  baseSkillContent: string,
+  runtimeSkills: RuntimeAgentSkill[]
+): string {
+  const dynamicContent = formatRuntimeAgentSkills(runtimeSkills);
+  return [baseSkillContent.trim(), dynamicContent].filter(Boolean).join("\n\n");
+}
+
+export function formatRuntimeAgentSkills(
+  runtimeSkills: RuntimeAgentSkill[]
+): string {
+  if (runtimeSkills.length === 0) return "";
+  return [
+    "# Active Project Skills",
+    ...runtimeSkills.map((skill) =>
+      [
+        `## ${skill.displayName}`,
+        `skill_id: ${skill.skillId}`,
+        `revision_id: ${skill.revisionId}`,
+        `content_hash: ${skill.contentHash}`,
+        skill.skillMd.trim(),
+        formatRuntimeSkillFiles(skill),
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+    ),
+  ].join("\n\n");
 }
 
 function findProjectRoot(start: string): string {
@@ -77,4 +107,15 @@ function clipByBytes(content: string, maxBytes: number): string {
     .toString("utf8")
     .replace(/\uFFFD$/u, "");
   return `${clipped}\n\n[Reference clipped by loadAgentSkill byte limit]`;
+}
+
+function formatRuntimeSkillFiles(skill: RuntimeAgentSkill): string {
+  const files = skill.files.filter((file) => file.contentText);
+  if (files.length === 0) return "";
+  return [
+    "### Skill Support Files",
+    ...files.map(
+      (file) => `#### ${file.relativePath}\n${file.contentText?.trim() ?? ""}`
+    ),
+  ].join("\n\n");
 }
