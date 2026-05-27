@@ -8,7 +8,7 @@ description: Use this skill when the QA Agent must generate frontend validation 
 ```yaml
 id: "qa-frontend-testing"
 agent: "qa"
-version: "0.2.0"
+version: "0.3.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into QAAgent prompt before test generation rules."
@@ -60,6 +60,7 @@ input_contract:
   target_files:
     - "generated index.html artifact when available"
     - "technical spec with components, data models, apiEndpoints, and acceptance criteria"
+    - "visualContract and DesignContextBundle when available"
   target_stack:
     frontend:
       - "HTML"
@@ -91,6 +92,7 @@ principles:
     - "Use component names, technical approach, data models, and apiEndpoints from the spec."
     - "When the spec describes future backend routes, test the frontend adapter/mock behavior and visible states rather than real network availability."
     - "Use curator feedback as a correction contract on retries."
+    - "Use visualContract to create explicit visual QA coverage for tokens, density, states, responsivity, accessibility, and antiPatterns."
   architecture:
     - "Separate primary journey, component behavior, responsive checks, and accessibility checks."
     - "Separate route-readiness tests from real backend integration tests."
@@ -152,6 +154,7 @@ coverage_matrix:
     - "Loading, error, and disabled states"
     - "Future route contract compatibility through mock data or adapter functions"
     - "Data model fields rendered with correct labels, formatting, and fallbacks"
+    - "Visual identity drift from visualContract or project design context"
 ```
 
 ### Step 3 - Generate Test Cases
@@ -165,6 +168,7 @@ Implementation rules:
 - Include negative/edge cases when the spec includes input or dynamic data.
 - Add at least one route-readiness test when `apiEndpoints` is non-empty.
 - Add at least one data rendering/fallback test when `dataModels` is non-empty.
+- Add at least one visual-contract test when `visualContract` is present.
 - Add loading, empty, and error-state tests when the technical approach mentions adapter-backed data.
 - Do not write "verify API call succeeds" unless the spec explicitly says a real backend route exists.
 - Prefer "verify the UI uses mock/adapter-compatible data and exposes loading/error fallback" for future route contracts.

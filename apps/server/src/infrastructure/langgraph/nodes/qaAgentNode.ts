@@ -27,13 +27,23 @@ export function createQaAgentNode(deps: LangGraphDependencies) {
     );
 
     const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
+    const designContext =
+      state.frontendProjectRootPath && deps.buildDesignContext
+        ? await deps.buildDesignContext({
+            ...(state.frontendProjectId
+              ? { projectId: state.frontendProjectId }
+              : {}),
+            projectRootPath: state.frontendProjectRootPath,
+          })
+        : undefined;
     // Self-correction: curator feedback refines test coverage on retry
     const qaOutput = await deps.generateQaTests(
       userStory,
       spec,
       curatorFeedback,
       llmSettings,
-      state.executionBrief
+      state.executionBrief,
+      designContext
     );
     const previewSmoke = await validatePreviewForQa(state, deps);
     const runtimeValidation = buildRuntimeValidationEvidenceFromPreviewSmoke({

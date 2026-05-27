@@ -28,6 +28,8 @@ const spec = {
 test("frontAgentNode passes selected project code context and emits real file CodeChangeSet", async () => {
   let contextInput;
   let receivedCodeContext;
+  let designContextInput;
+  let receivedDesignContext;
   const codeContext = {
     projectId: "33333333-3333-4333-8333-333333333333",
     query: "Ajustar painel",
@@ -47,6 +49,19 @@ test("frontAgentNode passes selected project code context and emits real file Co
       maxTotalBytes: 32000,
     },
   };
+  const designContext = {
+    projectId: "33333333-3333-4333-8333-333333333333",
+    sourceFiles: ["ID_VISUAL.md", "src/index.css"],
+    tokens: {
+      "--accent": "#14c77b",
+    },
+    components: [],
+    visualSummary: "Dark operational visual context.",
+    constraints: ["Use gray surfaces and controlled accent."],
+    antiPatterns: ["Avoid high saturation highlights."],
+    warnings: [],
+    generatedAt: "2026-05-27T00:00:00.000Z",
+  };
 
   const node = createFrontAgentNode({
     loadAgentSkill: () => "",
@@ -57,15 +72,21 @@ test("frontAgentNode passes selected project code context and emits real file Co
       contextInput = input;
       return codeContext;
     },
+    buildDesignContext: async (input) => {
+      designContextInput = input;
+      return designContext;
+    },
     generateFrontend: async (
       _userStory,
       _spec,
       _feedback,
       _llmSettings,
       _executionBrief,
-      injectedCodeContext
+      injectedCodeContext,
+      injectedDesignContext
     ) => {
       receivedCodeContext = injectedCodeContext;
+      receivedDesignContext = injectedDesignContext;
       return {
         html: "preview",
         inspectedFiles: injectedCodeContext?.inspectedFiles,
@@ -117,6 +138,8 @@ test("frontAgentNode passes selected project code context and emits real file Co
   assert.equal(contextInput.projectId, "33333333-3333-4333-8333-333333333333");
   assert.equal(contextInput.projectRootPath, "/tmp/horus-web");
   assert.equal(receivedCodeContext, codeContext);
+  assert.equal(designContextInput.projectRootPath, "/tmp/horus-web");
+  assert.equal(receivedDesignContext, designContext);
 
   const result = update.agentResults[userStory.id][0];
   assert.equal(result.output.codeChangeSet.operations[0].targetPath, "src/App.tsx");

@@ -208,7 +208,15 @@ interface WorkflowProgressEvent {
   evidence?: {
     status: string;
     commands: Array<{ commandId: string; exitCode: number }>;
-    preview: { status: string };
+    preview: {
+      status: string;
+      message?: string;
+      evidence?: {
+        title?: string | null;
+        bodySnippet?: string | null;
+        screenshotPath?: string | null;
+      };
+    };
   };
 }
 
@@ -236,6 +244,18 @@ function formatList(items: string[] | undefined, label: string): string {
 function validationNarrative(event: WorkflowProgressEvent): string {
   const evidence = event.evidence;
   if (!evidence) return `Validação registrada. ${eventDetail(event)}`;
+  const isVisualGate =
+    evidence.preview.evidence?.title === "Visual gate" ||
+    /visual/i.test(evidence.preview.message ?? "");
+  if (isVisualGate) {
+    return evidence.status === "passed"
+      ? "Visual aprovado. Vou seguir para revisão final."
+      : `Visual reprovado. ${
+          evidence.preview.evidence?.bodySnippet ??
+          evidence.preview.message ??
+          "Vou pedir ajuste antes de aplicar."
+        }`;
+  }
   const failedCommands = evidence.commands.filter((command) => command.exitCode !== 0).length;
   const commandSummary =
     evidence.commands.length === 0
@@ -339,6 +359,21 @@ function workflowActivityFromEvent(
         updatedAt,
       };
     case "validation_evidence": {
+      const isVisualGate =
+        event.evidence?.preview.evidence?.title === "Visual gate" ||
+        /visual/i.test(event.evidence?.preview.message ?? "");
+      if (isVisualGate) {
+        const failed = event.evidence?.status !== "passed";
+        return {
+          phase: failed ? "retrying" : "reviewing",
+          label: failed ? "Visual reprovado" : "Visual OK",
+          detail: failed
+            ? "A validação visual pediu ajuste antes da aplicação."
+            : "A validação visual passou.",
+          active: !failed,
+          updatedAt,
+        };
+      }
       const failedCommands =
         event.evidence?.commands.filter((command) => command.exitCode !== 0)
           .length ?? 0;

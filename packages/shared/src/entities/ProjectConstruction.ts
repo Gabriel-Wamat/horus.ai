@@ -212,6 +212,64 @@ export const RuntimeValidationEvidenceSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const VisualGateViewportSchema = z.enum(["desktop", "mobile"]);
+
+export const VisualGateIssueSeveritySchema = z.enum([
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const VisualGateIssueCategorySchema = z.enum([
+  "blank_render",
+  "render_error",
+  "responsive_overflow",
+  "visual_identity_drift",
+  "excessive_frames",
+  "missing_state",
+  "capture_unavailable",
+]);
+
+export const VisualGateScreenshotEvidenceSchema = z.object({
+  id: z.string().trim().min(1),
+  viewport: VisualGateViewportSchema,
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  captureKind: z.enum(["browser_screenshot", "static_dom"]).default("static_dom"),
+  artifactPath: z.string().trim().min(1).nullable().default(null),
+  artifactUrl: z.string().url().nullable().default(null),
+  nonBlank: z.boolean(),
+  diagnostics: z.record(z.unknown()).default({}),
+});
+
+export const VisualGateIssueSchema = z.object({
+  id: z.string().trim().min(1),
+  severity: VisualGateIssueSeveritySchema,
+  category: VisualGateIssueCategorySchema,
+  location: z.string().trim().min(1),
+  observed: z.string().trim().min(1),
+  expected: z.string().trim().min(1),
+  fixTarget: z.enum(["front", "qa", "both"]).default("front"),
+  evidenceIds: z.array(z.string().trim().min(1)).default([]),
+});
+
+export const VisualGateResultSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["passed", "failed", "inconclusive"]),
+  score: z.number().min(0).max(100),
+  threshold: z.number().min(0).max(100),
+  summary: z.string().trim().min(1),
+  issues: z.array(VisualGateIssueSchema).default([]),
+  screenshots: z.array(VisualGateScreenshotEvidenceSchema).default([]),
+  previewUrl: z.string().url().nullable().default(null),
+  captureUnavailableReason: z.string().trim().min(1).nullable().default(null),
+  designSystemSourceFiles: z.array(z.string().trim().min(1)).default([]),
+  startedAt: z.string().datetime(),
+  finishedAt: z.string().datetime(),
+  durationMs: z.number().int().nonnegative(),
+});
+
 export const CreateProjectWorkspaceInputSchema = z.object({
   workspaceFolderId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(100),
@@ -255,6 +313,18 @@ export type RuntimeValidationPreviewEvidence = z.infer<
 export type RuntimeValidationEvidence = z.infer<
   typeof RuntimeValidationEvidenceSchema
 >;
+export type VisualGateViewport = z.infer<typeof VisualGateViewportSchema>;
+export type VisualGateIssueSeverity = z.infer<
+  typeof VisualGateIssueSeveritySchema
+>;
+export type VisualGateIssueCategory = z.infer<
+  typeof VisualGateIssueCategorySchema
+>;
+export type VisualGateScreenshotEvidence = z.infer<
+  typeof VisualGateScreenshotEvidenceSchema
+>;
+export type VisualGateIssue = z.infer<typeof VisualGateIssueSchema>;
+export type VisualGateResult = z.infer<typeof VisualGateResultSchema>;
 export type CreateProjectWorkspaceInput = z.infer<
   typeof CreateProjectWorkspaceInputSchema
 >;

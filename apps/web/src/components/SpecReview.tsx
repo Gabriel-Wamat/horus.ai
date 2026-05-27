@@ -15,6 +15,87 @@ const COMPONENT_TYPE_COLORS: Record<string, string> = {
   utility: "var(--t2)",
 };
 
+const VISUAL_MODE_LABELS: Record<
+  NonNullable<Spec["visualContract"]>["mode"],
+  string
+> = {
+  preserve_identity: "Preservar",
+  guided_redesign: "Redesign guiado",
+  blank_project: "Novo",
+};
+
+const DENSITY_LABELS: Record<
+  NonNullable<Spec["visualContract"]>["density"],
+  string
+> = {
+  compact: "Compacta",
+  balanced: "Equilibrada",
+  spacious: "Espacada",
+};
+
+export function VisualContractSummary({
+  visualContract,
+}: {
+  visualContract?: Spec["visualContract"];
+}): JSX.Element | null {
+  if (!visualContract) return null;
+
+  const colorTokens = [
+    ...visualContract.colorPolicy.background,
+    ...visualContract.colorPolicy.surface,
+    ...visualContract.colorPolicy.text,
+    ...visualContract.colorPolicy.accent,
+  ].slice(0, 8);
+  const rules = [
+    ...visualContract.componentPolicy.requiredPatterns,
+    ...visualContract.responsiveRules,
+    ...visualContract.accessibilityRules,
+  ].slice(0, 4);
+  const antiPatterns = visualContract.antiPatterns.slice(0, 4);
+
+  return (
+    <section className="visual-contract-summary" aria-label="Contrato visual da spec">
+      <div className="visual-contract-summary-head">
+        <div>
+          <p className="panel-kicker">Contrato visual</p>
+          <p className="workflow-title">{VISUAL_MODE_LABELS[visualContract.mode]}</p>
+        </div>
+        <span className="status-chip">
+          <span className="status-chip-label">densidade</span>
+          <span className="status-chip-value">{DENSITY_LABELS[visualContract.density]}</span>
+        </span>
+      </div>
+      <p className="workflow-meta">{visualContract.tone}</p>
+      <div className="visual-contract-token-row" aria-label="Tokens visuais principais">
+        {colorTokens.map((token) => (
+          <span key={token}>{token}</span>
+        ))}
+        {colorTokens.length === 0 && <span>sem tokens explicitos</span>}
+      </div>
+      {(rules.length > 0 || antiPatterns.length > 0) && (
+        <div className="visual-contract-columns">
+          {rules.length > 0 && (
+            <div>
+              <p className="panel-kicker">Regras</p>
+              {rules.map((rule) => (
+                <p key={rule} className="workflow-meta">{rule}</p>
+              ))}
+            </div>
+          )}
+          {antiPatterns.length > 0 && (
+            <div>
+              <p className="panel-kicker">Evitar</p>
+              {antiPatterns.map((rule) => (
+                <p key={rule} className="workflow-meta">{rule}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.Element {
   const [summary, setSummary] = useState(spec.summary);
   const [approach, setApproach] = useState(spec.technicalApproach);
@@ -69,6 +150,8 @@ export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.
             className="textarea"
           />
         </div>
+
+        <VisualContractSummary visualContract={spec.visualContract} />
 
         {spec.components.length > 0 && (
           <div>

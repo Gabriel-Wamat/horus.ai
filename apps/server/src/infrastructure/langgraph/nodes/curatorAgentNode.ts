@@ -3,6 +3,10 @@ import { selectCuratorInputs } from "../curatorInputs.js";
 import type { LangGraphDependencies } from "../dependencies.js";
 import { defaultLangGraphDependencies } from "../dependencies.js";
 import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
+import {
+  visualGateFeedbackItems,
+  visualGateToRuntimeEvidence,
+} from "../../visual/VisualDesignGateService.js";
 
 const MAX_RETRIES = 3;
 
@@ -31,16 +35,51 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
     );
 
     const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
+    const designContext =
+      state.frontendProjectRootPath && deps.buildDesignContext
+        ? await deps.buildDesignContext({
+            ...(state.frontendProjectId
+              ? { projectId: state.frontendProjectId }
+              : {}),
+            projectRootPath: state.frontendProjectRootPath,
+          })
+        : undefined;
     const preflight =
       codeChangeSet && state.frontendProjectRootPath && deps.preflightCodeChangeSet
         ? await deps.preflightCodeChangeSet({
             changeSet: codeChangeSet,
             projectRootPath: state.frontendProjectRootPath,
+            constructionRunId: artifactContext?.constructionRunId ?? null,
             workflowThreadId: state.threadId,
             userStoryId: userStory.id,
             ...(state.frontendProjectId ? { projectId: state.frontendProjectId } : {}),
           })
         : undefined;
+
+    const visualGate =
+      (!preflight || preflight.passed) && deps.validateVisualGate
+        ? await deps.validateVisualGate({
+            spec,
+            html,
+            codeChangeSet,
+            ...(state.frontendProjectRootPath
+              ? { projectRootPath: state.frontendProjectRootPath }
+              : {}),
+            workflowThreadId: state.threadId,
+            userStoryId: userStory.id,
+            ...(state.frontendProjectId ? { projectId: state.frontendProjectId } : {}),
+            designContext,
+          })
+        : undefined;
+
+    const visualRuntimeEvidence = visualGate
+      ? visualGateToRuntimeEvidence({
+          result: visualGate,
+          workflowThreadId: state.threadId,
+          userStoryId: userStory.id,
+          projectId: state.frontendProjectId ?? null,
+        })
+      : undefined;
 
     const validation =
       preflight && !preflight.passed
@@ -52,14 +91,38 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
             missingItems: preflight.issues,
             fixTarget: "front" as const,
           }
-        : await deps.validateOutput(
-            spec,
-            html,
-            qaOutput,
-            codeChangeSet,
-            llmSettings,
-            state.executionBrief
-          );
+        : visualGate && visualGate.status !== "passed"
+          ? {
+              passed: false,
+              score: visualGate.score,
+              notes:
+                visualGate.status === "inconclusive"
+                  ? "Curador bloqueou a entrega porque a validação visual ficou inconclusiva."
+                  : "Curador bloqueou a entrega porque a validação visual reprovou.",
+              missingItems: visualGateFeedbackItems(visualGate),
+              fixTarget: "front" as const,
+            }
+          : state.workflowMode === "project_construction" &&
+              codeChangeSet &&
+              preflight?.passed === true &&
+              (!visualGate || visualGate.status === "passed")
+            ? {
+                passed: true,
+                score: Math.max(visualGate?.score ?? 0, 94),
+                notes:
+                  "Curador aprovou a entrega pelos gates determinísticos: preflight terminal/estática passou e validação visual não encontrou bloqueios.",
+                missingItems: [],
+                fixTarget: "front" as const,
+              }
+          : await deps.validateOutput(
+              spec,
+              html,
+              qaOutput,
+              codeChangeSet,
+              llmSettings,
+              state.executionBrief,
+              designContext
+            );
 
     const feedback: CuratorFeedback = {
       passed: validation.passed,
@@ -83,9 +146,19 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
                 issues: preflight.issues,
                 validation: preflight.validation,
               },
-              runtimeValidation: preflight.runtimeEvidence,
+              terminalRuntimeValidation: preflight.runtimeEvidence,
             }
           : {}),
+        ...(visualGate
+          ? {
+              visualGate,
+              runtimeValidation: visualRuntimeEvidence,
+            }
+          : preflight
+            ? {
+                runtimeValidation: preflight.runtimeEvidence,
+              }
+            : {}),
       },
       executionTimeMs: Date.now() - start,
       completedAt: new Date().toISOString(),

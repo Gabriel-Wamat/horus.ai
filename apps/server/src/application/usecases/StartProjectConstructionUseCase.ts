@@ -218,12 +218,20 @@ export class StartProjectConstructionUseCase {
         input.llmSettingsRef
       );
 
+      const workflowArtifactContext = Object.fromEntries(
+        contexts.map((context) => [
+          context.story.id,
+          {
+            ...context.artifactContext,
+            constructionRunId: run.id,
+          },
+        ])
+      );
+
       const workflow = await this.workflowStarter.start({
         workspaceFolderId: input.workspaceFolderId,
         userStories: contexts.map((context) => context.story),
-        workspaceArtifactContext: Object.fromEntries(
-          contexts.map((context) => [context.story.id, context.artifactContext])
-        ),
+        workspaceArtifactContext: workflowArtifactContext,
         initialSpecs,
         workflowMode: "project_construction",
         ...(frontendProject ? { frontendProjectId: frontendProject.id } : {}),

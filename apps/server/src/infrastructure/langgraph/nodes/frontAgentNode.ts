@@ -28,14 +28,22 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
       `[frontAgentNode] Generating frontend for: ${userStory.id} (retry=${state.retryCount})`
     );
 
-    const codeContext =
+    const [codeContext, designContext] =
       state.frontendProjectId && state.frontendProjectRootPath
-        ? await deps.buildFrontendCodeContext({
-            projectId: state.frontendProjectId,
-            projectRootPath: state.frontendProjectRootPath,
-            query: buildFrontendContextQuery(userStory.title, state.executionBrief),
-          })
-        : undefined;
+        ? await Promise.all([
+            deps.buildFrontendCodeContext({
+              projectId: state.frontendProjectId,
+              projectRootPath: state.frontendProjectRootPath,
+              query: buildFrontendContextQuery(userStory.title, state.executionBrief),
+            }),
+            deps.buildDesignContext
+              ? deps.buildDesignContext({
+                  projectId: state.frontendProjectId,
+                  projectRootPath: state.frontendProjectRootPath,
+                })
+              : Promise.resolve(undefined),
+          ])
+        : [undefined, undefined];
 
     const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
     // Self-correction: pass curator feedback so the agent improves on retry.
@@ -45,7 +53,8 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
       curatorFeedback,
       llmSettings,
       state.executionBrief,
-      codeContext
+      codeContext,
+      designContext
     );
     const { html } = frontendOutput;
 

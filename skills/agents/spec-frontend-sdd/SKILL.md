@@ -8,7 +8,7 @@ description: Use this skill when the Spec Agent must generate Horus.AI frontend-
 ```yaml
 id: "spec-frontend-sdd"
 agent: "spec"
-version: "0.1.0"
+version: "0.3.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into SpecAgent prompt before structured spec generation rules."
@@ -67,6 +67,8 @@ input_contract:
     database: []
   constraints:
     - "Spec output must satisfy the shared SpecSchema."
+    - "Spec output must include visualContract when design context is available."
+    - "Spec output must choose one frontend pattern before defining components."
     - "Frontend output remains a static browser-runnable artifact."
     - "No frameworks, build steps, external CDNs, or external runtime dependencies."
     - "Backend routes may be described as contracts only."
@@ -97,6 +99,24 @@ principles:
     - "Separate rendering, state, data adapter, and interaction responsibilities in the spec."
     - "Specify loading, empty, error, success, selected, hover, focus, and responsive states when relevant."
     - "Plan the frontend so mock data can later be replaced by backend route calls through one data adapter layer."
+  visual_contract:
+    - "Use DesignContextBundle as the strongest visual source when present."
+    - "Populate visualContract with mode, designSource, density, tone, colorPolicy, typography, spacing, componentPolicy, states, responsiveRules, accessibilityRules, antiPatterns, and referenceFiles."
+    - "Set visualContract.layoutArchetype to include the selected frontend pattern id."
+    - "Use componentPolicy.requiredPatterns for required pattern rules and componentPolicy.forbiddenPatterns for rejected pattern anti-patterns."
+    - "Prefer preserve_identity when project files prove an existing visual system."
+    - "Use guided_redesign only when the user explicitly asks to change identity."
+    - "Use blank_project only when there is no reliable project visual evidence."
+  frontend_patterns:
+    - "Choose exactly one primary pattern id before writing technicalApproach."
+    - "Allowed pattern ids: operational-dashboard, chat-preview-workbench, workflow-map, form-crud-tool, content-landing, custom-product-surface."
+    - "Use operational-dashboard for internal tools, monitoring, file browsing, admin, CRM, analytics, run control, and dense work consoles."
+    - "Use chat-preview-workbench for chat plus preview, generated output, agent progress, or execution controls."
+    - "Use workflow-map for graphs, dependency maps, pipelines, agent topology, and execution diagrams."
+    - "Use form-crud-tool for settings, key management, create/edit/delete, configuration, table editing, and validation-heavy workflows."
+    - "Use content-landing only for actual marketing, portfolio, venue, person, brand, product storytelling, or launch pages."
+    - "Use custom-product-surface only when none of the known patterns fits, and state the reason."
+    - "Record the chosen pattern in technicalApproach as 'Pattern: <id>' and in visualContract.layoutArchetype."
   backend_route_readiness:
     - "Use apiEndpoints to describe future backend contracts when dynamic data, persistence, submission, filtering, or remote loading is implied."
     - "Keep apiEndpoints empty only when the requested UI is truly static and needs no future route contract."
@@ -151,12 +171,21 @@ Create a spec that tells the Front Agent:
 
 ```yaml
 frontend_spec_plan:
+  selected_pattern:
+    id: "<operational-dashboard | chat-preview-workbench | workflow-map | form-crud-tool | content-landing | custom-product-surface>"
+    reason: "Why this pattern matches the user's task."
+    primary_task: "The task the layout must optimize."
+    required_states:
+      - "Pattern-specific states that the UI must support."
+    anti_patterns_to_avoid:
+      - "Pattern-specific failure modes the Front and Curator agents must reject."
   information_architecture:
     - "Primary user task."
     - "Secondary support content."
   visual_system:
     - "Layout density and hierarchy."
     - "Color, type, spacing, and state expectations."
+    - "Explicit visualContract constraints from project evidence."
   component_model:
     - "Named UI sections/components."
     - "Responsibility for each component."
@@ -186,6 +215,8 @@ spec_field_rules:
     - "Name the user-facing experience, not generic implementation."
   technicalApproach:
     - "Describe HTML structure, CSS architecture, JavaScript state, data adapter boundary, route readiness, responsive behavior, accessibility, and validation-sensitive states."
+    - "Start or clearly include 'Pattern: <id>' with the selected frontend pattern."
+    - "Name component reuse policy: existing project components/tokens first, installed libraries second, native HTML/CSS/JS third."
     - "State whether apiEndpoints are future contracts or intentionally empty."
     - "Mention that comments should be technical and sparse, focused on non-obvious logic."
   components:
@@ -203,6 +234,7 @@ spec_field_rules:
   acceptanceCriteria:
     - "Rewrite each user criterion as concrete technical behavior for HTML/CSS/JS."
     - "Include route-readiness or adapter behavior when the story implies backend data."
+    - "Include one criterion that makes the selected pattern and its main anti-patterns curator-testable."
     - "Keep criteria observable by QA."
 ```
 
@@ -211,6 +243,7 @@ spec_field_rules:
 ```yaml
 self_check:
   - "The spec can be implemented as one complete static HTML file."
+  - "The selected pattern is explicit and belongs to the allowed pattern ids."
   - "The frontend has a clear data adapter boundary for future backend routes."
   - "Every apiEndpoint has a matching data model or UI behavior."
   - "Every component supports the user story or acceptance criteria."
@@ -240,6 +273,7 @@ agent_error_mitigation:
     - "Do not omit loading, empty, error, and responsive states when data or forms exist."
     - "Do not allow text overflow or ambiguous controls."
     - "Do not omit accessibility requirements for interactive controls."
+    - "Do not allow excessive frames, nested cards, one-note palettes, high-light colors, generic landing pages for tools, or style drift from visualContract."
   anti_false_validation:
     - "Do not claim tests or browser checks were run."
     - "Leave validation to QA/Curator unless actual commands were executed."
@@ -256,6 +290,7 @@ architecture_checklist:
   - "Are future backend contracts typed and compatible with frontend data models?"
   - "Are static artifact constraints preserved?"
   - "Are visual, state, error, and responsive requirements explicit?"
+  - "Is the selected frontend pattern explicit, justified, and curator-testable?"
   - "Are acceptance criteria testable by QA?"
 ```
 
@@ -277,6 +312,7 @@ testing_checklist:
     - "Responsive and accessibility expectations are explicit when UI controls exist."
   curator_readiness:
     - "Components, data models, API contracts, and acceptance criteria provide enough evidence for pass/fail review."
+    - "Selected pattern, component policy, and anti-pattern checks are explicit enough for Curator."
 ```
 
 ## Final Output Contract
@@ -303,6 +339,17 @@ spec_output:
     - "<ModelName: { field: type, ... }>"
   acceptanceCriteria:
     - "<observable technical criterion>"
+  visualContract:
+    mode: "<preserve_identity | guided_redesign | blank_project>"
+    designSource: "<project_files | user_reference | generated_default | mixed>"
+    layoutArchetype: "<selected frontend pattern id plus layout description>"
+    componentPolicy:
+      preferExistingComponents: true
+      allowedLibraries: []
+      requiredPatterns:
+        - "<pattern/component requirement>"
+      forbiddenPatterns:
+        - "<pattern anti-pattern>"
 ```
 
 No markdown fences, prose outside the structured output, emojis, or implementation code.
@@ -351,3 +398,6 @@ Do not claim repository validation unless the command was actually run.
 8. Require robust vanilla HTML/CSS/JavaScript, semantic structure, accessible controls, stable layout, and constrained text.
 9. Require sparse technical comments only around non-obvious data adapters, validation logic, or state transitions.
 10. Make every acceptance criterion observable, testable, and traceable by QA and Curator agents.
+11. Select exactly one frontend pattern id before technical architecture and carry it through technicalApproach and visualContract.
+12. Require component reuse discipline: existing components/tokens first, installed libraries only when already present, no invented dependencies.
+13. Make pattern anti-patterns observable enough for QA and Curator to reject weak generated UI.

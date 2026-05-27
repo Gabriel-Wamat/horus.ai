@@ -1,8 +1,10 @@
 import type {
   CodeChangeSet,
   CodeContextBundle,
+  DesignContextBundle,
   LlmSettings,
   Spec,
+  VisualGateResult,
   UserStory,
 } from "@u-build/shared";
 import type { CuratorFeedback } from "./state.js";
@@ -19,6 +21,8 @@ import {
   CodeChangeSetPreflightService,
   type CodeChangeSetPreflightResult,
 } from "../code/CodeChangeSetPreflightService.js";
+import { DesignContextService } from "../design/DesignContextService.js";
+import { VisualDesignGateService } from "../visual/VisualDesignGateService.js";
 import { ReadOnlyCodeContextService } from "../../application/services/ReadOnlyCodeContextService.js";
 import {
   AgentToolRegistry,
@@ -29,6 +33,7 @@ import { z } from "zod";
 export interface GenerateSpecInput {
   skill: string;
   llmSettings?: LlmSettings | undefined;
+  designContext?: DesignContextBundle | undefined;
 }
 
 export interface LangGraphDependencies {
@@ -44,7 +49,8 @@ export interface LangGraphDependencies {
     feedback: CuratorFeedback | undefined,
     llmSettings: LlmSettings | undefined,
     executionBrief: string | undefined,
-    codeContext: CodeContextBundle | undefined
+    codeContext: CodeContextBundle | undefined,
+    designContext: DesignContextBundle | undefined
   ): Promise<{
     html: string;
     operations?: Array<{
@@ -59,12 +65,17 @@ export interface LangGraphDependencies {
     projectRootPath: string;
     query: string;
   }): Promise<CodeContextBundle>;
+  buildDesignContext?(input: {
+    projectId?: string | undefined;
+    projectRootPath: string;
+  }): Promise<DesignContextBundle>;
   generateQaTests(
     userStory: UserStory,
     spec: Spec,
     feedback: CuratorFeedback | undefined,
     llmSettings: LlmSettings | undefined,
-    executionBrief: string | undefined
+    executionBrief: string | undefined,
+    designContext: DesignContextBundle | undefined
   ): Promise<QaOutput>;
   validatePreviewSmoke?(
     previewSessionId: string
@@ -75,7 +86,8 @@ export interface LangGraphDependencies {
     qaOutput: QaOutput,
     codeChangeSet: CodeChangeSet | undefined,
     llmSettings: LlmSettings | undefined,
-    executionBrief: string | undefined
+    executionBrief: string | undefined,
+    designContext: DesignContextBundle | undefined
   ): Promise<{
     passed: boolean;
     score: number;
@@ -83,9 +95,20 @@ export interface LangGraphDependencies {
     missingItems: string[];
     fixTarget: "front" | "qa" | "both";
   }>;
+  validateVisualGate?(input: {
+    spec: Spec;
+    html: string;
+    codeChangeSet?: CodeChangeSet | undefined;
+    projectRootPath?: string | undefined;
+    workflowThreadId?: string | undefined;
+    userStoryId?: string | undefined;
+    projectId?: string | undefined;
+    designContext?: DesignContextBundle | undefined;
+  }): Promise<VisualGateResult>;
   preflightCodeChangeSet?(input: {
     changeSet: CodeChangeSet;
     projectRootPath: string;
+    constructionRunId?: string | null;
     workflowThreadId?: string | null;
     userStoryId?: string | null;
     projectId?: string | null;
@@ -94,6 +117,8 @@ export interface LangGraphDependencies {
 }
 
 const codeContextService = new ReadOnlyCodeContextService();
+const designContextService = new DesignContextService();
+const visualDesignGateService = new VisualDesignGateService();
 const codeChangeSetPreflightService = new CodeChangeSetPreflightService();
 defaultAgentToolRegistry.register({
   toolName: "search_code_readonly",
@@ -120,8 +145,10 @@ export const defaultLangGraphDependencies: LangGraphDependencies = {
       toolName: "search_code_readonly",
       input,
     }),
+  buildDesignContext: (input) => designContextService.build(input),
   generateQaTests: defaultGenerateQaTests,
   validateOutput: defaultValidateOutput,
+  validateVisualGate: (input) => visualDesignGateService.validate(input),
   preflightCodeChangeSet: (input) => codeChangeSetPreflightService.validate(input),
   agentToolRegistry: defaultAgentToolRegistry,
 };

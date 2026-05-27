@@ -12,6 +12,15 @@ test("loadAgentSkill loads the Front Agent skill from the project skills folder"
   assert.match(skill, /## Final Report Contract/);
   assert.match(skill, /Return ProjectExecutionPlan operations for real projects/);
   assert.match(skill, /complete HTML document/);
+  assert.match(skill, /# Skill References/);
+  assert.match(skill, /Reference: pattern-library\.md/);
+  assert.match(skill, /operational-dashboard/);
+  assert.match(skill, /chat-preview-workbench/);
+  assert.match(skill, /workflow-map/);
+  assert.match(skill, /Reference: component-policy\.md/);
+  assert.match(skill, /Existing Project First/);
+  assert.match(skill, /Reference: anti-patterns\.md/);
+  assert.match(skill, /excessive frames/i);
 });
 
 test("loadAgentSkill loads the Spec Agent skill from the project skills folder", () => {
@@ -25,6 +34,9 @@ test("loadAgentSkill loads the Spec Agent skill from the project skills folder",
   assert.match(skill, /## Final Output Contract/);
   assert.match(skill, /frontend-first/);
   assert.match(skill, /backend route/i);
+  assert.match(skill, /Allowed pattern ids/);
+  assert.match(skill, /Pattern: <id>/);
+  assert.match(skill, /component reuse discipline/i);
 });
 
 test("loadAgentSkill loads the QA Agent skill from the project skills folder", () => {
@@ -47,4 +59,7 @@ test("loadAgentSkill loads the Curator Agent skill from the project skills folde
   assert.match(skill, /## Agent Error Mitigation/);
   assert.match(skill, /## Final Report Contract/);
   assert.match(skill, /fixTarget/);
+  assert.match(skill, /\[front:pattern\]/);
+  assert.match(skill, /selected frontend pattern/i);
+  assert.match(skill, /Component policy is respected/i);
 });

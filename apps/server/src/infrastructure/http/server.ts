@@ -151,7 +151,8 @@ export async function createApp(
     repositories.workspaceStore,
     repositories.chatMemoryStore,
     repositories.codeChangeSets,
-    options.codeChangeSetApplier ?? new ProjectCodeChangeSetApplier()
+    options.codeChangeSetApplier ?? new ProjectCodeChangeSetApplier(),
+    repositories.projectConstruction
   );
 
   const startUseCase = new StartWorkflowUseCase(
