@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { LlmSettingsSchema, UserStorySchema } from "@u-build/shared";
 import type {
+  FrontendProject,
   Spec,
   UserStory,
   WorkflowMode,
@@ -12,6 +13,7 @@ export const StartWorkflowInputSchema = z.object({
   workspaceFolderId: z.string().uuid(),
   userStories: z.array(UserStorySchema).min(1).max(50),
   workflowMode: z.enum(["standard", "spec_generation"]).optional(),
+  frontendProjectId: z.string().uuid().optional(),
   llmSettings: LlmSettingsSchema.optional(),
 });
 
@@ -29,10 +31,15 @@ export interface WorkspaceStoryStore {
   }>;
 }
 
+export interface WorkflowFrontendProjectReader {
+  getProject(projectId: string): Promise<FrontendProject>;
+}
+
 export class StartWorkflowUseCase {
   constructor(
     private readonly orchestrator: WorkflowOrchestrator,
-    private readonly workspaceStore: WorkspaceStoryStore
+    private readonly workspaceStore: WorkspaceStoryStore,
+    private readonly frontendProjects?: WorkflowFrontendProjectReader
   ) {}
 
   async execute(input: unknown): Promise<{ threadId: string }> {
@@ -41,12 +48,22 @@ export class StartWorkflowUseCase {
       validated.workspaceFolderId,
       validated.userStories
     );
+    const frontendProject =
+      validated.frontendProjectId && this.frontendProjects
+        ? await this.frontendProjects.getProject(validated.frontendProjectId)
+        : undefined;
     return this.orchestrator.start({
       workspaceFolderId: validated.workspaceFolderId,
       userStories: resolved.userStories,
       workspaceArtifactContext: resolved.artifactContext,
       initialSpecs: resolved.initialSpecs,
       workflowMode: (validated.workflowMode ?? "standard") as WorkflowMode,
+      ...(frontendProject
+        ? {
+            frontendProjectId: frontendProject.id,
+            frontendProjectRootPath: frontendProject.rootPath,
+          }
+        : {}),
       ...(validated.llmSettings ? { llmSettings: validated.llmSettings } : {}),
     });
   }

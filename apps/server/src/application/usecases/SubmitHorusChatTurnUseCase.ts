@@ -2,6 +2,8 @@ import type {
   ChatAgentContextBundle,
   CodeContextBundle,
   FrontendProject,
+  HorusChatEvidenceSource,
+  HorusChatIntent,
   HorusChatOutcome,
   HorusChatTurnInput,
   HorusChatTurnResponse,
@@ -14,11 +16,10 @@ import {
   HorusChatTurnInputSchema,
   HorusChatTurnResponseSchema,
 } from "@u-build/shared";
-import type { FileChatMemoryStore } from "../../infrastructure/chat/FileChatMemoryStore.js";
+import type { ChatMemoryRepository } from "../../infrastructure/repositories/contracts.js";
 import { HorusOdinIntentRouter } from "../services/HorusOdinIntentRouter.js";
-import { ReadOnlyCodeContextService } from "../services/ReadOnlyCodeContextService.js";
 
-interface PreviewRuntimeReader {
+export interface PreviewRuntimeReader {
   listProjects(): Promise<FrontendProject[]>;
   getSession(sessionId: string): Promise<PreviewSession>;
   createSession(input: {
@@ -31,7 +32,7 @@ interface PreviewRuntimeReader {
   reloadSession(sessionId: string): Promise<{ session: PreviewSession }>;
 }
 
-interface CodeContextReader {
+export interface CodeContextReader {
   buildContext(input: {
     project: FrontendProject;
     chatContext: ChatAgentContextBundle;
@@ -54,6 +55,18 @@ export interface ChatCodeChangeExecutor {
     userStory: UserStory;
     spec: Spec;
     artifactContext: WorkspaceArtifactContext;
+    project: FrontendProject;
+    chatSessionId: string;
+    sourceMessageId: string;
+    executionBrief: string;
+    previewSessionId?: string;
+  }): Promise<{ threadId: string }>;
+}
+
+export interface SpecGenerationExecutor {
+  startSpecGeneration(input: {
+    workspaceFolderId: string;
+    userStory: UserStory;
     chatSessionId: string;
     sourceMessageId: string;
     executionBrief: string;
@@ -69,13 +82,13 @@ export class HorusChatContextMismatchError extends Error {
 
 export class SubmitHorusChatTurnUseCase {
   constructor(
-    private readonly chatMemoryStore: FileChatMemoryStore,
+    private readonly chatMemoryStore: ChatMemoryRepository,
     private readonly previewRuntime: PreviewRuntimeReader,
-    private readonly intentRouter = new HorusOdinIntentRouter(),
-    private readonly codeContextReader: CodeContextReader =
-      new ReadOnlyCodeContextService(),
-    private readonly chatResponder?: HorusChatResponder,
-    private readonly chatCodeChangeExecutor?: ChatCodeChangeExecutor
+    private readonly intentRouter: HorusOdinIntentRouter,
+    private readonly codeContextReader: CodeContextReader,
+    private readonly chatResponder: HorusChatResponder,
+    private readonly chatCodeChangeExecutor?: ChatCodeChangeExecutor,
+    private readonly specGenerationExecutor?: SpecGenerationExecutor
   ) {}
 
   async execute(input: HorusChatTurnInput): Promise<HorusChatTurnResponse> {
@@ -101,7 +114,7 @@ export class SubmitHorusChatTurnUseCase {
       }
     );
 
-    const intent = this.intentRouter.classify({
+    const intent = await this.intentRouter.classify({
       message: parsed.message,
       context,
     });
@@ -114,6 +127,7 @@ export class SubmitHorusChatTurnUseCase {
       this.previewRuntime,
       this.chatResponder,
       this.chatCodeChangeExecutor,
+      this.specGenerationExecutor,
       userMessage.id
     );
     const assistantMessage = await this.chatMemoryStore.appendMessage(
@@ -193,14 +207,15 @@ export class SubmitHorusChatTurnUseCase {
 }
 
 async function buildOutcome(
-  intent: ReturnType<HorusOdinIntentRouter["classify"]>,
+  intent: HorusChatIntent,
   input: HorusChatTurnInput,
   context: ChatAgentContextBundle,
   project: FrontendProject | undefined,
   codeContextReader: CodeContextReader,
   previewRuntime: PreviewRuntimeReader,
-  chatResponder: HorusChatResponder | undefined,
+  chatResponder: HorusChatResponder,
   chatCodeChangeExecutor: ChatCodeChangeExecutor | undefined,
+  specGenerationExecutor: SpecGenerationExecutor | undefined,
   sourceMessageId: string
 ): Promise<HorusChatOutcome> {
   const base = {
@@ -212,16 +227,6 @@ async function buildOutcome(
 
   switch (intent.kind) {
     case "answer_question": {
-      if (!chatResponder) {
-        return {
-          ...base,
-          action: "error",
-          status: "failed",
-          summary:
-            "Horus não conseguiu responder porque o agente LLM de chat não está configurado neste ambiente.",
-        };
-      }
-
       const codeContext = project
         ? await codeContextReader.buildContext({
             project,
@@ -241,6 +246,8 @@ async function buildOutcome(
         action: "answer",
         status: "completed",
         ...(codeContext ? { contextSources: codeContext.inspectedFiles } : {}),
+        ...(codeContext ? { evidenceSources: buildEvidenceSources(codeContext) } : {}),
+        ...(codeContext ? { groundingStatus: mapGroundingStatus(codeContext) } : {}),
         summary,
       };
     }
@@ -280,9 +287,13 @@ async function buildOutcome(
         userStory: context.activeUserStory,
         spec: context.activeSpec,
         artifactContext: context.artifactContext,
+        project,
         chatSessionId: input.chatSessionId,
         sourceMessageId,
         executionBrief: input.message,
+        ...(input.previewSessionId
+          ? { previewSessionId: input.previewSessionId }
+          : {}),
       });
 
       return {
@@ -305,17 +316,16 @@ async function buildOutcome(
         };
       }
 
-      if (hasArbitraryCommandRisk(input.message)) {
+      const lifecycleAction = intent.previewAction;
+      if (!lifecycleAction) {
         return {
           ...base,
-          action: "error",
+          action: "clarification_required",
           status: "blocked",
           summary:
-            "Horus não executa comandos arbitrários pelo chat. Use pedidos de ciclo do preview, como iniciar, parar ou recarregar o projeto selecionado.",
+            "Horus entendeu que o pedido envolve o preview, mas precisa saber se deve iniciar, parar ou recarregar o projeto selecionado.",
         };
       }
-
-      const lifecycleAction = inferPreviewLifecycleAction(input.message);
       const activeSession = input.previewSessionId
         ? await previewRuntime.getSession(input.previewSessionId)
         : (
@@ -355,23 +365,41 @@ async function buildOutcome(
           `Horus ${verb} o preview do projeto ${project.name}. Status atual: ${result.session.status}.`,
       };
     }
-    case "generate_spec":
+    case "generate_spec": {
+      if (!specGenerationExecutor) {
+        return {
+          ...base,
+          action: "error",
+          status: "blocked",
+          summary:
+            "Horus entendeu o pedido de geração de spec, mas o executor de specs não está configurado neste ambiente.",
+        };
+      }
+
+      const result = await specGenerationExecutor.startSpecGeneration({
+        workspaceFolderId: context.session.workspaceFolderId,
+        userStory: context.activeUserStory,
+        chatSessionId: input.chatSessionId,
+        sourceMessageId,
+        executionBrief: input.message,
+      });
+
       return {
         ...base,
+        workflowThreadId: result.threadId,
         action: "spec_requested",
         status: "accepted",
         summary:
-          "Horus reconheceu um pedido explícito de spec. A geração deve seguir o fluxo de specs sem tratar toda mensagem comum como user story.",
+          `Horus iniciou a geração de spec para esta user story. Thread ${result.threadId.slice(0, 8)} acionada com o contexto isolado deste chat.`,
       };
+    }
     case "unsupported":
       return {
-        ...base,
-        action: "error",
-        status: "blocked",
-        summary:
-          hasArbitraryCommandRisk(input.message)
-            ? "Horus não executa comandos arbitrários pelo chat. Use pedidos de ciclo do preview, como iniciar, parar ou recarregar o projeto selecionado."
-            : "Horus não suporta esse tipo de solicitação neste contexto.",
+          ...base,
+          action: "error",
+          status: "blocked",
+          summary:
+            "Horus não executa comandos arbitrários pelo chat. Use capacidades controladas do sistema, como iniciar preview registrado, gerar specs ou acionar agentes com contexto isolado.",
       };
     case "clarify":
       return {
@@ -384,26 +412,27 @@ async function buildOutcome(
   }
 }
 
-type PreviewLifecycleAction = "start" | "stop" | "reload";
-
-function inferPreviewLifecycleAction(message: string): PreviewLifecycleAction {
-  const normalized = message.trim().toLowerCase();
-  if (/\b(pare|parar|stop|desligue|encerrar|encerre)\b/.test(normalized)) {
-    return "stop";
-  }
-  if (
-    /\b(reload|recarregue|reinicie|reiniciar|atualize|refresh)\b/.test(
-      normalized
-    )
-  ) {
-    return "reload";
-  }
-  return "start";
+function buildEvidenceSources(codeContext: CodeContextBundle): HorusChatEvidenceSource[] {
+  return codeContext.excerpts.map((excerpt) => ({
+    type: "code_file",
+    label: `${excerpt.filePath}:${excerpt.startLine}-${excerpt.endLine}`,
+    path: excerpt.filePath,
+    startLine: excerpt.startLine,
+    endLine: excerpt.endLine,
+    excerpt: excerpt.content,
+    confidence:
+      codeContext.retrievalStatus === "matched"
+        ? "high"
+        : codeContext.retrievalStatus === "partial"
+          ? "medium"
+          : "low",
+  }));
 }
 
-function hasArbitraryCommandRisk(message: string): boolean {
-  const normalized = message.trim().toLowerCase();
-  return /\b(shell|terminal|comando|bash|zsh|sh|sudo|rm\s+-rf|curl|wget|git|docker|npm|pnpm|node|python|uvicorn)\b/.test(
-    normalized
-  );
+function mapGroundingStatus(
+  codeContext: CodeContextBundle
+): "grounded" | "partial" | "ungrounded" {
+  if (codeContext.retrievalStatus === "matched") return "grounded";
+  if (codeContext.retrievalStatus === "partial") return "partial";
+  return "ungrounded";
 }

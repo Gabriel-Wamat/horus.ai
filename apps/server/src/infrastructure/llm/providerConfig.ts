@@ -27,8 +27,6 @@ export class LlmProviderConfigError extends Error {
 type Env = Record<string, string | undefined>;
 
 const PROVIDERS = ["openai", "openrouter", "groq"] as const;
-const DEFAULT_PROVIDER: LlmProvider = "openai";
-const DEFAULT_MODEL = "gpt-5";
 
 const PROVIDER_KEY_ENV: Record<LlmProvider, string> = {
   openai: "OPENAI_API_KEY",
@@ -78,17 +76,13 @@ export function resolveAgentModelConfig(
 ): AgentModelConfig {
   const prefix = ROLE_ENV_PREFIX[role];
   const provider = parseLlmProvider(
-    runtimeSettings?.provider ??
-      env[`${prefix}_PROVIDER`] ??
-      env["LLM_PROVIDER"] ??
-      DEFAULT_PROVIDER
+    runtimeSettings?.provider ?? env[`${prefix}_PROVIDER`] ?? env["LLM_PROVIDER"]
   );
 
   const model = firstNonEmpty(
     runtimeSettings?.model,
     env[`${prefix}_MODEL`],
-    env["LLM_MODEL"],
-    provider === DEFAULT_PROVIDER ? DEFAULT_MODEL : undefined
+    env["LLM_MODEL"]
   );
   if (!model) {
     throw new LlmProviderConfigError(

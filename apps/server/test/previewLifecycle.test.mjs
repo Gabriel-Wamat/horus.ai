@@ -52,6 +52,7 @@ test("PreviewRuntimeManager creates lifecycle timeline and visual instruction dr
     [
       "preview_created",
       "preview_started",
+      "preview_ready",
       "device_changed",
       "visual_instruction_drafted",
       "preview_stopped",
@@ -59,6 +60,12 @@ test("PreviewRuntimeManager creates lifecycle timeline and visual instruction dr
   );
   assert.deepEqual(
     received.map((event) => event.type),
-    ["preview_started", "device_changed", "visual_instruction_drafted", "preview_stopped"]
+    [
+      "preview_started",
+      "preview_ready",
+      "device_changed",
+      "visual_instruction_drafted",
+      "preview_stopped",
+    ]
   );
 });

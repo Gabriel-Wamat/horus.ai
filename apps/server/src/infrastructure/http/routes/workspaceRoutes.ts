@@ -6,11 +6,11 @@ import {
   WorkspaceFolderNotFoundError,
   WorkspaceSpecNotFoundError,
   WorkspaceUserStoryNotFoundError,
-  type FileWorkspaceStore,
 } from "../../workspace/FileWorkspaceStore.js";
+import type { WorkspaceRepository } from "../../repositories/contracts.js";
 
 interface WorkspaceRouteDeps {
-  workspaceStore: FileWorkspaceStore;
+  workspaceStore: WorkspaceRepository;
 }
 
 export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {

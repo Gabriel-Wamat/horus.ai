@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { HorusOdinIntentRouter } from "../dist/application/services/HorusOdinIntentRouter.js";
 
-const router = new HorusOdinIntentRouter();
-
 const context = {
   session: {
     id: "11111111-1111-4111-8111-111111111111",
@@ -13,101 +11,79 @@ const context = {
     updatedAt: "2026-05-26T10:00:00.000Z",
   },
   messages: [],
-  activeStory: null,
-  activeSpec: null,
+  activeUserStory: {
+    id: "33333333-3333-4333-8333-333333333333",
+    title: "Story",
+    description: "Description",
+    acceptanceCriteria: ["Criterion"],
+    priority: "medium",
+    labels: [],
+    createdAt: "2026-05-26T10:00:00.000Z",
+  },
   artifactContext: {
     workspaceFolderId: "22222222-2222-4222-8222-222222222222",
-    userStoryId: "33333333-3333-4333-8333-333333333333",
   },
-  previousOutputs: [],
+  previousAgentResults: [],
 };
 
-test("HorusOdinIntentRouter routes questions to chat mode", () => {
-  const result = router.classify({
+function routerReturning(intent) {
+  return new HorusOdinIntentRouter({
+    classify: async () => intent,
+  });
+}
+
+test("HorusOdinIntentRouter delegates classification to the configured classifier", async () => {
+  const router = routerReturning({
+    kind: "answer_question",
+    mode: "chat",
+    confidence: 0.91,
+    rationale: "The user is asking for an explanation.",
+  });
+
+  const result = await router.classify({
     message: "Explique o objetivo desta tela.",
     context,
   });
 
   assert.equal(result.kind, "answer_question");
   assert.equal(result.mode, "chat");
+  assert.equal(result.confidence, 0.91);
 });
 
-test("HorusOdinIntentRouter treats greetings as chat mode", () => {
-  const result = router.classify({
-    message: "olá",
-    context,
+test("HorusOdinIntentRouter preserves structured preview action decisions", async () => {
+  const router = routerReturning({
+    kind: "run_project",
+    mode: "executor",
+    confidence: 0.88,
+    rationale: "The user requested a controlled preview reload.",
+    previewAction: "reload",
   });
 
-  assert.equal(result.kind, "answer_question");
-  assert.equal(result.mode, "chat");
-});
-
-test("HorusOdinIntentRouter keeps verification asks in chat mode", () => {
-  const result = router.classify({
-    message: "Verifique se esse botão está conectado corretamente.",
-    context,
-  });
-
-  assert.equal(result.kind, "answer_question");
-  assert.equal(result.mode, "chat");
-});
-
-test("HorusOdinIntentRouter routes code changes to executor mode", () => {
-  const result = router.classify({
-    message: "Ajuste esse botão e conecte no agente de front.",
-    context,
-  });
-
-  assert.equal(result.kind, "code_change");
-  assert.equal(result.mode, "executor");
-});
-
-test("HorusOdinIntentRouter keeps code-change questions in chat mode", () => {
-  const result = router.classify({
-    message: "Como ajustar esse botão sem quebrar o layout?",
-    context,
-  });
-
-  assert.equal(result.kind, "answer_question");
-  assert.equal(result.mode, "chat");
-});
-
-test("HorusOdinIntentRouter routes project execution requests to executor mode", () => {
-  const result = router.classify({
-    message: "Rode o projeto e abra o preview.",
+  const result = await router.classify({
+    message: "Recarregue o projeto.",
     context,
   });
 
   assert.equal(result.kind, "run_project");
   assert.equal(result.mode, "executor");
+  assert.equal(result.previewAction, "reload");
 });
 
-test("HorusOdinIntentRouter rejects arbitrary terminal commands", () => {
-  const result = router.classify({
-    message: "Execute pnpm install pelo terminal.",
-    context,
+test("HorusOdinIntentRouter rejects malformed classifier output through the shared schema", async () => {
+  const router = routerReturning({
+    kind: "run_project",
+    mode: "executor",
+    confidence: 2,
+    rationale: "Invalid confidence should fail contract validation.",
+    previewAction: "start",
   });
 
-  assert.equal(result.kind, "unsupported");
-  assert.equal(result.mode, "executor");
-});
-
-test("HorusOdinIntentRouter only routes explicit spec requests to executor mode", () => {
-  const result = router.classify({
-    message: "Crie uma spec para essa feature.",
-    context,
-  });
-
-  assert.equal(result.kind, "generate_spec");
-  assert.equal(result.mode, "executor");
-});
-
-test("HorusOdinIntentRouter does not treat user story mentions as spec generation", () => {
-  const result = router.classify({
-    message: "Explique o contexto desta user story.",
-    context,
-  });
-
-  assert.equal(result.kind, "answer_question");
-  assert.equal(result.mode, "chat");
+  await assert.rejects(
+    () =>
+      router.classify({
+        message: "Rode o projeto.",
+        context,
+      }),
+    /Number must be less than or equal to 1/
+  );
 });

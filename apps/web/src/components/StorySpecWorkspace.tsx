@@ -1,6 +1,7 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useId, useRef, useState, type JSX, type KeyboardEvent, type Ref } from "react";
 import type { Spec, UserStory, WorkflowState, WorkspaceFolder } from "@u-build/shared";
 import { SpecReview } from "./SpecReview.js";
+import { useFolderExpansionState } from "./story-spec/useFolderExpansionState.js";
 
 type DetailTab = "story" | "spec";
 type SpecMode = "view" | "edit";
@@ -10,11 +11,18 @@ interface PendingSpec {
   spec: Spec;
 }
 
+interface WorkspaceFolderArtifacts {
+  userStories: UserStory[];
+  specsByStoryId: Record<string, Spec>;
+}
+
 interface StorySpecWorkspaceProps {
   stories: UserStory[];
   workflowState: WorkflowState | null;
   pendingSpec: PendingSpec | null;
   workspaceFolders: WorkspaceFolder[];
+  workspaceFolderArtifactsById?: Record<string, WorkspaceFolderArtifacts>;
+  loadingWorkspaceFolderIds?: string[];
   selectedWorkspaceFolderId: string;
   selectedStoryId: string | null;
   activeTab: DetailTab;
@@ -22,15 +30,19 @@ interface StorySpecWorkspaceProps {
   onGenerateSpecs: () => void;
   onGenerateSpecsAndBuild: () => void;
   onSelectWorkspaceFolder: (folderId: string) => void;
-  onSelectStory: (storyId: string) => void;
+  onLoadWorkspaceFolder?: (folderId: string) => void;
+  onSelectStory: (storyId: string, folderId?: string) => void;
   onUpdateStory: (story: UserStory) => Promise<void>;
   onDeleteStory: (storyId: string) => Promise<void>;
   onUpdateSpec: (storyId: string, spec: Spec) => Promise<void>;
   onChangeTab: (tab: DetailTab) => void;
   onApproveSpec: (editedSpec?: Spec) => void;
   onRejectSpec: () => void;
+  createStoryButtonRef?: Ref<HTMLButtonElement>;
   isGeneratingSpecs?: boolean;
   isLoadingStories?: boolean;
+  constructionNotice?: string | null;
+  constructionError?: string | null;
 }
 
 const PRIORITY_LABELS: Record<UserStory["priority"], string> = {
@@ -38,13 +50,6 @@ const PRIORITY_LABELS: Record<UserStory["priority"], string> = {
   medium: "Média",
   high: "Alta",
   critical: "Crítica",
-};
-
-const PRIORITY_COLORS: Record<UserStory["priority"], string> = {
-  low: "var(--p)",
-  medium: "var(--info)",
-  high: "var(--warn)",
-  critical: "var(--danger)",
 };
 
 function createStorySlug(story: UserStory, index: number): string {
@@ -59,6 +64,10 @@ function createStorySlug(story: UserStory, index: number): string {
   return `US-${String(index + 1).padStart(2, "0")}-${base || story.id.slice(0, 8)}.md`;
 }
 
+function createDomId(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
 function getSpecMap(
   workflowState: WorkflowState | null,
   pendingSpec: PendingSpec | null
@@ -67,6 +76,64 @@ function getSpecMap(
     ...(workflowState?.specs ?? {}),
     ...(pendingSpec ? { [pendingSpec.userStoryId]: pendingSpec.spec } : {}),
   };
+}
+
+function formatFolderA11yLabel({
+  folder,
+  expanded,
+  storyCount,
+  specCount,
+  pendingCount,
+  loaded,
+  loading,
+}: {
+  folder: WorkspaceFolder;
+  expanded: boolean;
+  storyCount: number;
+  specCount: number;
+  pendingCount: number;
+  loaded: boolean;
+  loading: boolean;
+}): string {
+  const base = `Pasta ${folder.name}, ${storyCount} ${
+    storyCount === 1 ? "história" : "histórias"
+  }`;
+
+  if (!expanded) {
+    return `${base}. ${storyCount === 0 ? "Vazia" : "Recolhida"}.`;
+  }
+
+  if (loading && !loaded) {
+    return `${base}. Expandida e carregando conteúdo.`;
+  }
+
+  if (!loaded) {
+    return `${base}. Expandida, conteúdo ainda não carregado.`;
+  }
+
+  return `${base}, ${specCount} ${specCount === 1 ? "spec pronta" : "specs prontas"}, ${pendingCount} ${
+    pendingCount === 1 ? "pendente" : "pendentes"
+  }. Expandida.`;
+}
+
+function formatStoryA11yLabel({
+  story,
+  index,
+  total,
+  slug,
+  status,
+  selected,
+}: {
+  story: UserStory;
+  index: number;
+  total: number;
+  slug: string;
+  status: string;
+  selected: boolean;
+}): string {
+  return `User story ${index + 1} de ${total}: ${story.title}. Arquivo ${slug}. Status: ${status}.${
+    selected ? " Selecionada." : ""
+  }`;
 }
 
 function getStoryStatus(
@@ -82,18 +149,18 @@ function getStoryStatus(
 
   if (!workflowState) {
     return hasSpec
-      ? { label: "spec pronta", tone: "done" }
+      ? { label: "ok", tone: "done" }
       : { label: "rascunho", tone: "neutral" };
   }
 
   if (workflowState.status === "idle") {
     return hasSpec
-      ? { label: "spec pronta", tone: "done" }
+      ? { label: "ok", tone: "done" }
       : { label: "rascunho", tone: "neutral" };
   }
 
   if (workflowState.status === "cancelled") {
-    return { label: "cancelado", tone: "danger" };
+    return { label: "off", tone: "danger" };
   }
 
   if (workflowState.status === "error") {
@@ -101,11 +168,11 @@ function getStoryStatus(
   }
 
   if (workflowState.status === "completed") {
-    return { label: "concluído", tone: "done" };
+    return { label: "feito", tone: "done" };
   }
 
   if (index < workflowState.currentUSIndex) {
-    return { label: "concluído", tone: "done" };
+    return { label: "feito", tone: "done" };
   }
 
   if (index === workflowState.currentUSIndex) {
@@ -135,6 +202,35 @@ function FolderIcon(): JSX.Element {
   return (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h6l1.5 2.25h9v8.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6.75Z" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ expanded }: { expanded: boolean }): JSX.Element {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      {expanded ? (
+        <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
+      )}
+    </svg>
+  );
+}
+
+function PlusIcon(): JSX.Element {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
+function StoryIcon(): JSX.Element {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 4.5h10.5A1.5 1.5 0 0 1 18.75 6v12a1.5 1.5 0 0 1-1.5 1.5H6.75A1.5 1.5 0 0 1 5.25 18V6a1.5 1.5 0 0 1 1.5-1.5Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 8.25h7.5M8.25 12h7.5M8.25 15.75h4.5" />
     </svg>
   );
 }
@@ -171,6 +267,15 @@ function EditIcon(): JSX.Element {
     <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+    </svg>
+  );
+}
+
+function EyeIcon(): JSX.Element {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" />
     </svg>
   );
 }
@@ -232,44 +337,31 @@ function EmptySpecsState({ onCreateStory }: { onCreateStory: () => void }): JSX.
 
 function UserStoryDetail({ story }: { story: UserStory }): JSX.Element {
   return (
-    <div className="story-detail-grid">
-      <div className="story-detail-block">
-        <p className="panel-kicker">Descrição</p>
-        <p className="message-body">{story.description}</p>
-      </div>
-
-      <div className="story-detail-block">
-        <div className="story-detail-meta-row">
-          <span className="status-chip">
-            <span className="status-chip-label">prioridade</span>
-            <span
-              className="status-chip-value"
-              style={{ color: PRIORITY_COLORS[story.priority] }}
-            >
-              {PRIORITY_LABELS[story.priority]}
-            </span>
-          </span>
-          <span className="status-chip">
-            <span className="status-chip-label">critérios</span>
-            <span className="status-chip-value">{story.acceptanceCriteria.length}</span>
-          </span>
+    <article className="document-preview">
+      <header className="document-preview-title">
+        <h1>{story.title}</h1>
+        <div className="document-preview-meta" aria-label="Metadados da user story">
+          <span>{PRIORITY_LABELS[story.priority]}</span>
+          <span>{story.acceptanceCriteria.length} critérios</span>
         </div>
-      </div>
+      </header>
 
-      <div className="story-detail-block">
-        <p className="panel-kicker">Critérios de aceite</p>
-        <div className="spec-list">
+      <section className="document-preview-section">
+        <p className="document-body">{story.description}</p>
+      </section>
+
+      <section className="document-preview-section">
+        <h2>Critérios de aceite</h2>
+        <div className="document-checklist">
           {story.acceptanceCriteria.map((criterion, index) => (
-            <div key={`${story.id}-criterion-${index}`} className="spec-list-row">
-              <span className="criteria-index">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <p className="message-body">{criterion}</p>
+            <div key={`${story.id}-criterion-${index}`} className="document-check-row">
+              <span className="document-checkbox" aria-hidden="true" />
+              <p>{criterion}</p>
             </div>
           ))}
         </div>
-      </div>
-    </div>
+      </section>
+    </article>
   );
 }
 
@@ -285,6 +377,10 @@ function EditableUserStoryDetail({
   const [draft, setDraft] = useState(() => createStoryDraft(story));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const titleInputId = `edit-story-title-${createDomId(story.id)}`;
+  const descriptionInputId = `edit-story-description-${createDomId(story.id)}`;
+  const priorityInputId = `edit-story-priority-${createDomId(story.id)}`;
+  const criteriaLabelId = `edit-story-criteria-${createDomId(story.id)}`;
 
   useEffect(() => {
     setDraft(createStoryDraft(story));
@@ -336,11 +432,12 @@ function EditableUserStoryDetail({
 
   return (
     <div className="story-detail-grid">
-      {error && <div className="error-banner">{error}</div>}
+      {error && <div className="error-banner" role="alert">{error}</div>}
 
       <div className="story-detail-block">
-        <label className="field-label">Título</label>
+        <label className="field-label" htmlFor={titleInputId}>Título</label>
         <input
+          id={titleInputId}
           className="input"
           value={draft.title}
           onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
@@ -348,8 +445,9 @@ function EditableUserStoryDetail({
       </div>
 
       <div className="story-detail-block">
-        <label className="field-label">Descrição</label>
+        <label className="field-label" htmlFor={descriptionInputId}>Descrição</label>
         <textarea
+          id={descriptionInputId}
           className="textarea"
           rows={4}
           value={draft.description}
@@ -358,8 +456,9 @@ function EditableUserStoryDetail({
       </div>
 
       <div className="story-detail-block">
-        <label className="field-label">Prioridade</label>
+        <label className="field-label" htmlFor={priorityInputId}>Prioridade</label>
         <select
+          id={priorityInputId}
           className="select"
           value={draft.priority}
           onChange={(event) =>
@@ -379,7 +478,7 @@ function EditableUserStoryDetail({
 
       <div className="story-detail-block">
         <div className="story-edit-section-head">
-          <p className="panel-kicker">Critérios de aceite</p>
+          <p className="panel-kicker" id={criteriaLabelId}>Critérios de aceite</p>
           <button
             type="button"
             className="panel-action"
@@ -401,6 +500,8 @@ function EditableUserStoryDetail({
             <div key={index} className="criteria-row">
               <span className="criteria-index">{String(index + 1).padStart(2, "0")}</span>
               <input
+                id={`edit-story-criterion-${createDomId(story.id)}-${index}`}
+                aria-label={`Critério de aceite ${index + 1}`}
                 className="input"
                 value={criterion}
                 onChange={(event) => updateCriterion(index, event.target.value)}
@@ -434,64 +535,59 @@ function EditableUserStoryDetail({
 
 function ReadOnlySpecDetail({ spec }: { spec: Spec }): JSX.Element {
   return (
-    <div className="story-detail-grid">
-      <div className="story-detail-block">
-        <p className="panel-kicker">Resumo</p>
-        <p className="message-body">{spec.summary}</p>
-      </div>
+    <article className="document-preview">
+      <header className="document-preview-title">
+        <h1>{spec.summary}</h1>
+      </header>
 
-      <div className="story-detail-block">
-        <p className="panel-kicker">Abordagem técnica</p>
-        <p className="message-body">{spec.technicalApproach}</p>
-      </div>
+      <section className="document-preview-section">
+        <h2>Abordagem técnica</h2>
+        <p className="document-body">{spec.technicalApproach}</p>
+      </section>
 
       {spec.components.length > 0 && (
-        <div className="story-detail-block">
-          <p className="panel-kicker">Componentes</p>
-          <div className="spec-component-grid">
+        <section className="document-preview-section">
+          <h2>Componentes</h2>
+          <div className="document-card-grid">
             {spec.components.map((component) => (
-              <div key={component.name} className="spec-component">
-                <span className="status-chip-value">{component.type}</span>
-                <p className="workflow-title">{component.name}</p>
-                <p className="workflow-meta">{component.description}</p>
+              <div key={component.name} className="document-mini-card">
+                <span>{component.type}</span>
+                <strong>{component.name}</strong>
+                <p>{component.description}</p>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {spec.apiEndpoints.length > 0 && (
-        <div className="story-detail-block">
-          <p className="panel-kicker">Endpoints</p>
-          <div className="spec-list">
+        <section className="document-preview-section">
+          <h2>Endpoints</h2>
+          <div className="document-list">
             {spec.apiEndpoints.map((endpoint) => (
-              <div key={`${endpoint.method}-${endpoint.path}`} className="spec-list-row">
-                <span className="status-chip-value" style={{ color: "var(--info)" }}>
-                  {endpoint.method}
-                </span>
+              <div key={`${endpoint.method}-${endpoint.path}`} className="document-list-row">
+                <span>{endpoint.method}</span>
                 <div>
-                  <p className="workflow-title">{endpoint.path}</p>
-                  <p className="workflow-meta">{endpoint.description}</p>
+                  <strong>{endpoint.path}</strong>
+                  <p>{endpoint.description}</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {spec.dataModels.length > 0 && (
-        <div className="story-detail-block">
-          <p className="panel-kicker">Modelos de dados</p>
-          <div className="spec-token-row">
+        <section className="document-preview-section">
+          <h2>Modelos de dados</h2>
+          <div className="document-token-row">
             {spec.dataModels.map((model) => (
-              <span key={model} className="status-chip-value">
-                {model}
-              </span>
+              <span key={model}>{model}</span>
             ))}
           </div>
-        </div>
+        </section>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -509,6 +605,11 @@ function EditableSpecDetail({
   const [dataModelsText, setDataModelsText] = useState(() => spec.dataModels.join("\n"));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const specId = createDomId(spec.id);
+  const summaryInputId = `edit-spec-summary-${specId}`;
+  const approachInputId = `edit-spec-approach-${specId}`;
+  const criteriaInputId = `edit-spec-criteria-${specId}`;
+  const dataModelsInputId = `edit-spec-data-models-${specId}`;
 
   useEffect(() => {
     setDraft(createSpecDraft(spec));
@@ -556,11 +657,12 @@ function EditableSpecDetail({
 
   return (
     <div className="story-detail-grid">
-      {error && <div className="error-banner">{error}</div>}
+      {error && <div className="error-banner" role="alert">{error}</div>}
 
       <div className="story-detail-block">
-        <label className="field-label">Resumo</label>
+        <label className="field-label" htmlFor={summaryInputId}>Resumo</label>
         <textarea
+          id={summaryInputId}
           className="textarea"
           rows={4}
           value={draft.summary}
@@ -571,8 +673,9 @@ function EditableSpecDetail({
       </div>
 
       <div className="story-detail-block">
-        <label className="field-label">Abordagem técnica</label>
+        <label className="field-label" htmlFor={approachInputId}>Abordagem técnica</label>
         <textarea
+          id={approachInputId}
           className="textarea"
           rows={5}
           value={draft.technicalApproach}
@@ -586,8 +689,9 @@ function EditableSpecDetail({
       </div>
 
       <div className="story-detail-block">
-        <label className="field-label">Critérios da spec</label>
+        <label className="field-label" htmlFor={criteriaInputId}>Critérios da spec</label>
         <textarea
+          id={criteriaInputId}
           className="textarea"
           rows={5}
           value={criteriaText}
@@ -596,8 +700,9 @@ function EditableSpecDetail({
       </div>
 
       <div className="story-detail-block">
-        <label className="field-label">Modelos de dados</label>
+        <label className="field-label" htmlFor={dataModelsInputId}>Modelos de dados</label>
         <textarea
+          id={dataModelsInputId}
           className="textarea"
           rows={3}
           value={dataModelsText}
@@ -637,6 +742,8 @@ export function StorySpecWorkspace({
   workflowState,
   pendingSpec,
   workspaceFolders,
+  workspaceFolderArtifactsById = {},
+  loadingWorkspaceFolderIds = [],
   selectedWorkspaceFolderId,
   selectedStoryId,
   activeTab,
@@ -644,6 +751,7 @@ export function StorySpecWorkspace({
   onGenerateSpecs,
   onGenerateSpecsAndBuild,
   onSelectWorkspaceFolder,
+  onLoadWorkspaceFolder,
   onSelectStory,
   onUpdateStory,
   onDeleteStory,
@@ -651,28 +759,27 @@ export function StorySpecWorkspace({
   onChangeTab,
   onApproveSpec,
   onRejectSpec,
+  createStoryButtonRef,
   isGeneratingSpecs = false,
   isLoadingStories = false,
+  constructionNotice = null,
+  constructionError = null,
 }: StorySpecWorkspaceProps): JSX.Element {
+  const idPrefix = createDomId(useId());
+  const storyTabRef = useRef<HTMLButtonElement>(null);
+  const specTabRef = useRef<HTMLButtonElement>(null);
   const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
   const [specMode, setSpecMode] = useState<SpecMode>("view");
   const [isDeletingStory, setIsDeletingStory] = useState(false);
-  const [expandedFolderId, setExpandedFolderId] = useState(selectedWorkspaceFolderId);
+  const folderExpansion = useFolderExpansionState({
+    selectedWorkspaceFolderId,
+    hasLoadedFolder: (folderId) => Boolean(workspaceFolderArtifactsById[folderId]),
+    onLoadFolder: onLoadWorkspaceFolder,
+  });
 
   useEffect(() => {
     setSpecMode("view");
   }, [selectedStoryId, activeTab]);
-
-  useEffect(() => {
-    if (!selectedWorkspaceFolderId) {
-      setExpandedFolderId("");
-      return;
-    }
-
-    if (!isLoadingStories) {
-      setExpandedFolderId(selectedWorkspaceFolderId);
-    }
-  }, [isLoadingStories, selectedWorkspaceFolderId]);
 
   const specByStoryId = getSpecMap(workflowState, pendingSpec);
   const firstStory = stories[0];
@@ -690,7 +797,6 @@ export function StorySpecWorkspace({
     ? pendingSpec?.userStoryId === safeSelectedStory.id
     : false;
   const selectedFolder =
-    workspaceFolders.find((folder) => folder.id === (isLoadingStories ? expandedFolderId : selectedWorkspaceFolderId)) ??
     workspaceFolders.find((folder) => folder.id === selectedWorkspaceFolderId) ??
     null;
   const selectedFolderSpecCount = stories.filter((story) =>
@@ -719,6 +825,26 @@ export function StorySpecWorkspace({
   const isEditingSelectedSpec = Boolean(
     selectedSpec && !isSelectedPendingSpec && activeTab === "spec" && specMode === "edit"
   );
+  const storyTabId = `${idPrefix}-story-tab`;
+  const specTabId = `${idPrefix}-spec-tab`;
+  const storyPanelId = `${idPrefix}-story-panel`;
+  const specPanelId = `${idPrefix}-spec-panel`;
+  const activePanelId = activeTab === "story" ? storyPanelId : specPanelId;
+  const activeTabId = activeTab === "story" ? storyTabId : specTabId;
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const nextTab = activeTab === "story" ? "spec" : "story";
+    onChangeTab(nextTab);
+    window.requestAnimationFrame(() => {
+      if (nextTab === "story") {
+        storyTabRef.current?.focus();
+      } else {
+        specTabRef.current?.focus();
+      }
+    });
+  };
 
   const handleDeleteSelectedStory = async (): Promise<void> => {
     if (!safeSelectedStory) return;
@@ -731,13 +857,21 @@ export function StorySpecWorkspace({
     }
   };
 
+  const handleToggleFolder = (folderId: string): void => {
+    folderExpansion.toggleFolder(folderId);
+  };
+
+  const handleSelectFolder = (folderId: string): void => {
+    folderExpansion.selectFolder(folderId, onSelectWorkspaceFolder);
+  };
+
   return (
     <section className="spec-workspace panel">
       <aside className="spec-rail" aria-label="User stories">
         <div className="spec-rail-head">
           <div>
             <p className="panel-kicker">User stories</p>
-            <h2 className="panel-title">Histórias e specs</h2>
+            <h2 className="panel-title">Histórias</h2>
           </div>
           <div className="spec-rail-actions">
           <span className="status-chip">
@@ -745,20 +879,20 @@ export function StorySpecWorkspace({
             <span className="status-chip-value">{stories.length}</span>
           </span>
           {isLoadingStories && (
-            <span className="status-chip loading-chip" role="status">
+            <span className="status-chip loading-chip" role="status" aria-live="polite">
               <span className="status-chip-label">pasta</span>
               <span className="status-chip-value">carregando</span>
             </span>
           )}
             <button
+              ref={createStoryButtonRef}
               type="button"
-              className="panel-action"
+              className="panel-action create-story-action"
+              aria-label="Criar nova user story"
               onClick={onCreateStory}
             >
-              <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Criar
+              <PlusIcon />
+              Nova história
             </button>
             <div className="workflow-action-group" aria-label="Ações do orquestrador">
               <span className={`workflow-action-hint ${canStartBuild ? "ready" : ""}`}>
@@ -776,7 +910,7 @@ export function StorySpecWorkspace({
                 }
               >
                 <SpecIcon />
-                {isGeneratingSpecs ? "Gerando" : canGenerateSpecs ? "Gerar specs" : "Specs geradas"}
+                {isGeneratingSpecs ? "Gerando" : canGenerateSpecs ? "Specs" : "Specs OK"}
               </button>
               <button
                 type="button"
@@ -791,76 +925,165 @@ export function StorySpecWorkspace({
               >
                 {canStartBuild ? <RocketIcon /> : <LockIcon />}
                 {isGeneratingSpecs
-                  ? "Construindo"
+                  ? "Rodando"
                   : canStartBuild
-                  ? "Iniciar projeto"
+                  ? "Construir"
                   : "Aguardando specs"}
               </button>
             </div>
           </div>
         </div>
 
+        {(constructionNotice || constructionError) && (
+          <div
+            className={constructionError ? "error-banner" : "success-banner"}
+            role={constructionError ? "alert" : "status"}
+            aria-live={constructionError ? "assertive" : "polite"}
+          >
+            {constructionError ?? constructionNotice}
+          </div>
+        )}
+
         <div className="spec-folder-list">
           {workspaceFolders.map((folder) => {
             const folderSelected = folder.id === selectedWorkspaceFolderId;
-            const folderExpanded = folder.id === expandedFolderId;
-            const folderPending = folderSelected && isLoadingStories && !folderExpanded;
+            const folderExpanded = folderExpansion.isFolderExpanded(folder.id);
+            const folderPending = loadingWorkspaceFolderIds.includes(folder.id) || (folderSelected && isLoadingStories);
+            const cachedArtifacts = workspaceFolderArtifactsById[folder.id] ?? null;
+            const folderHasLoadedArtifacts = folderSelected
+              ? Boolean(cachedArtifacts) || !isLoadingStories
+              : Boolean(cachedArtifacts);
+            const folderStories = folderSelected && !isLoadingStories
+              ? stories
+              : cachedArtifacts?.userStories ?? [];
+            const folderSpecs = folderSelected && !isLoadingStories
+              ? specByStoryId
+              : cachedArtifacts?.specsByStoryId ?? {};
+            const folderSpecCount = folderStories.filter((story) => Boolean(folderSpecs[story.id])).length;
+            const folderPendingCount = Math.max(0, folderStories.length - folderSpecCount);
+            const folderProgress =
+              folderStories.length > 0 ? Math.round((folderSpecCount / folderStories.length) * 100) : 0;
+            const folderStoriesId = `${idPrefix}-folder-${createDomId(folder.id)}-stories`;
             return (
               <div
                 key={folder.id}
-                className={`spec-folder-group ${folderExpanded ? "active" : ""} ${folderPending ? "pending" : ""}`}
+                className={`spec-folder-group ${folderSelected ? "active" : ""} ${folderExpanded ? "expanded" : ""} ${folderPending ? "pending" : ""}`}
               >
-                <button
-                  type="button"
-                  className="spec-folder-item"
-                  onClick={() => onSelectWorkspaceFolder(folder.id)}
-                  aria-expanded={folderExpanded}
-                >
-                  <span className="spec-folder-icon">
-                    <FolderIcon />
-                  </span>
-                  <span className="spec-folder-copy">
-                    <span className="spec-folder-title-row">
-                      <span className="workflow-title">{folder.name}</span>
-                      <span className="status-chip-value">{folder.storyCount}</span>
+                <div className="spec-folder-row">
+                  <button
+                    type="button"
+                    className="spec-folder-chevron"
+                    onClick={() => handleToggleFolder(folder.id)}
+                    aria-expanded={folderExpanded}
+                    aria-controls={folderStoriesId}
+                    aria-label={`${folderExpanded ? "Recolher" : "Expandir"} pasta ${folder.name}`}
+                  >
+                    <ChevronIcon expanded={folderExpanded} />
+                  </button>
+                  <button
+                    type="button"
+                    className="spec-folder-item"
+                    onClick={() => handleSelectFolder(folder.id)}
+                    aria-expanded={folderExpanded}
+                    aria-controls={folderStoriesId}
+                    aria-current={folderSelected ? "true" : undefined}
+                    aria-label={formatFolderA11yLabel({
+                      folder,
+                      expanded: folderExpanded,
+                      storyCount: folder.storyCount,
+                      specCount: folderSpecCount,
+                      pendingCount: folderPendingCount,
+                      loaded: folderHasLoadedArtifacts,
+                      loading: folderPending,
+                    })}
+                  >
+                    <span className="spec-folder-icon">
+                      <FolderIcon />
                     </span>
-                    <span className="spec-folder-metrics">
-                      <span>{folder.storyCount} stories</span>
-                      {folderPending && <span>carregando</span>}
-                      {folderExpanded && (
-                        <>
-                          <span>{selectedFolderSpecCount} specs</span>
-                          <span>{selectedFolderPendingCount} pendentes</span>
-                        </>
+                    <span className="spec-folder-copy">
+                      <span className="spec-folder-title-row">
+                        <span className="workflow-title" title={folder.name}>{folder.name}</span>
+                        <span className="folder-count" aria-hidden="true">{folder.storyCount}</span>
+                      </span>
+                      <span className="spec-folder-metrics" aria-hidden="true">
+                        <span>{folder.storyCount} stories</span>
+                        {folderPending && <span>carregando</span>}
+                        {folderExpanded && folderHasLoadedArtifacts && (
+                          <>
+                            <span>{folderSpecCount} specs</span>
+                            <span>{folderPendingCount} pendentes</span>
+                          </>
+                        )}
+                      </span>
+                      {folderExpanded && folderHasLoadedArtifacts && (
+                        <span
+                          className="spec-folder-progress"
+                          role="progressbar"
+                          aria-label={`${folderProgress}% das specs prontas`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={folderProgress}
+                        >
+                          <span style={{ width: `${folderProgress}%` }} />
+                        </span>
                       )}
                     </span>
-                    {folderExpanded && (
-                      <span className="spec-folder-progress" aria-label={`${selectedFolderProgress}% das specs prontas`}>
-                        <span style={{ width: `${selectedFolderProgress}%` }} />
-                      </span>
-                    )}
-                  </span>
-                </button>
+                  </button>
+                </div>
 
                 {folderExpanded && (
-                  <div className={`spec-story-list nested ${isLoadingStories ? "is-loading" : ""}`}>
-                    {isLoadingStories && selectedWorkspaceFolderId !== expandedFolderId && (
+                  <div
+                    id={folderStoriesId}
+                    className={`spec-story-list nested ${isLoadingStories ? "is-loading" : ""}`}
+                    aria-label={`Histórias da pasta ${folder.name}`}
+                  >
+                    {folderPending && !folderHasLoadedArtifacts && (
                       <div className="spec-story-loading" role="status">
                         <span className="loading-spinner" aria-hidden="true" />
-                        Mantendo esta pasta aberta enquanto a próxima carrega
+                        Carregando
                       </div>
                     )}
-                    {stories.map((story, index) => {
-                      const hasSpec = Boolean(specByStoryId[story.id]);
-                      const status = getStoryStatus(story, index, workflowState, pendingSpec, hasSpec);
+                    {!folderPending && folderHasLoadedArtifacts && folderStories.length === 0 && (
+                      <div className="spec-story-empty" role="status">
+                        Pasta vazia
+                      </div>
+                    )}
+                    {!folderPending && !folderHasLoadedArtifacts && (
+                      <button
+                        type="button"
+                        className="spec-story-empty action"
+                        onClick={() => handleSelectFolder(folder.id)}
+                      >
+                        Carregar
+                      </button>
+                    )}
+                    {folderStories.map((story, index) => {
+                      const hasSpec = Boolean(folderSpecs[story.id]);
+                      const status = getStoryStatus(
+                        story,
+                        index,
+                        folderSelected ? workflowState : null,
+                        folderSelected ? pendingSpec : null,
+                        hasSpec
+                      );
                       const selected = safeSelectedStory ? story.id === safeSelectedStory.id : false;
+                      const storySlug = createStorySlug(story, index);
 
                       return (
                         <button
                           key={story.id}
                           type="button"
                           className={`spec-story-item ${selected ? "active" : ""}`}
-                          onClick={() => onSelectStory(story.id)}
+                          onClick={() => onSelectStory(story.id, folder.id)}
+                          aria-current={selected ? "true" : undefined}
+                          aria-label={formatStoryA11yLabel({
+                            story,
+                            index,
+                            total: folderStories.length,
+                            slug: storySlug,
+                            status: status.label,
+                            selected,
+                          })}
                         >
                           <span
                             className={`step-dot ${
@@ -875,8 +1098,8 @@ export function StorySpecWorkspace({
                             aria-hidden="true"
                           />
                           <span className="spec-story-copy">
-                            <span className="workflow-title">{story.title}</span>
-                            <span className="workflow-meta">{createStorySlug(story, index)}</span>
+                            <span className="workflow-title" title={story.title}>{story.title}</span>
+                            <span className="workflow-meta" title={storySlug}>{storySlug}</span>
                           </span>
                           <StatusPill label={status.label} tone={status.tone} />
                         </button>
@@ -894,6 +1117,7 @@ export function StorySpecWorkspace({
                 const hasSpec = Boolean(specByStoryId[story.id]);
                 const status = getStoryStatus(story, index, workflowState, pendingSpec, hasSpec);
                 const selected = safeSelectedStory ? story.id === safeSelectedStory.id : false;
+                const storySlug = createStorySlug(story, index);
 
                 return (
                   <button
@@ -901,11 +1125,20 @@ export function StorySpecWorkspace({
                     type="button"
                     className={`spec-story-item ${selected ? "active" : ""}`}
                     onClick={() => onSelectStory(story.id)}
+                    aria-current={selected ? "true" : undefined}
+                    aria-label={formatStoryA11yLabel({
+                      story,
+                      index,
+                      total: stories.length,
+                      slug: storySlug,
+                      status: status.label,
+                      selected,
+                    })}
                   >
                     <span className="step-dot" aria-hidden="true" />
                     <span className="spec-story-copy">
-                      <span className="workflow-title">{story.title}</span>
-                      <span className="workflow-meta">{createStorySlug(story, index)}</span>
+                      <span className="workflow-title" title={story.title}>{story.title}</span>
+                      <span className="workflow-meta" title={storySlug}>{storySlug}</span>
                     </span>
                     <StatusPill label={status.label} tone={status.tone} />
                   </button>
@@ -933,23 +1166,38 @@ export function StorySpecWorkspace({
             </p>
           </div>
 
-          <div className="story-spec-tabs" role="tablist" aria-label="Detalhe da história">
+          <div
+            className="story-spec-tabs"
+            role="tablist"
+            aria-label="Detalhe da história"
+            onKeyDown={handleTabKeyDown}
+          >
             <button
+              ref={storyTabRef}
+              id={storyTabId}
               type="button"
               role="tab"
               aria-selected={activeTab === "story"}
+              aria-controls={storyPanelId}
+              tabIndex={activeTab === "story" ? 0 : -1}
               className={`story-spec-tab ${activeTab === "story" ? "active" : ""}`}
               onClick={() => onChangeTab("story")}
             >
+              <StoryIcon />
               User Story
             </button>
             <button
+              ref={specTabRef}
+              id={specTabId}
               type="button"
               role="tab"
               aria-selected={activeTab === "spec"}
+              aria-controls={specPanelId}
+              tabIndex={activeTab === "spec" ? 0 : -1}
               className={`story-spec-tab ${activeTab === "spec" ? "active" : ""}`}
               onClick={() => onChangeTab("spec")}
             >
+              <SpecIcon />
               SPEC (SDD)
               {selectedSpec && (
                 <span className="tab-dot" aria-hidden="true" />
@@ -966,6 +1214,7 @@ export function StorySpecWorkspace({
                   aria-pressed={specMode === "view"}
                   onClick={() => setSpecMode("view")}
                 >
+                  <EyeIcon />
                   Visualização
                 </button>
                 <button
@@ -975,7 +1224,7 @@ export function StorySpecWorkspace({
                   onClick={() => setSpecMode("edit")}
                 >
                   <EditIcon />
-                  Edit
+                  Editar
                 </button>
               </div>
             ) : (
@@ -1006,7 +1255,12 @@ export function StorySpecWorkspace({
           </div>
         </div>
 
-        <div className="spec-detail-body">
+        <div
+          id={activePanelId}
+          className="spec-detail-body"
+          role="tabpanel"
+          aria-labelledby={activeTabId}
+        >
           {activeTab === "story" && safeSelectedStory && !isEditingSelectedStory && (
             <UserStoryDetail story={safeSelectedStory} />
           )}

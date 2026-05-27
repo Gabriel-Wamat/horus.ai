@@ -1,6 +1,6 @@
 ---
 name: front-design-frontend
-description: Use this skill when the Front Agent must generate or revise static frontend output from a Horus.AI spec using TypeScript/LangGraph workflow context. Triggers include frontend generation, UI quality, responsive layout, vanilla HTML/CSS/JS output, visual polish, accessibility, and curator feedback targeting front fixes.
+description: Use this skill when the Front Agent must generate or revise frontend code from a Horus.AI spec using TypeScript/LangGraph workflow context. Triggers include project-aware React/Vite/TypeScript implementation, stack-aware frontend generation, UI quality, responsive layout, accessibility, and curator feedback targeting front fixes. Static HTML is allowed only for explicit artifact mode.
 ---
 
 # Front Agent Design And Frontend Quality
@@ -8,7 +8,7 @@ description: Use this skill when the Front Agent must generate or revise static 
 ```yaml
 id: "front-design-frontend"
 agent: "front"
-version: "0.3.0"
+version: "0.4.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into FrontAgent prompt before implementation rules."
@@ -16,27 +16,30 @@ runtime_use: "Injected into FrontAgent prompt before implementation rules."
 
 ## Purpose
 
-Use this skill to generate polished, usable, responsive static frontends from a technical spec.
+Use this skill to generate polished, usable, responsive frontend code from a technical spec.
 
 This skill helps the Front Agent produce work that is:
 
 - scoped to the spec;
 - evidence-based from the user story and acceptance criteria;
-- modular in HTML/CSS/JavaScript structure;
+- modular in the selected frontend stack;
 - testable by the QA and Curator agents;
-- aligned with Horus.AI's static artifact architecture;
+- aligned with Horus.AI's generated project architecture;
 - validated before completion;
-- safe against common agent errors such as generic pages, broken responsive layouts, and missing interactions.
+- safe against common agent errors such as generic pages, broken responsive layouts, missing interactions, standalone HTML inside framework projects, and unmounted source files.
 
 ## When To Use
 
 Use this skill when the workflow asks the Front Agent to:
 
 - generate a static frontend artifact from a `Spec`;
+- implement or revise a real generated frontend project;
+- edit React/Vite/TypeScript project files such as `src/main.tsx`, `src/App.tsx`, `src/features`, `src/components`, `src/styles`, and typed adapters;
+- follow a selected frontend stack contract such as React, Vue, Svelte, Angular, Next.js, Nuxt, Astro, Remix, Vite vanilla, HTML/CSS/JavaScript, or TypeScript variants;
 - revise frontend output after curator feedback;
 - implement user-facing HTML/CSS/JavaScript behavior;
 - improve design quality, layout, visual hierarchy, accessibility, or responsiveness;
-- create a complete browser-runnable page without external dependencies.
+- create a complete browser-runnable page without external dependencies when artifact mode is explicit.
 
 Do not use this skill for:
 
@@ -55,21 +58,19 @@ input_contract:
   user_request: "Current user story and generated technical spec"
   repository_root: "/Users/wamat/Desktop/horus.ai"
   target_files:
-    - "generated index.html artifact"
+    - "project source files or generated index.html artifact"
   target_stack:
     frontend:
-      - "HTML"
-      - "CSS"
-      - "Vanilla JavaScript"
+      - "selected projectStack, such as React/Vite/TypeScript"
     backend: []
     database: []
   constraints:
-    - "No frameworks"
+    - "Use the selected stack; do not invent a different framework"
     - "No external CDNs"
-    - "CSS and JS embedded in one HTML document"
-    - "Return only complete HTML"
+    - "No standalone HTML implementation when a framework project root exists"
+    - "Return ProjectExecutionPlan operations for real projects"
   validation_expected:
-    - "Curator validates generated HTML against spec and QA cases"
+    - "Curator validates generated source changes against spec, QA cases, and architecture gates"
 ```
 
 If the spec omits details, infer conservatively from the user story and acceptance criteria. Do not invent unrelated product features.
@@ -87,9 +88,10 @@ principles:
     - "Treat curator feedback as a correction contract on retries."
     - "Do not claim support for a state or interaction unless implemented."
   architecture:
-    - "Keep the HTML semantic and understandable."
+    - "For real projects, keep code reachable from the selected stack entrypoint or route system."
+    - "For React/Vite/TypeScript, use src/main.tsx, src/App.tsx, src/features, src/components, src/styles, and typed contracts."
     - "Keep CSS organized by design tokens, layout, components, states, and responsive rules."
-    - "Keep JavaScript small, deterministic, and tied to visible interactions."
+    - "Keep JavaScript or TypeScript deterministic and tied to visible interactions."
   code_quality:
     - "Prefer semantic elements and accessible attributes."
     - "Use stable dimensions for controls and repeated UI elements."
@@ -162,17 +164,21 @@ ui_plan:
 
 ```yaml
 implementation_strategy:
-  selected_approach: "One complete HTML file with embedded CSS and JavaScript"
-  why_this_approach: "Horus.AI artifacts are static browser-openable outputs"
+  selected_approach: "Stack-aware source files for real projects; complete HTML only for explicit artifact mode"
+  why_this_approach: "Horus.AI generated projects must remain editable, importable, buildable, and previewable"
   compatibility_notes:
-    - "No build step"
-    - "No runtime dependency"
+    - "React/Vite/TypeScript projects require mounted TSX source files"
+    - "HTML/CSS/JS standalone is allowed only when selected stack is explicit artifact/static mode"
     - "No external network dependency"
 ```
 
 Implementation rules:
 
-- Start with semantic HTML.
+- In project mode, inspect existing entrypoints before creating files.
+- In React/Vite/TypeScript mode, implement through TSX components, typed data/contracts, CSS, and imports reachable from `src/main.tsx` or `src/App.tsx`.
+- Do not write `generated/horus/*.html` as the implementation for a framework project.
+- Do not create parallel apps, orphan components, or unmounted files.
+- Start UI markup with semantic structure.
 - Define CSS variables for color, spacing, radius, type, and shadows.
 - Use CSS Grid/Flexbox with responsive constraints.
 - Use realistic mock data from the spec.
@@ -199,7 +205,7 @@ self_check:
 
 ### Step 5 - Final Output
 
-Return only the complete HTML document.
+Return only the structured output requested by the runtime. In project mode, return file operations with complete final file contents. In explicit artifact mode, return only the complete HTML document.
 
 ## 10 Foundations
 
@@ -212,7 +218,7 @@ Return only the complete HTML document.
 7. Keep CSS organized with variables, component-level sections, predictable states, and no one-note color palette.
 8. Implement complete interactive behavior expected by the spec, including empty, loading, selected, hover, focus, and error states when relevant.
 9. Standardize action buttons as `icon + visible name`, preserving accessible labels, stable dimensions, and consistent hover/active states.
-10. Return one complete, directly runnable HTML document starting with `<!DOCTYPE html>`, with embedded CSS and JavaScript only.
+10. Return project file operations for real generated projects; return a directly runnable HTML document only when the selected stack is explicit static artifact mode.
 
 ## Agent Error Mitigation
 
@@ -220,7 +226,7 @@ Return only the complete HTML document.
 agent_error_mitigation:
   anti_hallucination:
     - "Do not invent APIs, backend calls, libraries, or assets."
-    - "If content is missing, use realistic local mock data."
+    - "If content is missing, use typed local development data only when clearly labeled and not pretending to be a live integration."
   anti_overengineering:
     - "Do not implement a framework inside vanilla JS."
     - "Do not add abstractions unless they simplify visible behavior."
@@ -228,6 +234,7 @@ agent_error_mitigation:
     - "On retry, fix curator feedback without removing previously correct requirements."
     - "Preserve acceptance criteria coverage."
     - "Do not replace standardized icon+name buttons with text-only controls."
+    - "Do not replace a React/Vite/TypeScript project with standalone HTML."
   anti_false_validation:
     - "Do not say the page is accessible unless labels, focus, and semantics are present."
 ```
@@ -236,7 +243,9 @@ agent_error_mitigation:
 
 ```yaml
 architecture_checklist:
-  - "Is the output a single static HTML artifact?"
+  - "Is project-mode output reachable from the selected stack entrypoint?"
+  - "For React/Vite/TypeScript, are TSX/CSS/type files mounted by src/main.tsx or src/App.tsx?"
+  - "If the output is a single static HTML artifact, was artifact/static mode explicit?"
   - "Is CSS separated into tokens, layout, components, states, and responsive rules?"
   - "Is JavaScript limited to UI behavior required by the spec?"
   - "Are semantic regions and controls used correctly?"
@@ -249,7 +258,7 @@ architecture_checklist:
 ```yaml
 testing_checklist:
   frontend:
-    - "Can the page open directly in a browser?"
+    - "Can the selected stack preview/build path run when dependencies are available?"
     - "Can QA execute all test steps against visible UI?"
     - "Does the UI work at mobile and desktop widths?"
     - "Are focus states and labels present for controls?"

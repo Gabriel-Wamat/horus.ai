@@ -10,6 +10,8 @@ import {
   type AgentRole,
 } from "./providerConfig.js";
 
+type Env = Record<string, string | undefined>;
+
 interface ChatModelCommonFields {
   model: string;
   temperature?: number;
@@ -19,12 +21,13 @@ interface ChatModelCommonFields {
 export function createChatModel(
   role: AgentRole,
   defaults: AgentModelDefaults = {},
-  runtimeSettings?: LlmSettings
+  runtimeSettings?: LlmSettings,
+  env: Env = process.env
 ): BaseChatModel {
   const config = resolveAgentModelConfig(
     role,
     defaults,
-    process.env,
+    env,
     runtimeSettings
   );
   const common = getCommonFields(config);
@@ -57,9 +60,14 @@ export function createChatModel(
 function getCommonFields(config: AgentModelConfig): ChatModelCommonFields {
   return {
     model: config.model,
-    ...(config.temperature !== undefined
+    ...(config.temperature !== undefined && supportsCustomTemperature(config)
       ? { temperature: config.temperature }
       : {}),
     ...(config.maxTokens !== undefined ? { maxTokens: config.maxTokens } : {}),
   };
+}
+
+function supportsCustomTemperature(config: AgentModelConfig): boolean {
+  if (config.provider !== "openai") return true;
+  return !config.model.toLowerCase().startsWith("gpt-5");
 }

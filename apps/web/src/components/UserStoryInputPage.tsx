@@ -54,6 +54,9 @@ export function UserStoryInputPage({
   onSelectWorkspaceFolder,
   onCreateWorkspaceFolder,
 }: Props): JSX.Element {
+  const workspaceFolderSelectId = "story-workspace-folder-select";
+  const newFolderNameId = "story-new-folder-name";
+  const modalErrorId = "story-modal-error";
   const [drafts, setDrafts] = useState<StoryDraft[]>(() =>
     initialStories && initialStories.length > 0
       ? initialStories.map((s) => ({
@@ -211,10 +214,12 @@ export function UserStoryInputPage({
 
             <div className="field-row workspace-folder-row">
               <div>
-                <label className="field-label">
+                <label className="field-label" htmlFor={workspaceFolderSelectId}>
                   Pasta de destino *
                 </label>
                 <select
+                  id={workspaceFolderSelectId}
+                  data-autofocus="story-modal"
                   value={selectedWorkspaceFolderId}
                   onChange={(e) => onSelectWorkspaceFolder(e.target.value)}
                   className="select"
@@ -233,11 +238,12 @@ export function UserStoryInputPage({
                 </select>
               </div>
               <div>
-                <label className="field-label">
+                <label className="field-label" htmlFor={newFolderNameId}>
                   Nova pasta
                 </label>
                 <div className="workspace-folder-create">
                   <input
+                    id={newFolderNameId}
                     type="text"
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
@@ -250,6 +256,9 @@ export function UserStoryInputPage({
                     onClick={handleCreateFolder}
                     disabled={isCreatingFolder}
                   >
+                    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
                     {isCreatingFolder ? "Criando..." : "Iniciar"}
                   </button>
                 </div>
@@ -257,7 +266,11 @@ export function UserStoryInputPage({
             </div>
 
             {(workspaceFolderError || workspaceFolders.length === 0) && (
-              <p className="workflow-meta" style={{ marginTop: 10 }}>
+              <p
+                className="workflow-meta"
+                role={workspaceFolderError ? "alert" : "status"}
+                style={{ marginTop: 10 }}
+              >
                 {workspaceFolderError ??
                   "Nenhuma pasta encontrada. Inicie uma pasta para direcionar estas user stories."}
               </p>
@@ -265,6 +278,13 @@ export function UserStoryInputPage({
           </div>
 
           {drafts.map((draft, storyIndex) => (
+            (() => {
+              const titleId = `story-title-${draft.id}`;
+              const priorityId = `story-priority-${draft.id}`;
+              const descriptionId = `story-description-${draft.id}`;
+              const criteriaLabelId = `story-criteria-label-${draft.id}`;
+
+              return (
             <div
               key={draft.id}
               className="story-card"
@@ -291,10 +311,11 @@ export function UserStoryInputPage({
               <div className="form-grid">
                 <div className="field-row">
                   <div>
-                    <label className="field-label">
+                    <label className="field-label" htmlFor={titleId}>
                       Título *
                     </label>
                     <input
+                      id={titleId}
                       type="text"
                       value={draft.title}
                       onChange={(e) => updateDraft(draft.id, "title", e.target.value)}
@@ -303,10 +324,11 @@ export function UserStoryInputPage({
                     />
                   </div>
                   <div>
-                    <label className="field-label">
+                    <label className="field-label" htmlFor={priorityId}>
                       Prioridade
                     </label>
                     <select
+                      id={priorityId}
                       value={draft.priority}
                       onChange={(e) =>
                         updateDraft(draft.id, "priority", e.target.value as StoryDraft["priority"])
@@ -323,10 +345,11 @@ export function UserStoryInputPage({
                 </div>
 
                 <div>
-                  <label className="field-label">
+                  <label className="field-label" htmlFor={descriptionId}>
                     Descrição *
                   </label>
                   <textarea
+                    id={descriptionId}
                     value={draft.description}
                     onChange={(e) => updateDraft(draft.id, "description", e.target.value)}
                     placeholder="Descreva o contexto, motivação e comportamento esperado…"
@@ -336,9 +359,9 @@ export function UserStoryInputPage({
                 </div>
 
                 <div>
-                  <label className="field-label">
+                  <span className="field-label" id={criteriaLabelId}>
                     Critérios de aceite *
-                  </label>
+                  </span>
                   <div>
                     {draft.acceptanceCriteria.map((criterion, criterionIndex) => (
                       <div key={criterionIndex} className="criteria-row">
@@ -346,6 +369,8 @@ export function UserStoryInputPage({
                           {String(criterionIndex + 1).padStart(2, "0")}
                         </span>
                         <input
+                          id={`story-criterion-${draft.id}-${criterionIndex}`}
+                          aria-label={`Critério de aceite ${criterionIndex + 1} da história ${storyIndex + 1}`}
                           type="text"
                           value={criterion}
                           onChange={(e) =>
@@ -386,6 +411,8 @@ export function UserStoryInputPage({
                 </div>
               </div>
             </div>
+              );
+            })()
           ))}
         </div>
 
@@ -402,7 +429,12 @@ export function UserStoryInputPage({
         </button>
 
         {error && (
-          <div className="error-banner" style={{ marginTop: 14, marginBottom: 0 }}>
+          <div
+            id={modalErrorId}
+            className="error-banner"
+            role="alert"
+            style={{ marginTop: 14, marginBottom: 0 }}
+          >
             <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
             </svg>
@@ -422,6 +454,7 @@ export function UserStoryInputPage({
             onClick={handleSubmit}
             disabled={isSubmitting || !selectedWorkspaceFolderId}
             className="primary-button"
+            aria-describedby={error ? modalErrorId : undefined}
           >
             {isSubmitting ? (
               <>
@@ -433,10 +466,10 @@ export function UserStoryInputPage({
               </>
             ) : (
               <>
-                Gerar Specs
                 <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
+                Gerar Specs
               </>
             )}
           </button>

@@ -9,26 +9,28 @@ import {
 import { createChatModel } from "../llm/createChatModel.js";
 import { resolveAgentModelConfig } from "../llm/providerConfig.js";
 
+type Env = Record<string, string | undefined>;
+
 const LlmSpecSchema = z.object({
-  summary: z.string().min(20).max(240),
-  technicalApproach: z.string().min(80).max(1200),
+  summary: z.string().min(1),
+  technicalApproach: z.string().min(1),
   components: z.array(
     z.object({
-      name: z.string().min(2).max(80),
-      type: z.enum(["ui", "logic", "data", "api"]),
-      description: z.string().min(20).max(300),
-      dependencies: z.array(z.string().min(1).max(80)).max(8),
+      name: z.string().min(1),
+      type: z.enum(["ui", "api", "service", "model", "utility"]),
+      description: z.string().min(1),
+      dependencies: z.array(z.string().min(1)),
     })
   ).min(2).max(6),
   apiEndpoints: z.array(
     z.object({
       method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
-      path: z.string().min(1).max(160),
-      description: z.string().min(20).max(300),
+      path: z.string().startsWith("/"),
+      description: z.string().min(1),
     })
   ).max(5),
-  dataModels: z.array(z.string().min(8).max(240)).min(1).max(5),
-  acceptanceCriteria: z.array(z.string().min(8).max(240)).min(1).max(8),
+  dataModels: z.array(z.string().min(1)).min(1).max(5),
+  acceptanceCriteria: z.array(z.string().min(1)).min(1).max(8),
 });
 
 const LLM_SPEC_JSON_SCHEMA = {
@@ -44,7 +46,10 @@ const LLM_SPEC_JSON_SCHEMA = {
         additionalProperties: false,
         properties: {
           name: { type: "string" },
-          type: { type: "string", enum: ["ui", "logic", "data", "api"] },
+          type: {
+            type: "string",
+            enum: ["ui", "api", "service", "model", "utility"],
+          },
           description: { type: "string" },
           dependencies: {
             type: "array",
@@ -89,13 +94,10 @@ const LLM_SPEC_JSON_SCHEMA = {
   ],
 } as const;
 
-const SPEC_GENERATION_TIMEOUT_MS = Number(
-  process.env["SPEC_AGENT_TIMEOUT_MS"] ?? 180_000
-);
-
 export interface GenerateSpecOptions {
   skill: string;
   llmSettings?: LlmSettings | undefined;
+  env?: Env;
 }
 
 export async function generateSpec(
@@ -106,7 +108,7 @@ export async function generateSpec(
   console.log(
     `[SpecAgent] calling LLM for userStory=${userStory.id} title="${userStory.title}"`
   );
-  const raw = await invokeSpecModel(prompt, options.llmSettings);
+  const raw = await invokeSpecModel(prompt, options.llmSettings, options.env);
 
   return SpecSchema.parse({
     ...raw,
@@ -119,43 +121,48 @@ export async function generateSpec(
 
 async function invokeSpecModel(
   prompt: string,
-  llmSettings: LlmSettings | undefined
+  llmSettings: LlmSettings | undefined,
+  env: Env = process.env
 ): Promise<z.infer<typeof LlmSpecSchema>> {
+  const timeoutMs = resolveSpecTimeoutMs(env);
   const config = resolveAgentModelConfig(
     "spec",
-    { maxTokens: 1400 },
-    process.env,
+    {},
+    env,
     llmSettings
   );
 
   if (config.provider === "openai") {
-    return invokeOpenAiResponses(prompt, config);
+    return invokeOpenAiResponses(prompt, config, env, timeoutMs);
   }
 
   const model = createChatModel(
     "spec",
-    { maxTokens: 1400 },
-    llmSettings
+    {},
+    llmSettings,
+    env
   ).withStructuredOutput(LlmSpecSchema);
 
   return (await withTimeout(
     model.invoke(prompt),
-    SPEC_GENERATION_TIMEOUT_MS,
-    `SpecAgent timed out after ${SPEC_GENERATION_TIMEOUT_MS / 1000}s while generating a structured spec.`
+    timeoutMs,
+    `SpecAgent timed out after ${timeoutMs / 1000}s while generating a structured spec.`
   )) as z.infer<typeof LlmSpecSchema>;
 }
 
 async function invokeOpenAiResponses(
   prompt: string,
-  config: ReturnType<typeof resolveAgentModelConfig>
+  config: ReturnType<typeof resolveAgentModelConfig>,
+  env: Env,
+  timeoutMs: number
 ): Promise<z.infer<typeof LlmSpecSchema>> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () => controller.abort(),
-    SPEC_GENERATION_TIMEOUT_MS
-  );
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
 
   try {
+    const reasoningEffort = env["OPENAI_REASONING_EFFORT"]?.trim();
+    const textVerbosity = env["OPENAI_TEXT_VERBOSITY"]?.trim() ?? "low";
     const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/responses`, {
       method: "POST",
       headers: {
@@ -166,7 +173,9 @@ async function invokeOpenAiResponses(
         model: config.model,
         input: prompt,
         ...(config.maxTokens ? { max_output_tokens: config.maxTokens } : {}),
+        ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
         text: {
+          verbosity: textVerbosity,
           format: {
             type: "json_schema",
             name: "horus_spec",
@@ -190,17 +199,36 @@ async function invokeOpenAiResponses(
       throw new Error("OpenAI Responses API returned no output_text for SpecAgent.");
     }
 
-    return LlmSpecSchema.parse(JSON.parse(outputText));
+    console.log(
+      `[SpecAgent] OpenAI Responses API completed in ${Date.now() - startedAt}ms`
+    );
+    const parsedJson = JSON.parse(outputText);
+    const parsedSpec = LlmSpecSchema.parse(parsedJson);
+    console.log("[SpecAgent] structured output parsed successfully");
+    return parsedSpec;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(
-        `SpecAgent timed out after ${SPEC_GENERATION_TIMEOUT_MS / 1000}s while generating a structured spec.`
+        `SpecAgent timed out after ${timeoutMs / 1000}s while generating a structured spec.`
       );
+    }
+    if (err instanceof z.ZodError) {
+      throw new Error(`SpecAgent output failed schema validation: ${formatZodIssues(err)}`);
     }
     throw err;
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function resolveSpecTimeoutMs(env: Env): number {
+  const raw = env["SPEC_AGENT_TIMEOUT_MS"]?.trim();
+  if (!raw) return 180_000;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error("SPEC_AGENT_TIMEOUT_MS must be a positive finite number.");
+  }
+  return parsed;
 }
 
 function extractOutputText(body: unknown): string | undefined {
@@ -267,16 +295,27 @@ ${JSON.stringify(
 )}
 
 # Instruções de saída
-- A spec deve ser implementável em HTML, CSS e JavaScript puro (vanilla) — sem frameworks ou bibliotecas externas
+- A spec deve respeitar a stack real do projeto quando houver projeto alvo; não force HTML/JS standalone quando o app usa React/TypeScript
 - Gere um summary conciso de 1 frase
 - Descreva o technicalApproach em no máximo 900 caracteres: estrutura de HTML/CSS/JS, organização visual, componentes, estados, data adapter, responsividade e acessibilidade
 - Liste 2 a 6 components como blocos de responsabilidade; use nomes específicos do domínio
+- Cada component.type deve ser exatamente um destes valores: ui, api, service, model, utility
 - apiEndpoints deve representar contratos futuros para rotas do backend quando a história implicar dados remotos, persistência, envio, busca, filtro ou atualização; deixe [] apenas quando a interface for realmente estática
-- Quando apiEndpoints existir, mantenha claro no technicalApproach que o frontend atual deve usar mock data por uma camada adaptadora compatível com esses contratos
+- Quando apiEndpoints existir, cada path deve começar com /
+- Quando apiEndpoints existir, mantenha claro no technicalApproach que o frontend deve usar contratos reais já disponíveis ou boundary/adapters injetáveis; não peça mock/fake data em código aplicado ao projeto
 - dataModels deve listar de 1 a 5 estruturas de dados JS e formatos de resposta esperados
 - acceptanceCriteria deve cobrir todos os critérios da UserStory em linguagem técnica e observável para QA
 - Seja direto; não escreva documentação longa; não repita a user story inteira
 - Responda em português`;
+}
+
+function formatZodIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+      return `${path}: ${issue.message}`;
+    })
+    .join("; ");
 }
 
 function buildSkillDigest(skill: string): string {
@@ -286,10 +325,10 @@ function buildSkillDigest(skill: string): string {
   return `Skill ativa: spec-frontend-sdd.
 Siga o protocolo operacional abaixo, derivado da skill versionada:
 - gere specs escopadas à user story e aos critérios de aceite;
-- preserve arquitetura frontend-first com HTML, CSS e JavaScript vanilla;
+- preserve a arquitetura frontend real do projeto alvo, incluindo React/TypeScript quando aplicável;
 - descreva componentes por responsabilidade visível, estado, dados e interação;
 - inclua contratos de API apenas quando a história implicar dados remotos, persistência, busca, envio ou atualização;
-- mantenha mock data atrás de data adapter quando houver rota futura;
+- use contratos reais ou adapters injetáveis; não solicite mock/fake data em runtime aplicado ao projeto;
 - torne cada critério testável por comportamento observável;
 - cubra loading, empty, error, success, acessibilidade, responsividade e texto sem overflow quando aplicável;
 - não invente fluxos, autenticação, dashboards, backend real ou integrações fora do pedido;

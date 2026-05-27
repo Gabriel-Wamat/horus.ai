@@ -16,6 +16,7 @@ spec/
 *.log
 
 .vite/
+.playwright-cli/
 
 .DS_Store
 Thumbs.db

@@ -5,6 +5,9 @@ import type {
   WorkflowState,
   LlmSettings,
   WorkspaceFolder,
+  ProjectConstructionRun,
+  ProjectWorkspace,
+  FrontendProject,
 } from "@u-build/shared";
 
 const BASE = "/api";
@@ -26,12 +29,20 @@ export interface StartWorkflowResponse {
   threadId: string;
 }
 
+export interface StartProjectConstructionResponse {
+  projectWorkspace: ProjectWorkspace;
+  constructionRun: ProjectConstructionRun;
+  frontendProject: FrontendProject | null;
+  reusedProjectWorkspace?: boolean;
+}
+
 export const workflowApi = {
   start: async (
     userStories: UserStory[],
     workspaceFolderId: string,
     workflowMode: "standard" | "spec_generation" = "standard",
-    llmSettings?: LlmSettings
+    llmSettings?: LlmSettings,
+    frontendProjectId?: string
   ): Promise<StartWorkflowResponse> => {
     const res = await fetch(`${BASE}/workflow/start`, {
       method: "POST",
@@ -41,6 +52,7 @@ export const workflowApi = {
         userStories,
         workflowMode,
         ...(llmSettings ? { llmSettings } : {}),
+        ...(frontendProjectId ? { frontendProjectId } : {}),
       }),
     });
     await requireOk(res, "Iniciar workflow");
@@ -174,5 +186,20 @@ export const workflowApi = {
     await requireOk(res, "Atualizar spec do workspace");
     const body = (await res.json()) as { spec: Spec };
     return body.spec;
+  },
+
+  startProjectConstruction: async (input: {
+    workspaceFolderId: string;
+    projectName?: string;
+    userStoryIds: string[];
+    specIds: string[];
+  }): Promise<StartProjectConstructionResponse> => {
+    const res = await fetch(`${BASE}/project-construction/runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    await requireOk(res, "Iniciar construção do projeto");
+    return res.json() as Promise<StartProjectConstructionResponse>;
   },
 } as const;

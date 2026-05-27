@@ -20,6 +20,19 @@ function projectFixture(rootPath, devCommand, previewUrl) {
     rootPath,
     defaultRoute: "/",
     devCommand,
+    previewCommandId: "dev",
+    commandCatalog: devCommand
+      ? [
+          {
+            id: "dev",
+            label: "Dev",
+            executable: devCommand.split(" ")[0],
+            args: devCommand.split(" ").slice(1),
+            cwd: ".",
+            env: {},
+          },
+        ]
+      : [],
     previewUrl,
     createdAt: "2026-05-26T00:00:00.000Z",
   };
@@ -69,7 +82,7 @@ test("ProcessBrowserPreviewAdapter starts a real managed preview process and sto
   try {
     assert.equal(started.previewUrl, previewUrl);
     assert.equal(typeof started.processId, "number");
-    assert.equal(started.evidence?.["commandId"], `preview:${project.id}`);
+    assert.equal(started.evidence?.["commandId"], "dev");
     assert.equal(started.evidence?.["cwd"], canonicalRootPath);
     assert.deepEqual(probedUrls, [previewUrl]);
   } finally {
@@ -96,7 +109,7 @@ test("ProcessBrowserPreviewAdapter rejects missing dev commands", async () => {
     () => adapter.start(project, session),
     (err) =>
       err instanceof BrowserPreviewStartError &&
-      err.evidence["reason"] === "missing_dev_command"
+      err.evidence["reason"] === "unknown_command_id"
   );
 });
 
@@ -131,7 +144,7 @@ test("PreviewRuntimeManager records preview_error when adapter startup fails", a
 
   assert.equal(started.session.status, "error");
   assert.equal(started.event.type, "preview_error");
-  assert.match(started.session.errorMessage, /no dev command/i);
+  assert.match(started.session.errorMessage, /command id was not found/i);
   assert.deepEqual(
     timeline.map((event) => event.type),
     ["preview_created", "preview_error"]

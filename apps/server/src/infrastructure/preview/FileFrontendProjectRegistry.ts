@@ -1,14 +1,18 @@
 import { promises as fs } from "node:fs";
-import { resolve, relative, sep } from "node:path";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { v4 as uuidv4 } from "uuid";
 import {
   FrontendProjectSchema,
   type FrontendProject,
 } from "@u-build/shared";
+import {
+  buildSeedFrontendProject,
+  canonicalizeProjectRoot,
+  FrontendProjectRootError,
+} from "./SeedFrontendProject.js";
 
 const PROJECTS_FILE = "projects.json";
-const WEB_PROJECT_ID = "11111111-1111-4111-8111-111111111116";
 
 export class FrontendProjectNotFoundError extends Error {
   constructor(projectId: string) {
@@ -17,12 +21,7 @@ export class FrontendProjectNotFoundError extends Error {
   }
 }
 
-export class FrontendProjectRootError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "FrontendProjectRootError";
-  }
-}
+export { FrontendProjectRootError };
 
 function slugify(value: string): string {
   const slug = value
@@ -36,17 +35,13 @@ function slugify(value: string): string {
   return slug || "frontend-project";
 }
 
-function isInsideRoot(rootPath: string, candidatePath: string): boolean {
-  const relation = relative(rootPath, candidatePath);
-  return relation === "" || (!relation.startsWith("..") && !relation.includes(`..${sep}`));
-}
-
 export class FileFrontendProjectRegistry {
   constructor(
     private readonly baseDir = "./data/frontend-projects",
     private readonly repositoryRoot = resolve(
       fileURLToPath(new URL("../../../../../", import.meta.url))
-    )
+    ),
+    private readonly env: Record<string, string | undefined> = process.env
   ) {}
 
   private projectsPath(): string {
@@ -58,31 +53,14 @@ export class FileFrontendProjectRegistry {
   }
 
   private async canonicalizeProjectRoot(rootPath: string): Promise<string> {
-    const repoRoot = await fs.realpath(this.repositoryRoot);
-    const candidate = resolve(repoRoot, rootPath);
-    const canonical = await fs.realpath(candidate);
-
-    if (!isInsideRoot(repoRoot, canonical)) {
-      throw new FrontendProjectRootError(
-        `Frontend project root must stay inside repository root: ${rootPath}`
-      );
-    }
-
-    return canonical;
+    return canonicalizeProjectRoot(this.repositoryRoot, rootPath);
   }
 
   private async seedProjects(): Promise<FrontendProject[]> {
-    const rootPath = await this.canonicalizeProjectRoot("apps/web");
     return [
-      FrontendProjectSchema.parse({
-        id: WEB_PROJECT_ID,
-        name: "user_stories",
-        slug: "user-stories",
-        rootPath,
-        defaultRoute: "/",
-        devCommand: "pnpm --filter @u-build/web dev -- --host 127.0.0.1 --port 5174",
-        previewUrl: "http://localhost:5174",
-        createdAt: "2026-05-26T00:00:00.000Z",
+      await buildSeedFrontendProject({
+        repositoryRoot: this.repositoryRoot,
+        env: this.env,
       }),
     ];
   }
@@ -130,20 +108,30 @@ export class FileFrontendProjectRegistry {
     defaultRoute?: string;
     devCommand?: string | null;
     previewUrl?: string | null;
+    previewCommandId?: string | null;
+    commandCatalog?: FrontendProject["commandCatalog"];
   }): Promise<FrontendProject> {
     const projects = await this.readProjects();
+    const rootPath = await this.canonicalizeProjectRoot(input.rootPath);
+    const slug = slugify(input.name);
+    const existing = projects.find((item) => item.slug === slug);
     const project = FrontendProjectSchema.parse({
-      id: uuidv4(),
+      id: existing?.id ?? uuidv4(),
       name: input.name.trim(),
-      slug: slugify(input.name),
-      rootPath: await this.canonicalizeProjectRoot(input.rootPath),
+      slug,
+      rootPath,
       defaultRoute: input.defaultRoute ?? "/",
       devCommand: input.devCommand ?? null,
+      previewCommandId: input.previewCommandId ?? null,
+      commandCatalog: input.commandCatalog ?? [],
       previewUrl: input.previewUrl ?? null,
-      createdAt: new Date().toISOString(),
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
     });
 
-    await this.writeProjects([...projects, project]);
+    await this.writeProjects([
+      ...projects.filter((item) => item.id !== project.id),
+      project,
+    ]);
     return project;
   }
 }

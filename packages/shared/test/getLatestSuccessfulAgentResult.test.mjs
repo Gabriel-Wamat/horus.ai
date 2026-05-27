@@ -4,6 +4,7 @@ import {
   AgentResultSchema,
   getLatestSuccessfulAgentResult,
 } from "../dist/entities/AgentResult.js";
+import { CodeChangeSetSchema } from "../dist/entities/CodeChangeSet.js";
 
 const base = {
   userStoryId: "11111111-1111-4111-8111-111111111111",
@@ -81,4 +82,28 @@ test("AgentResultSchema accepts consumed workspace artifact revision metadata", 
   assert.equal(parsed.specRevisionId, "spec:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:abc123");
   assert.equal(parsed.chatSessionId, "33333333-3333-4333-8333-333333333333");
   assert.equal(parsed.sourceMessageId, "44444444-4444-4444-8444-444444444444");
+});
+
+test("CodeChangeSetSchema requires auditable file operations", () => {
+  const parsed = CodeChangeSetSchema.parse({
+    id: "33333333-3333-4333-8333-333333333333",
+    workflowThreadId: "22222222-2222-4222-8222-222222222222",
+    workspaceFolderId: "11111111-1111-4111-8111-111111111111",
+    userStoryId: "44444444-4444-4444-8444-444444444444",
+    sourceAgent: "front",
+    status: "proposed",
+    operations: [
+      {
+        targetPath: "generated/horus/story.html",
+        changeType: "create",
+        beforeContent: null,
+        afterContent: "<!DOCTYPE html>",
+        diff: "diff --git a/generated/horus/story.html b/generated/horus/story.html",
+      },
+    ],
+    validation: [],
+    createdAt: "2026-05-26T00:00:00.000Z",
+  });
+
+  assert.equal(parsed.operations[0].changeType, "create");
 });

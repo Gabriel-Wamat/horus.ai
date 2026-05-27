@@ -1,6 +1,7 @@
 import { useEffect, useRef, type JSX } from "react";
 import type {
   FrontendProject,
+  HorusChatEvidenceSource,
   PreviewSession,
   VisualInstructionMode,
 } from "@u-build/shared";
@@ -14,6 +15,8 @@ export interface PreviewChatMessage {
   createdAt: string;
   projectId?: string;
   previewSessionId?: string;
+  evidenceSources?: HorusChatEvidenceSource[];
+  groundingStatus?: "grounded" | "partial" | "ungrounded";
 }
 
 function getStatusLabel(session: PreviewSession | null): string {
@@ -37,6 +40,77 @@ function formatMessageTime(createdAt: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(createdAt));
+}
+
+const groundingLabels: Record<
+  NonNullable<PreviewChatMessage["groundingStatus"]>,
+  string
+> = {
+  grounded: "Com fontes",
+  partial: "Parcial",
+  ungrounded: "Sem fonte",
+};
+
+function formatSourceLocation(source: HorusChatEvidenceSource): string {
+  if (!source.path) return source.label;
+  if (source.startLine && source.endLine) {
+    return `${source.path}:${source.startLine}-${source.endLine}`;
+  }
+  if (source.startLine) return `${source.path}:${source.startLine}`;
+  return source.path;
+}
+
+function ChatEvidence({
+  message,
+}: {
+  readonly message: PreviewChatMessage;
+}): JSX.Element | null {
+  if (!message.groundingStatus && !message.evidenceSources?.length) return null;
+
+  const evidenceSources = message.evidenceSources ?? [];
+
+  return (
+    <div className="preview-chat-evidence">
+      <div className="preview-chat-evidence-head">
+        <strong>Fontes consultadas</strong>
+        {message.groundingStatus ? (
+          <span className={`preview-chat-grounding ${message.groundingStatus}`}>
+            {groundingLabels[message.groundingStatus]}
+          </span>
+        ) : null}
+      </div>
+      {evidenceSources.length === 0 ? (
+        <p className="preview-chat-evidence-empty">
+          Horus não encontrou um trecho de código confiável para sustentar esta
+          resposta.
+        </p>
+      ) : (
+        <div className="preview-chat-evidence-list">
+          {evidenceSources.map((source, index) => (
+            <details
+              className="preview-chat-evidence-item"
+              key={`${source.type}:${source.path ?? source.label}:${
+                source.startLine ?? index
+              }`}
+            >
+              <summary>
+                <span>
+                  <strong>{source.label}</strong>
+                  <small>{formatSourceLocation(source)}</small>
+                </span>
+                <em>{source.confidence}</em>
+              </summary>
+              {source.excerpt ? (
+                <pre aria-label={`Trecho de ${source.label}`}>
+                  <code>{source.excerpt}</code>
+                </pre>
+              ) : null}
+            </details>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function PreviewConversationPanel({
@@ -187,6 +261,7 @@ export function PreviewConversationPanel({
                     <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
                   </span>
                   <p>{message.body}</p>
+                  {message.role === "agent" ? <ChatEvidence message={message} /> : null}
                 </article>
               ))}
             </div>

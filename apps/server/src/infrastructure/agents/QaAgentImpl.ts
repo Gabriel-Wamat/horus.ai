@@ -1,8 +1,16 @@
 import { z } from "zod";
-import type { LlmSettings, Spec, UserStory } from "@u-build/shared";
+import { randomUUID } from "node:crypto";
+import {
+  RuntimeValidationEvidenceSchema,
+  type LlmSettings,
+  type RuntimeValidationEvidence,
+  type Spec,
+  type UserStory,
+} from "@u-build/shared";
 import type { CuratorFeedback } from "../langgraph/state.js";
 import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
+import { QaPreviewSmokeResultSchema } from "../preview/QaPreviewSmokeValidationService.js";
 
 const TestCaseSchema = z.object({
   id: z.string(),
@@ -13,9 +21,49 @@ const TestCaseSchema = z.object({
 
 const QaOutputSchema = z.object({
   testCases: z.array(TestCaseSchema),
+  previewSmoke: QaPreviewSmokeResultSchema.optional(),
 });
 
-export type QaOutput = z.infer<typeof QaOutputSchema>;
+export type QaOutput = z.infer<typeof QaOutputSchema> & {
+  runtimeValidation?: RuntimeValidationEvidence | undefined;
+};
+
+export function buildRuntimeValidationEvidenceFromPreviewSmoke(input: {
+  workflowThreadId?: string;
+  userStoryId?: string;
+  projectId?: string;
+  previewSmoke?: z.infer<typeof QaPreviewSmokeResultSchema>;
+}): RuntimeValidationEvidence | undefined {
+  if (!input.previewSmoke) return undefined;
+  const previewStatus =
+    input.previewSmoke.status === "passed"
+      ? "passed"
+      : input.previewSmoke.status === "failed"
+        ? "failed"
+        : "skipped";
+  return RuntimeValidationEvidenceSchema.parse({
+    id: randomUUID(),
+    workflowThreadId: input.workflowThreadId ?? null,
+    constructionRunId: null,
+    userStoryId: input.userStoryId ?? null,
+    projectId: input.projectId ?? null,
+    status: previewStatus,
+    skippedReason:
+      previewStatus === "skipped" ? input.previewSmoke.reason : null,
+    commands: [],
+    preview: {
+      status: previewStatus,
+      url: input.previewSmoke.previewUrl ?? null,
+      message: input.previewSmoke.reason,
+      evidence: {
+        title: null,
+        bodySnippet: null,
+        screenshotPath: null,
+      },
+    },
+    createdAt: input.previewSmoke.checkedAt,
+  });
+}
 
 export async function generateQaTests(
   userStory: UserStory,
@@ -93,7 +141,7 @@ ${apiContracts}
 ${criteria}
 
 Gere um caso de teste por critério de aceite. Cada caso deve ter steps claros e objetivo com o resultado esperado.
-Se houver contratos futuros de API/Rotas, teste a prontidão do frontend por meio de adapter/mock data, estados de loading/empty/error/success e compatibilidade de shape; não assuma que existe backend real.
+Se houver contratos futuros de API/Rotas, teste a prontidão do frontend por meio de boundary/adapters injetáveis, estados de loading/empty/error/success e compatibilidade de shape; não assuma que existe backend real nem peça mocks em código aplicado ao projeto.
 IDs devem ser TC-01, TC-02, etc.`;
 
   const model = createChatModel("qa", {
@@ -106,11 +154,12 @@ IDs devem ser TC-01, TC-02, etc.`;
     } catch (err) {
       console.warn(`[QaAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {
-        console.error("[QaAgent] All retries exhausted — returning empty test cases");
-        return { testCases: [] };
+        throw new Error(
+          "QaAgent failed to produce structured test cases after 2 attempts."
+        );
       }
     }
   }
 
-  return { testCases: [] };
+  throw new Error("QaAgent failed to produce structured test cases.");
 }

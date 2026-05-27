@@ -27,7 +27,7 @@ export function LlmSettingsModal({
   onClose,
 }: LlmSettingsModalProps): JSX.Element | null {
   const [provider, setProvider] = useState<LlmProvider>("openai");
-  const [model, setModel] = useState("gpt-5");
+  const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [isRevealed, setIsRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function LlmSettingsModal({
     if (!isOpen) return;
 
     setProvider(settings?.provider ?? "openai");
-    setModel(settings?.model ?? "gpt-5");
+    setModel(settings?.model ?? "");
     setApiKey(settings?.apiKey ?? "");
     setIsRevealed(false);
     setError(null);
@@ -135,7 +135,7 @@ export function LlmSettingsModal({
             name="horus-llm-model"
             value={model}
             onChange={(event) => setModel(event.target.value)}
-            placeholder="gpt-5"
+            placeholder="ex: LLM_MODEL configurado no backend"
             autoComplete="off"
           />
         </label>

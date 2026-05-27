@@ -17,6 +17,16 @@ test("Preview schemas accept valid project, session, event, and inputs", () => {
     rootPath: "/repo/apps/web",
     defaultRoute: "/",
     devCommand: "pnpm --filter @u-build/web dev",
+    previewCommandId: "dev",
+    commandCatalog: [
+      {
+        id: "dev",
+        label: "Start dev server",
+        executable: "pnpm",
+        args: ["--filter", "@u-build/web", "dev"],
+        cwd: ".",
+      },
+    ],
     previewUrl: "http://localhost:5174",
     createdAt: "2026-05-26T10:00:00.000Z",
   });
@@ -46,6 +56,8 @@ test("Preview schemas accept valid project, session, event, and inputs", () => {
   });
 
   assert.equal(project.slug, "user-stories");
+  assert.equal(project.previewCommandId, "dev");
+  assert.equal(project.commandCatalog[0].executable, "pnpm");
   assert.equal(session.device.name, "pc");
   assert.deepEqual(event.data, {});
   assert.equal(
@@ -61,6 +73,22 @@ test("Preview schemas accept valid project, session, event, and inputs", () => {
     }).mode,
     "visual_edits"
   );
+});
+
+test("Preview project command catalog defaults preserve legacy project compatibility", () => {
+  const project = FrontendProjectSchema.parse({
+    id: "11111111-1111-4111-8111-111111111116",
+    name: "legacy_project",
+    slug: "legacy-project",
+    rootPath: "/repo/apps/web",
+    defaultRoute: "/",
+    devCommand: "pnpm dev",
+    previewUrl: "http://localhost:5174",
+    createdAt: "2026-05-26T10:00:00.000Z",
+  });
+
+  assert.equal(project.previewCommandId, null);
+  assert.deepEqual(project.commandCatalog, []);
 });
 
 test("Preview schemas reject unsafe routes and invalid devices", () => {

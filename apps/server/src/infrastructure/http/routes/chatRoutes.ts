@@ -7,15 +7,15 @@ import {
 } from "@u-build/shared";
 import {
   ChatSessionNotFoundError,
-  type FileChatMemoryStore,
 } from "../../chat/FileChatMemoryStore.js";
+import type { ChatMemoryRepository } from "../../repositories/contracts.js";
 import {
   WorkspaceFolderNotFoundError,
   WorkspaceUserStoryNotFoundError,
 } from "../../workspace/FileWorkspaceStore.js";
 
 interface ChatRouteDeps {
-  chatMemoryStore: FileChatMemoryStore;
+  chatMemoryStore: ChatMemoryRepository;
 }
 
 export function createChatRouter(deps: ChatRouteDeps): Router {

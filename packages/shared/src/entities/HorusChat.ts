@@ -12,6 +12,8 @@ export const HorusChatIntentKindSchema = z.enum([
   "unsupported",
 ]);
 
+export const HorusPreviewActionSchema = z.enum(["start", "stop", "reload"]);
+
 export const HorusChatOutcomeActionSchema = z.enum([
   "answer",
   "code_change_started",
@@ -31,6 +33,16 @@ export const HorusChatOutcomeStatusSchema = z.enum([
   "failed",
 ]);
 
+export const HorusChatEvidenceSourceSchema = z.object({
+  type: z.enum(["code_file", "user_story", "spec", "chat_history", "preview"]),
+  label: z.string().trim().min(1),
+  path: z.string().trim().min(1).optional(),
+  startLine: z.number().int().positive().optional(),
+  endLine: z.number().int().positive().optional(),
+  excerpt: z.string().optional(),
+  confidence: z.enum(["high", "medium", "low"]),
+});
+
 export const HorusChatTurnInputSchema = z.object({
   chatSessionId: z.string().uuid(),
   message: z.string().trim().min(1).max(8000),
@@ -46,6 +58,7 @@ export const HorusChatIntentSchema = z.object({
   mode: HorusChatModeSchema,
   confidence: z.number().min(0).max(1),
   rationale: z.string().trim().min(1),
+  previewAction: HorusPreviewActionSchema.optional(),
 });
 
 export const HorusChatOutcomeSchema = z.object({
@@ -57,6 +70,8 @@ export const HorusChatOutcomeSchema = z.object({
   workflowThreadId: z.string().uuid().optional(),
   previewSessionId: z.string().uuid().optional(),
   contextSources: z.array(z.string().trim().min(1)).optional(),
+  evidenceSources: z.array(HorusChatEvidenceSourceSchema).optional(),
+  groundingStatus: z.enum(["grounded", "partial", "ungrounded"]).optional(),
 });
 
 export const HorusChatTurnResponseSchema = z.object({
@@ -68,8 +83,10 @@ export const HorusChatTurnResponseSchema = z.object({
 
 export type HorusChatIntentKind = z.infer<typeof HorusChatIntentKindSchema>;
 export type HorusChatMode = z.infer<typeof HorusChatModeSchema>;
+export type HorusPreviewAction = z.infer<typeof HorusPreviewActionSchema>;
 export type HorusChatOutcomeAction = z.infer<typeof HorusChatOutcomeActionSchema>;
 export type HorusChatOutcomeStatus = z.infer<typeof HorusChatOutcomeStatusSchema>;
+export type HorusChatEvidenceSource = z.infer<typeof HorusChatEvidenceSourceSchema>;
 export type HorusChatTurnInput = z.infer<typeof HorusChatTurnInputSchema>;
 export type HorusChatIntent = z.infer<typeof HorusChatIntentSchema>;
 export type HorusChatOutcome = z.infer<typeof HorusChatOutcomeSchema>;
