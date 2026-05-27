@@ -99,6 +99,13 @@ export class PostgresPreviewSessionRepository
     return sessionFromRow(row);
   }
 
+  async listSessions(): Promise<PreviewSession[]> {
+    const result = await this.pool.query<PreviewSessionRow>(
+      "SELECT * FROM preview_sessions ORDER BY updated_at DESC"
+    );
+    return result.rows.map(sessionFromRow);
+  }
+
   async appendEvent(event: PreviewEvent): Promise<PreviewEvent> {
     const validated = PreviewEventSchema.parse(event);
     await this.pool.query(

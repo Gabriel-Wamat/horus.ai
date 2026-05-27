@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import { createWriteStream } from "node:fs";
 import { mkdtemp, mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
+import express from "express";
+import { ProjectArchiveService } from "../dist/infrastructure/project/ProjectArchiveService.js";
 import { ProjectFileBrowserService } from "../dist/infrastructure/project/ProjectFileBrowserService.js";
+import { createProjectFileRouter } from "../dist/infrastructure/http/routes/projectFileRoutes.js";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
@@ -203,6 +207,95 @@ test("ProjectFileBrowserService can read a git worktree tied to an existing proj
 
   assert.equal(file.runId, RUN_ID);
   assert.equal(file.content, "run\n");
+});
+
+test("ProjectArchiveService streams a safe project ZIP with organized files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "horus-files-root-"));
+  const outside = await mkdtemp(join(tmpdir(), "horus-files-outside-"));
+  await mkdir(join(root, "src"), { recursive: true });
+  await mkdir(join(root, "node_modules", "x"), { recursive: true });
+  await mkdir(join(root, "dist"), { recursive: true });
+  await mkdir(join(root, ".git"), { recursive: true });
+  await writeFile(join(root, "package.json"), "{\"name\":\"demo\"}\n");
+  await writeFile(join(root, "src", "App.tsx"), "export function App() { return null; }\n");
+  await writeFile(join(root, ".gitignore"), "node_modules/\n");
+  await writeFile(join(root, ".env"), "SECRET=1\n");
+  await writeFile(join(root, "node_modules", "x", "index.js"), "module.exports = 1;\n");
+  await writeFile(join(root, "dist", "bundle.js"), "compiled\n");
+  await writeFile(join(root, ".git", "config"), "[core]\n");
+  await writeFile(join(outside, "secret.txt"), "outside\n");
+  await symlink(join(outside, "secret.txt"), join(root, "src", "linked-secret.txt"));
+
+  const archive = new ProjectArchiveService(
+    new ProjectFileBrowserService(repositoryFor(root), { logger: silentLogger }),
+    { logger: silentLogger }
+  );
+  const manifest = await archive.createManifest({ projectId: PROJECT_ID });
+
+  assert.equal(manifest.projectId, PROJECT_ID);
+  assert.equal(manifest.runId, null);
+  assert.ok(manifest.fileName.startsWith("horus-project-demo-project-"));
+  assert.ok(manifest.entries.some((entry) => entry.archivePath === "demo-project/package.json"));
+  assert.ok(manifest.entries.some((entry) => entry.archivePath === "demo-project/src/App.tsx"));
+  assert.ok(manifest.entries.some((entry) => entry.archivePath === "demo-project/.gitignore"));
+  assert.ok(!manifest.entries.some((entry) => entry.archivePath.includes(".env")));
+  assert.ok(!manifest.entries.some((entry) => entry.archivePath.includes("node_modules")));
+  assert.ok(!manifest.entries.some((entry) => entry.archivePath.includes("dist/")));
+  assert.ok(!manifest.entries.some((entry) => entry.archivePath.includes(".git/")));
+  assert.ok(!manifest.entries.some((entry) => entry.archivePath.includes("linked-secret")));
+
+  const zipPath = join(root, "download.zip");
+  await archive.streamZip(manifest, createWriteStream(zipPath));
+  const zip = await readFile(zipPath);
+
+  assert.ok(zip.includes(Buffer.from("demo-project/package.json")));
+  assert.ok(zip.includes(Buffer.from("demo-project/src/App.tsx")));
+  assert.ok(zip.includes(Buffer.from("demo-project/.gitignore")));
+  assert.ok(!zip.includes(Buffer.from(".env")));
+  assert.ok(!zip.includes(Buffer.from("node_modules")));
+  assert.ok(!zip.includes(Buffer.from("linked-secret")));
+});
+
+test("Project file download route returns a ZIP attachment", async () => {
+  const root = await mkdtemp(join(tmpdir(), "horus-files-root-"));
+  await writeFile(join(root, "package.json"), "{\"name\":\"demo\"}\n");
+  await writeFile(join(root, ".env"), "SECRET=1\n");
+  const fileBrowser = new ProjectFileBrowserService(repositoryFor(root), {
+    logger: silentLogger,
+  });
+  const archiveService = new ProjectArchiveService(fileBrowser, {
+    logger: silentLogger,
+  });
+  const app = express();
+  app.use(
+    "/api/project-files",
+    createProjectFileRouter({ fileBrowser, archiveService })
+  );
+  const server = await new Promise((resolve) => {
+    const listener = app.listen(0, () => resolve(listener));
+  });
+
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/project-files/projects/${PROJECT_ID}/download`
+    );
+    const body = Buffer.from(await response.arrayBuffer());
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "application/zip");
+    assert.match(
+      response.headers.get("content-disposition") ?? "",
+      /^attachment; filename="horus-project-demo-project-/
+    );
+    assert.ok(body.includes(Buffer.from("demo-project/package.json")));
+    assert.ok(!body.includes(Buffer.from(".env")));
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  }
 });
 
 const silentLogger = {

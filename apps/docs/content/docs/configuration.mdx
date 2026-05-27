@@ -1,0 +1,179 @@
+---
+title: Configuration
+description: Environment variables and runtime configuration.
+---
+
+## Configuration Areas
+
+| Area | Variables |
+| --- | --- |
+| LLM providers | `LLM_PROVIDER`, `LLM_MODEL`, provider API keys |
+| Per-agent overrides | `SPEC_AGENT_*`, `FRONT_AGENT_*`, `QA_AGENT_*`, `CURATOR_AGENT_*` |
+| Persistence | `PERSISTENCE_DRIVER`, `HORUS_DATA_DIR`, `DATABASE_URL`, `DATABASE_SSL` |
+| HTTP | `PORT`, `HOST`, `CORS_ORIGIN` |
+| Preview | `HORUS_WEB_PREVIEW_*` |
+| Generated projects | `HORUS_PROJECT_WORKSPACE_ROOT`, `HORUS_PROJECT_RUN_WORKSPACE_ROOT`, generated preview vars |
+| Security | `HORUS_SECRET_KEY` |
+
+Configuration is read from the process environment and should be reproducible from `.env.example`. Defaults may exist for local development, but production or shared environments should set values explicitly.
+
+## LLM Providers
+
+| Variable | Required | Secret | Purpose |
+| --- | --- | --- | --- |
+| `LLM_PROVIDER` | For LLM workflows | No | Global provider |
+| `LLM_MODEL` | For LLM workflows | No | Global model |
+| `OPENAI_API_KEY` | OpenAI only | Yes | OpenAI credential |
+| `OPENROUTER_API_KEY` | OpenRouter only | Yes | OpenRouter credential |
+| `GROQ_API_KEY` | Groq only | Yes | Groq credential |
+| `OPENAI_BASE_URL` | No | No | OpenAI-compatible endpoint override |
+| `OPENROUTER_BASE_URL` | No | No | OpenRouter endpoint override |
+| `GROQ_BASE_URL` | No | No | Groq endpoint override |
+
+## Per-Agent Provider Overrides
+
+Each specialist can use the global provider/model or an override. This lets Horus run, for example, a stronger Curator model without changing the Front Agent model.
+
+| Prefix | Agent |
+| --- | --- |
+| `SPEC_AGENT_*` | Spec Agent |
+| `FRONT_AGENT_*` | Front Agent |
+| `QA_AGENT_*` | QA Agent |
+| `CURATOR_AGENT_*` | Curator |
+
+Common override shape:
+
+```bash
+SPEC_AGENT_PROVIDER=openai
+SPEC_AGENT_MODEL=<provider-model>
+FRONT_AGENT_PROVIDER=openrouter
+FRONT_AGENT_MODEL=<provider-model>
+QA_AGENT_PROVIDER=openai
+QA_AGENT_MODEL=<provider-model>
+CURATOR_AGENT_PROVIDER=openai
+CURATOR_AGENT_MODEL=<provider-model>
+```
+
+When an override is missing, the resolver should fall back to the global runtime profile.
+
+Additional tuning variables:
+
+| Variable | Required | Secret | Purpose |
+| --- | --- | --- | --- |
+| `FRONT_AGENT_TEMPERATURE` | No | No | Front Agent sampling control |
+| `FRONT_AGENT_MAX_TOKENS` | No | No | Front Agent response budget |
+| `QA_AGENT_TEMPERATURE` | No | No | QA Agent sampling control |
+| `CURATOR_AGENT_TEMPERATURE` | No | No | Curator sampling control |
+| `SPEC_AGENT_TIMEOUT_MS` | No | No | Spec Agent request timeout |
+| `OPENAI_REASONING_EFFORT` | No | No | Optional OpenAI reasoning setting |
+| `OPENAI_TEXT_VERBOSITY` | No | No | Optional OpenAI text verbosity setting |
+
+## Persistence
+
+| Variable | Required | Secret | Purpose |
+| --- | --- | --- | --- |
+| `PERSISTENCE_DRIVER` | No | No | `file` or `postgres` |
+| `HORUS_DATA_DIR` | No | No | Base directory for file-mode state |
+| `DATABASE_URL` | Postgres mode | Yes | Postgres connection URL |
+| `DATABASE_SSL` | No | No | Enable SSL for database connections |
+
+Recommended local file-mode configuration:
+
+```bash
+PERSISTENCE_DRIVER=file
+HORUS_DATA_DIR=.horus/data
+```
+
+Recommended Postgres configuration:
+
+```bash
+PERSISTENCE_DRIVER=postgres
+DATABASE_URL=postgresql://horus:horus@localhost:5432/horus
+DATABASE_SSL=false
+```
+
+`HORUS_DATA_DIR` should be relative to the repository or an explicit volume path in containers. Do not use a developer-specific path such as `/Users/name/Desktop/...`.
+
+## HTTP
+
+| Variable | Required | Secret | Purpose |
+| --- | --- | --- | --- |
+| `PORT` | No | No | API server port, default `3000` |
+| `HOST` | No | No | Bind host |
+| `CORS_ORIGIN` | No | No | Comma-separated allowed origins |
+
+Example for local split frontend/API:
+
+```bash
+PORT=3000
+HOST=0.0.0.0
+CORS_ORIGIN=http://localhost:5173,http://localhost:5174
+```
+
+Use `HOST=0.0.0.0` for containerized or network-visible runs. Use a stricter `CORS_ORIGIN` outside local development.
+
+## Preview Defaults
+
+The default web preview project is env-driven so the project can run on different machines and in containers:
+
+```bash
+HORUS_WEB_PROJECT_ROOT=apps/web
+HORUS_WEB_PROJECT_NAME=user_stories
+HORUS_WEB_PROJECT_SLUG=user-stories
+HORUS_WEB_DEFAULT_ROUTE=/
+HORUS_PACKAGE_MANAGER=pnpm
+HORUS_WEB_PACKAGE_FILTER=@u-build/web
+HORUS_WEB_PREVIEW_HOST=localhost
+HORUS_WEB_PREVIEW_PORT=5174
+HORUS_WEB_PREVIEW_URL=http://localhost:5174
+```
+
+## Generated Project Workspaces
+
+Generated project roots should also be configurable:
+
+```bash
+HORUS_PROJECT_WORKSPACE_ROOT=.horus/data/project-workspaces
+HORUS_PROJECT_RUN_WORKSPACE_ROOT=.horus/data/project-run-worktrees
+```
+
+These paths are runtime state. They must be ignored and should be mounted as volumes when Docker support is introduced.
+
+Additional generated-project variables:
+
+| Variable | Required | Secret | Purpose |
+| --- | --- | --- | --- |
+| `HORUS_GENERATED_PROJECT_PREVIEW_HOST` | No | No | Host used by generated project preview sessions |
+| `HORUS_GENERATED_PROJECT_PREVIEW_PORT` | No | No | Port used by generated project preview sessions |
+| `HORUS_PROJECT_BASE_REF` | No | No | Git base ref used when preparing project workspaces |
+| `HORUS_BOOTSTRAP_GIT_USER_NAME` | No | No | Git author name for generated project bootstrap commits |
+| `HORUS_BOOTSTRAP_GIT_USER_EMAIL` | No | No | Git author email for generated project bootstrap commits |
+
+## Security
+
+| Variable | Required | Secret | Purpose |
+| --- | --- | --- | --- |
+| `HORUS_SECRET_KEY` | Recommended for persistent local credentials | Yes | Encryption key used by the backend credential store |
+
+When `HORUS_SECRET_KEY` is not set, local credential storage can still work for development, but a stable explicit key is safer for persistent environments.
+
+## Configuration Validation Checklist
+
+Before running a workflow that calls real providers, confirm:
+
+- `pnpm install` completed without missing workspace packages.
+- `.env` exists locally and is not tracked.
+- `PERSISTENCE_DRIVER` is either `file` or `postgres`.
+- File mode has a writable `HORUS_DATA_DIR`.
+- Postgres mode has a reachable `DATABASE_URL`.
+- At least one provider credential is available for the selected provider.
+- `CORS_ORIGIN` includes the frontend origin when frontend and API are split.
+- Preview ports do not conflict with the product frontend or docs app.
+
+## Secret Rules
+
+<Warning>
+Secrets must be injected through environment variables or the backend credential store. They must not be committed, logged, rendered in workflow events, or copied into Docker images.
+</Warning>
+
+Do not commit runtime secrets, local credential stores, generated state, build output, dependency folders, private operator notes, or machine-specific instructions.

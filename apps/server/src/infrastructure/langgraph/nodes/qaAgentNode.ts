@@ -26,12 +26,13 @@ export function createQaAgentNode(deps: LangGraphDependencies) {
       `[qaAgentNode] Generating QA tests for: ${userStory.id} (retry=${state.retryCount})`
     );
 
+    const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
     // Self-correction: curator feedback refines test coverage on retry
     const qaOutput = await deps.generateQaTests(
       userStory,
       spec,
       curatorFeedback,
-      deps.getRuntimeLlmSettings(state.threadId),
+      llmSettings,
       state.executionBrief
     );
     const previewSmoke = await validatePreviewForQa(state, deps);

@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useMemo, useState, type JSX, type ReactNode } from "react";
 import type {
+  HorusAgentExecutionSnapshot,
   HorusAgentEvidenceSummary,
   HorusRunEventSnapshot,
   HorusRunSnapshot,
@@ -48,6 +49,7 @@ export function RunFlowDrawer({ run, node, onClose }: RunFlowDrawerProps): JSX.E
       return summary.nodeId === data.nodeName;
     }) ?? null;
   const latestEvent = relatedEvents.at(-1) ?? null;
+  const latestExecution = relatedExecutions.at(-1) ?? null;
 
   return (
     <aside className="agent-flow-drawer" aria-label={`Inspeção de ${data.label}`}>
@@ -89,9 +91,11 @@ export function RunFlowDrawer({ run, node, onClose }: RunFlowDrawerProps): JSX.E
           run={run}
           node={node}
           events={relatedEvents}
+          executions={relatedExecutions}
           executionCount={relatedExecutions.length}
           summary={evidenceSummary}
           latestEvent={latestEvent}
+          latestExecution={latestExecution}
         />
       )}
       {activeTab === "events" && <EventsTab events={relatedEvents} />}
@@ -100,7 +104,12 @@ export function RunFlowDrawer({ run, node, onClose }: RunFlowDrawerProps): JSX.E
       )}
       {activeTab === "code" && <CodeTab events={relatedEvents} summary={evidenceSummary} />}
       {activeTab === "deps" && (
-        <DepsTab events={relatedEvents} summary={evidenceSummary} run={run} />
+        <DepsTab
+          events={relatedEvents}
+          executions={relatedExecutions}
+          summary={evidenceSummary}
+          run={run}
+        />
       )}
     </aside>
   );
@@ -110,19 +119,26 @@ function SummaryTab({
   run,
   node,
   events,
+  executions,
   executionCount,
   summary,
   latestEvent,
+  latestExecution,
 }: {
   run: HorusRunSnapshot;
   node: AgentFlowNode;
   events: HorusRunEventSnapshot[];
+  executions: HorusAgentExecutionSnapshot[];
   executionCount: number;
   summary: HorusAgentEvidenceSummary | null;
   latestEvent: HorusRunEventSnapshot | null;
+  latestExecution: HorusAgentExecutionSnapshot | null;
 }): JSX.Element {
   const data = node.data;
-  const commandCount = summary?.commandIds.length ?? events.flatMap((event) => event.commandIds ?? []).length;
+  const commandIds = dedupe([
+    ...(summary?.commandIds ?? []),
+    ...events.flatMap((event) => event.commandIds ?? []),
+  ]);
   const fileCount = new Set([
     ...(summary?.filesRead ?? []),
     ...(summary?.filesChanged ?? []),
@@ -132,7 +148,7 @@ function SummaryTab({
   return (
     <div className="agent-flow-drawer-tab-panel">
       <InfoCard label="Resumo">
-        <p>{data.latestSummary ?? latestEvent?.summary ?? data.description}</p>
+        <p>{latestEvent?.summary ?? data.latestSummary ?? latestExecution?.summary ?? data.description}</p>
         {latestEvent && (
           <p className="agent-flow-rich-line">
             <code>{latestEvent.nodeId ?? data.nodeName}</code> publicou um update com status{" "}
@@ -146,8 +162,13 @@ function SummaryTab({
           rows={[
             ["Eventos", String(events.length)],
             ["Execuções", String(executionCount)],
-            ["Comandos", String(commandCount)],
+            ["Comandos", String(commandIds.length)],
             ["Arquivos", String(fileCount)],
+            ["Último evento", latestEvent ? formatDateTime(latestEvent.timestamp) : "Nenhum"],
+            [
+              "Última execução",
+              latestExecution?.completedAt ? formatDateTime(latestExecution.completedAt) : "Nenhuma",
+            ],
           ]}
         />
       </InfoCard>
@@ -156,8 +177,20 @@ function SummaryTab({
         <MetricRows
           rows={[
             ["Status", run.status],
+            ["Fase", run.currentPhase],
+            ["História", run.currentUserStoryTitle ?? "Não informada"],
             ["Nó atual", run.currentNode ?? "Sem nó ativo"],
-            ["Ator", latestEvent?.actorName ?? "Sem ator recente"],
+            ["Último ator", latestEvent?.actorName ?? "Sem ator recente"],
+            [
+              "Latência",
+              data.kind === "agentExecution"
+                ? data.executionTimeMs != null
+                  ? `${data.executionTimeMs}ms`
+                  : "Não medida"
+                : data.latencyMs != null
+                  ? `${data.latencyMs}ms`
+                  : "Não medida",
+            ],
             ["Workspace", run.workspaceFolderId ?? "Não informado"],
           ]}
         />
@@ -217,8 +250,14 @@ function ActionsTab({
   events: HorusRunEventSnapshot[];
   summary: HorusAgentEvidenceSummary | null;
 }): JSX.Element {
-  const tools = summary?.toolNames ?? [];
-  const commands = dedupe(events.flatMap((event) => event.commandIds ?? summary?.commandIds ?? []));
+  const tools = dedupe([
+    ...(summary?.toolNames ?? []),
+    ...events.map((event) => toolNameFromEvent(event)).filter((name): name is string => Boolean(name)),
+  ]);
+  const commands = dedupe([
+    ...(summary?.commandIds ?? []),
+    ...events.flatMap((event) => event.commandIds ?? []),
+  ]);
   const validationEvents = events.filter((event) => event.validationGateId || event.evidence);
 
   return (
@@ -253,20 +292,29 @@ function CodeTab({
   events: HorusRunEventSnapshot[];
   summary: HorusAgentEvidenceSummary | null;
 }): JSX.Element {
-  const filesRead = dedupe([...(summary?.filesRead ?? []), ...events.flatMap((event) => event.filePaths ?? [])]);
-  const changed = summary?.filesChanged ?? [];
+  const codeEvents = events.filter((event) => event.filePaths?.length);
+  const changed = dedupe([
+    ...(summary?.filesChanged ?? []),
+    ...codeEvents
+      .filter((event) => event.eventType === "patch_proposed" || event.eventType === "patch_applied")
+      .flatMap((event) => event.filePaths ?? []),
+  ]);
+  const filesRead = dedupe([
+    ...(summary?.filesRead ?? []),
+    ...codeEvents
+      .filter((event) => event.eventType !== "patch_proposed" && event.eventType !== "patch_applied")
+      .flatMap((event) => event.filePaths ?? []),
+  ]);
   return (
     <div className="agent-flow-drawer-tab-panel">
       <ChipCard label="Arquivos lidos" empty="Nenhum arquivo lido registrado." items={filesRead} />
       <ChipCard label="Arquivos alterados" empty="Nenhum arquivo alterado registrado." items={changed} />
       <InfoCard label="Eventos de código">
-        {events.filter((event) => event.filePaths?.length).length === 0 ? (
+        {codeEvents.length === 0 ? (
           <p className="agent-flow-muted">Nenhum evento com arquivo associado.</p>
         ) : (
           <div className="agent-flow-compact-list">
-            {events
-              .filter((event) => event.filePaths?.length)
-              .map((event) => (
+            {codeEvents.map((event) => (
                 <span key={event.id}>
                   <strong>{event.title}</strong>
                   <em>{event.filePaths?.join(", ")}</em>
@@ -281,14 +329,18 @@ function CodeTab({
 
 function DepsTab({
   events,
+  executions,
   summary,
   run,
 }: {
   events: HorusRunEventSnapshot[];
+  executions: HorusAgentExecutionSnapshot[];
   summary: HorusAgentEvidenceSummary | null;
   run: HorusRunSnapshot;
 }): JSX.Element {
-  const profile = [...events].reverse().find((event) => event.agentProfile)?.agentProfile;
+  const profile =
+    [...events].reverse().find((event) => event.agentProfile)?.agentProfile ??
+    [...executions].reverse().find((execution) => execution.agentProfile)?.agentProfile;
   return (
     <div className="agent-flow-drawer-tab-panel">
       <InfoCard label="Perfil">
@@ -406,6 +458,11 @@ function formatDateTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function toolNameFromEvent(event: HorusRunEventSnapshot): string | null {
+  const value = event.metadata?.["toolName"] ?? event.metadata?.["tool"];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 function dedupe(values: string[]): string[] {

@@ -12,24 +12,30 @@ Horus.AI must run on macOS, Windows, and Linux without depending on this machine
    - `FileChatMemoryStore` defaults to `./data/chat-memory`.
    - `FileFrontendProjectRegistry` defaults to `./data/frontend-projects`.
    - `FilePreviewSessionStore` defaults to `./data/preview-sessions`.
+   - `FileCodeChangeSetRepository` defaults to `./data/code-change-sets`.
+   - `FileWorkflowEventLogRepository` defaults to `./data/workflow-events`.
+   - `FileProjectConstructionRepository` defaults to `./data/project-construction`.
+   - `ProjectWorkspaceService` defaults generated project roots to `data/project-workspaces` and run worktrees to `data/project-run-worktrees`.
    - These paths are portable at the Node API level, but they are not stable across `cwd` changes, Docker/service execution, packaged builds, or different launch scripts.
 
 2. Dependency injection does not centralize persistence configuration.
-   - `createApp()` constructs every store with default paths.
-   - There is no single app config object or environment contract such as `HORUS_DATA_DIR`.
-   - Tests can inject temp directories directly, but production cannot.
+   - `createApp()` now accepts injected repositories and calls `createRepositories(env)`, which is a good seam.
+   - The file-backed `createRepositories()` path still constructs every file repository with default `./data/...` paths.
+   - There is no single app config object or environment contract such as `HORUS_DATA_DIR` for the file driver.
+   - Tests can inject repositories directly, but production file mode cannot move all local state with one setting.
 
-3. Workflow persistence is split between durable JSON state and an in-memory LangGraph checkpoint.
+3. Workflow persistence is driver-dependent and inconsistent.
    - Workflow snapshots are saved as JSON.
-   - LangGraph uses `MemorySaver`.
-   - Human-in-the-loop resume explicitly fails after process restart because the checkpoint is only in memory.
-   - This means local files are not enough to restore an interrupted workflow on another process or machine.
+   - Postgres mode uses `PostgresSaver`, which is the right durable direction.
+   - File mode still returns `MemorySaver`.
+   - Human-in-the-loop resume in file mode can fail after process restart because the checkpoint is only in memory.
+   - This means the default local mode cannot fully restore an interrupted workflow from local files.
 
 4. Preview process state is persisted as if it were durable.
    - `PreviewSession` stores `processId`.
    - `ProcessBrowserPreviewAdapter` keeps live children in an in-memory map.
    - After server restart, a stored `running` session may point to a process the new server cannot control.
-   - Process group termination uses POSIX-style negative PIDs and may not behave correctly on Windows.
+   - Process cleanup should be reviewed for Windows behavior; process groups and signal semantics are not portable in the same way across macOS/Linux/Windows.
 
 5. Frontend project registry stores absolute project paths.
    - Seeded projects canonicalize `apps/web` into an absolute `rootPath`.
@@ -37,24 +43,31 @@ Horus.AI must run on macOS, Windows, and Linux without depending on this machine
    - Registered projects are constrained to the repository root, which is good, but persisted absolute paths reduce portability.
 
 6. Preview commands are persisted as shell-like strings.
-   - Commands are split by a custom parser.
-   - This avoids `shell: true`, but the parser is not a full cross-platform command model.
-   - A string such as `pnpm --filter @u-build/web dev -- --host 127.0.0.1 --port 5174` should be stored as executable plus args, not reparsed every run.
+   - The newer preview model has a `commandCatalog` with executable plus args, which is the right shape.
+   - The legacy `devCommand` string remains in the schema and seed data as a fallback.
+   - The migration should make `commandCatalog` authoritative and keep `devCommand` display-only or remove it after compatibility is no longer needed.
 
 7. Skill metadata contains a machine-specific repository root.
-   - Four agent skills include `repository_root: "/Users/wamat/Desktop/horus.ai"`.
+   - Some agent skills include an absolute `repository_root` value.
    - This is a direct portability problem if skills are loaded as project metadata or inspected by agents.
 
 8. JSON file writes are not atomic and no locking/migration layer exists.
    - Stores overwrite shared JSON files directly.
-   - Concurrent requests can lose updates in `sessions.json`, `projects.json`, workspace indexes, timelines, and revision manifests.
+   - Concurrent requests can lose updates in `sessions.json`, `projects.json`, workspace indexes, timelines, event logs, project-construction arrays, and revision manifests.
    - There is no storage schema version, migration path, backup, or corruption recovery.
 
 9. Local runtime URLs and CORS are hardcoded.
-   - Server CORS allows only `http://localhost:5173`.
-   - Preview seed uses `http://localhost:5174`.
+   - Server CORS is configurable through `CORS_ORIGIN`, which is good.
+   - Preview seed uses `HORUS_WEB_PREVIEW_*` settings, also good.
    - Vite proxies to `http://localhost:3000`.
+   - Generated project preview settings have separate `HORUS_GENERATED_PROJECT_PREVIEW_*` defaults.
    - This is less about persistence, but it affects running consistently across machines, containers, and non-default ports.
+
+10. Postgres mode solves some persistence problems but is not the local portability answer by itself.
+   - Postgres gives durable workflow state/checkpoints and central persistence when configured.
+   - A fresh clone still defaults to file mode.
+   - The project still needs a robust file-mode contract for "runs on any machine" without requiring an external database.
+   - If Postgres is supported as an option, the README and `.env.example` must document `PERSISTENCE_DRIVER`, `DATABASE_URL`, `DATABASE_SSL`, and migration behavior.
 
 ## Target Design
 
@@ -73,6 +86,11 @@ Create a single runtime config module:
   - `chat-memory`
   - `frontend-projects`
   - `preview-sessions`
+  - `code-change-sets`
+  - `workflow-events`
+  - `project-construction`
+  - `project-workspaces`
+  - `project-run-worktrees`
   - `langgraph-checkpoints`
 
 ### Store Construction
@@ -80,17 +98,17 @@ Create a single runtime config module:
 Replace direct default construction in `createApp()` with:
 
 - `const config = loadRuntimeConfig(process.env)`
-- `new JsonStorageAdapter(config.paths.workflowsDir)`
-- `new FileWorkspaceStore(config.paths.workspaceDir)`
-- `new FileChatMemoryStore(workspaceStore, storage, config.paths.chatMemoryDir)`
-- `new FileFrontendProjectRegistry(config.paths.frontendProjectsDir, config.repositoryRoot)`
-- `new FilePreviewSessionStore(config.paths.previewSessionsDir)`
+- `createRepositories(config)` or `createRepositories(env, config)`.
+- File repositories must receive explicit paths from `config.paths`.
+- Project workspace services must receive explicit generated-project roots from `config.paths`.
 
 Expose a test-only/app-factory override so integration tests can use temp directories without mutating environment variables.
 
 ### Durable Workflow Resume
 
-Replace `MemorySaver` with a durable checkpoint implementation or wrap LangGraph checkpoint data under the configured storage root.
+For Postgres mode, keep `PostgresSaver`.
+
+For file mode, replace `MemorySaver` with a durable checkpoint implementation or wrap LangGraph checkpoint data under the configured storage root.
 
 Minimum acceptable behavior:
 
@@ -124,6 +142,12 @@ For existing `projects.json`, add a migration:
 - If absolute path is inside current repository root, convert to repo-relative.
 - If absolute path is outside the current repository root, keep it but mark it external and validate existence.
 
+Apply the same rule to generated project construction data:
+
+- Persist generated project workspaces relative to `HORUS_DATA_DIR` when they are managed by Horus.
+- Only persist external absolute paths for user-selected existing repositories.
+- Mark external repositories explicitly so the UI can explain that they are machine-local.
+
 ### Preview Process Recovery
 
 Treat `processId` as ephemeral runtime metadata, not durable state.
@@ -154,6 +178,12 @@ Store preview commands as structured data:
 
 Keep display strings in the UI only. Avoid reparsing persisted command strings.
 
+Migration rule:
+
+- Prefer `previewCommandId` plus `commandCatalog`.
+- If only legacy `devCommand` exists, parse it once during migration and store the resulting command object when safe.
+- Keep legacy `devCommand` only as a display/backward-compatibility field.
+
 ### Atomic JSON Store Layer
 
 Add a small shared `JsonFileStore` helper:
@@ -167,6 +197,18 @@ Add a small shared `JsonFileStore` helper:
 
 Use it in every file-backed store before changing storage format. This reduces data loss risk before larger migrations.
 
+File-backed stores in scope:
+
+- workflow state
+- workspace folders/stories/specs
+- chat sessions/messages
+- frontend projects
+- preview sessions/timelines/drafts
+- code change sets
+- workflow event logs
+- project construction workspaces/runs/commands/quality gates
+- project config and manifest writes inside generated project roots
+
 ### Machine-Specific Skill Metadata
 
 Remove absolute `repository_root` values from skill files.
@@ -175,7 +217,7 @@ Options:
 
 - Replace with `repository_root: "<repo-root>"`.
 - Or remove the field entirely if runtime already provides `cwd`.
-- Ensure any prompt-visible context uses dynamically resolved root paths, not `/Users/wamat/...`.
+- Ensure any prompt-visible context uses dynamically resolved root paths, not checkout-specific absolute paths.
 
 ### Runtime Ports and Origins
 
@@ -189,20 +231,36 @@ Add config:
 
 Defaults can remain local, but they should be explicit and documented.
 
+Keep the already added settings:
+
+- `CORS_ORIGIN`
+- `HORUS_WEB_PROJECT_ROOT`
+- `HORUS_WEB_PREVIEW_HOST`
+- `HORUS_WEB_PREVIEW_PORT`
+- `HORUS_WEB_PREVIEW_URL`
+- `HORUS_GENERATED_PROJECT_PREVIEW_HOST`
+- `HORUS_GENERATED_PROJECT_PREVIEW_PORT`
+
+Add missing single-root settings:
+
+- `HORUS_DATA_DIR`
+- `HORUS_PROJECT_WORKSPACE_ROOT`, defaulting to `${HORUS_DATA_DIR}/project-workspaces`
+- `HORUS_PROJECT_RUN_WORKSPACE_ROOT`, defaulting to `${HORUS_DATA_DIR}/project-run-worktrees`
+
 ## Implementation Phases
 
 ### Phase 1 - Centralize Config and Storage Root
 
 1. Add `runtimeConfig.ts`.
 2. Add `.env.example` with `HORUS_DATA_DIR=.horus/data`.
-3. Update `createApp()` to inject configured paths.
+3. Update `createRepositories()` to inject configured paths into every file-backed repository.
 4. Update `.gitignore` to ignore `.horus/`.
 5. Keep `data/` ignored for backward compatibility.
-6. Add tests proving the server writes all local stores under a temp configured root.
+6. Add tests proving the server writes all local stores under a temp configured root, including workflow events, code change sets, project construction, generated project workspaces, and run worktrees.
 
 ### Phase 2 - Remove Machine-Specific Paths
 
-1. Replace hardcoded `/Users/wamat/Desktop/horus.ai` in skill files.
+1. Replace hardcoded checkout-specific absolute paths in skill files.
 2. Store frontend project roots as repo-relative values.
 3. Add migration for old absolute `projects.json`.
 4. Add tests for moving a persisted project registry between two fake repo roots.
@@ -216,10 +274,11 @@ Defaults can remain local, but they should be explicit and documented.
 
 ### Phase 4 - Durable Workflow Resume
 
-1. Replace or augment `MemorySaver` with configured durable checkpoint storage.
-2. Persist recoverable HITL continuation metadata.
-3. Add restart/resume integration tests.
-4. Update API errors to distinguish missing workflow JSON from missing checkpoint.
+1. Keep `PostgresSaver` for Postgres mode.
+2. Replace or augment `MemorySaver` with configured durable checkpoint storage for file mode.
+3. Persist recoverable HITL continuation metadata.
+4. Add restart/resume integration tests for file mode and Postgres mode.
+5. Update API errors to distinguish missing workflow JSON from missing checkpoint.
 
 ### Phase 5 - Preview Runtime Portability
 
@@ -234,12 +293,13 @@ Defaults can remain local, but they should be explicit and documented.
 1. Document local data directory behavior in README.
 2. Document backup/migration expectations.
 3. Add a startup log showing resolved data dir and repository root.
-4. Add a smoke test that starts the app with a temporary `HORUS_DATA_DIR` and validates all major persisted areas.
+4. Document Postgres mode separately from file mode.
+5. Add a smoke test that starts the app with a temporary `HORUS_DATA_DIR` and validates all major persisted areas.
 
 ## Acceptance Criteria
 
 - A fresh clone on macOS, Windows, or Linux can start with only documented environment variables.
-- No persisted file contains `/Users/wamat` or any checkout-specific absolute path for built-in projects.
+- No persisted file contains any checkout-specific absolute path for built-in projects.
 - All local data is written under the configured `HORUS_DATA_DIR`.
 - Restarting the server does not leave preview sessions falsely marked as controllable.
 - A workflow awaiting human input can be resumed after process restart, or is explicitly marked unrecoverable with a documented reason until Phase 4 is complete.

@@ -16,6 +16,7 @@ import {
   MACRO_WORKFLOW_NODE_DEFINITIONS,
   MICRO_WORKFLOW_EDGE_DEFINITIONS,
   MICRO_WORKFLOW_NODE_DEFINITIONS,
+  type WorkflowEdgeDefinition,
 } from "./nodeMetadata.js";
 
 export function buildHorusFlowGraph(input: {
@@ -75,11 +76,10 @@ export function buildHorusFlowGraph(input: {
   const visibleEdgeDefinitions = input.edgeVisibility === "simple"
     ? edgeDefinitions.filter((definition) => shouldShowSimplifiedEdge(definition.id))
     : edgeDefinitions;
+  const activeEdgeIds = resolveActiveWorkflowEdgeIds(input.run, visibleEdgeDefinitions);
 
   const edges: AgentFlowEdge[] = visibleEdgeDefinitions.map((definition) => {
-    const sourceNode = nodes.find((node) => node.id === definition.source);
-    const targetNode = nodes.find((node) => node.id === definition.target);
-    const active = isLiveRun && (sourceNode?.data.status === "active" || targetNode?.data.status === "active");
+    const active = activeEdgeIds.has(definition.id);
     const handles = resolveWorkflowEdgeHandles(definition.route ?? "primary");
     return {
       id: definition.id,
@@ -133,6 +133,37 @@ function shouldShowSimplifiedEdge(edgeId: string): boolean {
     "curator-fail",
     "curator-retry",
   ]).has(normalized);
+}
+
+function resolveActiveWorkflowEdgeIds(
+  run: HorusRunSnapshot,
+  edgeDefinitions: WorkflowEdgeDefinition[]
+): Set<string> {
+  if (run.status !== "running" || !run.currentNode) return new Set();
+
+  const currentNode = run.currentNode;
+  const incomingEdges = edgeDefinitions.filter((edge) => edge.target === currentNode);
+  if (incomingEdges.length === 0) return new Set();
+
+  const observedNodeIds = new Set(
+    run.events
+      .filter((event) => event.nodeId && event.nodeId !== currentNode)
+      .map((event) => event.nodeId)
+  );
+  for (const step of run.steps) {
+    if (step.nodeId !== currentNode) observedNodeIds.add(step.nodeId);
+  }
+  for (const execution of run.agentExecutions) {
+    if (execution.nodeId !== currentNode) observedNodeIds.add(execution.nodeId);
+  }
+
+  const observedIncoming = incomingEdges.filter((edge) => observedNodeIds.has(edge.source));
+  if (observedIncoming.length > 0) {
+    return new Set(observedIncoming.map((edge) => edge.id));
+  }
+
+  const fallbackIncoming = incomingEdges.find((edge) => edge.route === "primary") ?? incomingEdges[0];
+  return fallbackIncoming ? new Set([fallbackIncoming.id]) : new Set();
 }
 
 function resolveWorkflowStatus(

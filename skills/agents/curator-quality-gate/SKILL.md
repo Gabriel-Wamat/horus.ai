@@ -56,7 +56,7 @@ Before acting, identify:
 ```yaml
 input_contract:
   user_request: "Approved spec, generated HTML, generated QA test cases"
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<repo-root>"
   target_files:
     - "generated index.html artifact"
     - "generated test-cases.json artifact"

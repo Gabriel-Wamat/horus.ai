@@ -3,6 +3,10 @@ import { join } from "node:path";
 import type { IStorageProvider } from "@u-build/shared";
 import { WorkflowStateSchema } from "@u-build/shared";
 import type { WorkflowState } from "@u-build/shared";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 export class JsonStorageAdapter implements IStorageProvider {
   private readonly baseDir: string;
@@ -20,23 +24,14 @@ export class JsonStorageAdapter implements IStorageProvider {
   }
 
   async save(state: WorkflowState): Promise<void> {
-    await this.ensureBaseDir();
     const validated = WorkflowStateSchema.parse(state);
-    await fs.writeFile(
-      this.filePath(state.threadId),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.filePath(state.threadId), validated);
   }
 
   async load(threadId: string): Promise<WorkflowState | null> {
-    try {
-      const raw = await fs.readFile(this.filePath(threadId), "utf-8");
-      return WorkflowStateSchema.parse(JSON.parse(raw));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-      throw err;
-    }
+    return readJsonFile(this.filePath(threadId), WorkflowStateSchema, {
+      defaultValue: null,
+    });
   }
 
   async list(): Promise<string[]> {

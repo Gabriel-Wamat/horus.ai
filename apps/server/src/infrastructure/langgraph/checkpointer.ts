@@ -1,11 +1,14 @@
 import { MemorySaver, type BaseCheckpointSaver } from "@langchain/langgraph";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import { join } from "node:path";
 import type { PgPool } from "../database/pool.js";
+import { FileMemorySaver } from "./FileMemorySaver.js";
 
 export const checkpointer = new MemorySaver();
 
 export interface WorkflowCheckpointerOptions {
   driver: "file" | "postgres";
+  checkpointsDir?: string;
   pool?: PgPool;
 }
 
@@ -24,5 +27,6 @@ export async function createWorkflowCheckpointer(
     return postgresSaver;
   }
 
-  return new MemorySaver();
+  if (!options.checkpointsDir) return new MemorySaver();
+  return FileMemorySaver.create(join(options.checkpointsDir, "memory-saver.json"));
 }

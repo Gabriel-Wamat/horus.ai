@@ -1,5 +1,10 @@
 import { JsonStorageAdapter } from "../adapters/JsonStorageAdapter.js";
 import { FileChatMemoryStore } from "../chat/FileChatMemoryStore.js";
+import {
+  assertWritableDataDir,
+  loadRuntimeConfig,
+  type RuntimeConfig,
+} from "../config/runtimeConfig.js";
 import { createPgPool, readDatabaseConfig, type PgPool } from "../database/pool.js";
 import { runMigrations } from "../database/migrate.js";
 import { FileFrontendProjectRegistry } from "../preview/FileFrontendProjectRegistry.js";
@@ -29,6 +34,7 @@ import type { IStorageProvider } from "@u-build/shared";
 
 export interface PersistenceRepositories {
   driver: "file" | "postgres";
+  runtimeConfig: RuntimeConfig;
   pool?: PgPool;
   storage: IStorageProvider;
   workspaceStore: WorkspaceRepository;
@@ -41,9 +47,10 @@ export interface PersistenceRepositories {
 }
 
 export async function createRepositories(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
+  runtimeConfig: RuntimeConfig = loadRuntimeConfig(env)
 ): Promise<PersistenceRepositories> {
-  const driver = env["PERSISTENCE_DRIVER"]?.trim() || "file";
+  const driver = runtimeConfig.persistenceDriver;
   if (driver === "postgres") {
     const pool = createPgPool(readDatabaseConfig(env));
     await runMigrations(pool);
@@ -51,6 +58,7 @@ export async function createRepositories(
     const workspaceStore = new PostgresWorkspaceRepository(pool);
     return {
       driver,
+      runtimeConfig,
       pool,
       storage,
       workspaceStore,
@@ -75,21 +83,35 @@ export async function createRepositories(
     throw new Error(`Unsupported PERSISTENCE_DRIVER "${driver}". Use file or postgres.`);
   }
 
-  const storage = new JsonStorageAdapter();
-  const workspaceStore = new FileWorkspaceStore();
+  await assertWritableDataDir(runtimeConfig);
+  const storage = new JsonStorageAdapter(runtimeConfig.paths.workflowsDir);
+  const workspaceStore = new FileWorkspaceStore(runtimeConfig.paths.workspaceDir);
   return {
     driver,
+    runtimeConfig,
     storage,
     workspaceStore,
-    chatMemoryStore: new FileChatMemoryStore(workspaceStore, storage),
+    chatMemoryStore: new FileChatMemoryStore(
+      workspaceStore,
+      storage,
+      runtimeConfig.paths.chatMemoryDir
+    ),
     frontendProjects: new FileFrontendProjectRegistry(
-      undefined,
-      undefined,
+      runtimeConfig.paths.frontendProjectsDir,
+      runtimeConfig.repositoryRoot,
       env
     ),
-    previewSessions: new FilePreviewSessionStore(),
-    codeChangeSets: new FileCodeChangeSetRepository(),
-    workflowEvents: new FileWorkflowEventLogRepository(),
-    projectConstruction: new FileProjectConstructionRepository(),
+    previewSessions: new FilePreviewSessionStore(
+      runtimeConfig.paths.previewSessionsDir
+    ),
+    codeChangeSets: new FileCodeChangeSetRepository(
+      runtimeConfig.paths.codeChangeSetsDir
+    ),
+    workflowEvents: new FileWorkflowEventLogRepository(
+      runtimeConfig.paths.workflowEventsDir
+    ),
+    projectConstruction: new FileProjectConstructionRepository(
+      runtimeConfig.paths.projectConstructionDir
+    ),
   };
 }

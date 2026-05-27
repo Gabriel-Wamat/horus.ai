@@ -3,6 +3,8 @@ import {
   StartProjectConstructionInputSchema,
   type FrontendProject,
   type HorusProjectConfig,
+  type LlmSettings,
+  type LlmSettingsReference,
   type ProjectConstructionRun,
   type ProjectWorkspace,
   type PreviewCommand,
@@ -43,7 +45,14 @@ export interface ProjectConstructionWorkflowStarter {
     workflowMode?: "project_construction";
     frontendProjectId?: string;
     frontendProjectRootPath?: string;
+    llmSettings?: LlmSettings;
   }): Promise<{ threadId: string }>;
+}
+
+export interface ProjectConstructionLlmSettingsResolver {
+  resolveReference(
+    reference?: LlmSettingsReference
+  ): Promise<LlmSettings | undefined>;
 }
 
 function slug(value: string, fallback = "item"): string {
@@ -85,7 +94,8 @@ export class StartProjectConstructionUseCase {
     private readonly projectConfigService = new ProjectConfigService(),
     private readonly projectExecutionService = new ProjectExecutionService(),
     private readonly env: Record<string, string | undefined> = process.env,
-    private readonly workflowStarter?: ProjectConstructionWorkflowStarter
+    private readonly workflowStarter?: ProjectConstructionWorkflowStarter,
+    private readonly llmSettingsResolver?: ProjectConstructionLlmSettingsResolver
   ) {}
 
   async execute(rawInput: unknown): Promise<StartProjectConstructionResult> {
@@ -204,6 +214,9 @@ export class StartProjectConstructionUseCase {
       for (const context of contexts) {
         if (context.spec) initialSpecs[context.story.id] = context.spec;
       }
+      const llmSettings = await this.llmSettingsResolver?.resolveReference(
+        input.llmSettingsRef
+      );
 
       const workflow = await this.workflowStarter.start({
         workspaceFolderId: input.workspaceFolderId,
@@ -215,6 +228,7 @@ export class StartProjectConstructionUseCase {
         workflowMode: "project_construction",
         ...(frontendProject ? { frontendProjectId: frontendProject.id } : {}),
         frontendProjectRootPath: prepared.workspacePath,
+        ...(llmSettings ? { llmSettings } : {}),
       });
 
       const started = ProjectConstructionRunSchema.parse({

@@ -38,9 +38,6 @@ export function WorkflowNode({ data, selected }: NodeProps<AgentFlowNode>): JSX.
         <span>{nodeData.eventCount} sinais</span>
         <span>{nodeData.assignmentCount} exec.</span>
       </div>
-      {nodeData.latestSummary && (
-        <p className="agent-flow-node-summary">{nodeData.latestSummary}</p>
-      )}
       {nodeData.errorMessage && (
         <p className="agent-flow-node-error">{nodeData.errorMessage}</p>
       )}
