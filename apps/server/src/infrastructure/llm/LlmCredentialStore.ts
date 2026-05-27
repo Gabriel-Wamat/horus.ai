@@ -62,7 +62,7 @@ const PROVIDER_LABELS: Record<LlmProvider, string> = {
 
 const PROVIDER_MODELS: Record<LlmProvider, string[]> = {
   openai: ["gpt-5-mini", "gpt-4.1-mini"],
-  openrouter: ["openai/gpt-4.1-mini", "anthropic/private-model-3.5-sonnet"],
+  openrouter: ["openai/gpt-4.1-mini"],
   groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
 };
 
