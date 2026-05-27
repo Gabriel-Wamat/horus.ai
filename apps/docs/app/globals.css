@@ -1,0 +1,211 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: #0b0e0c;
+  --foreground: #f1f4f2;
+  --card: #14181a;
+  --card-foreground: #f1f4f2;
+  --popover: #111719;
+  --popover-foreground: #f1f4f2;
+  --primary: #14c77b;
+  --primary-foreground: #06110d;
+  --secondary: #181d1f;
+  --secondary-foreground: #f1f4f2;
+  --muted: #181d1f;
+  --muted-foreground: #a4adb3;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #262c30;
+  --input: #262c30;
+  --ring: #14c77b;
+
+  --accent: #14c77b;
+  --accent-foreground: #06110d;
+  --accent-muted: rgba(20, 199, 123, 0.11);
+  --surface-raised: #14181a;
+  --surface-subtle: #181d1f;
+  --sidebar-active: rgba(20, 199, 123, 0.11);
+  --callout-agent: rgba(20, 199, 123, 0.11);
+}
+
+.dark {
+  --background: #020712;
+  --foreground: #eef6ff;
+  --card: #07111f;
+  --card-foreground: #eef6ff;
+  --popover: #07111f;
+  --popover-foreground: #eef6ff;
+  --primary: #eef6ff;
+  --primary-foreground: #020712;
+  --secondary: #0f1714;
+  --secondary-foreground: #d7f5e7;
+  --muted: #111a17;
+  --muted-foreground: #a4adb3;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: rgba(126, 164, 205, 0.22);
+  --input: rgba(126, 164, 205, 0.26);
+  --ring: #28e98f;
+
+  --accent: #28e98f;
+  --accent-foreground: #020712;
+  --accent-muted: rgba(40, 233, 143, 0.13);
+  --surface-raised: #0f1314;
+  --surface-subtle: #101415;
+  --sidebar-active: rgba(40, 233, 143, 0.12);
+  --callout-agent: rgba(132, 204, 22, 0.16);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    letter-spacing: 0;
+    background:
+      radial-gradient(circle at 72% 8%, rgba(20, 199, 123, 0.075), transparent 28%),
+      linear-gradient(180deg, var(--background), var(--background));
+  }
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at 72% 8%, rgba(20, 199, 123, 0.075), transparent 28%),
+    linear-gradient(180deg, #0b0e0c 0%, #0b0e0c 100%);
+}
+
+.prose {
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-code: var(--foreground);
+}
+
+.prose h2 {
+  scroll-margin-top: 8rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.prose h2:first-child {
+  border-top: 0;
+}
+
+.prose table {
+  font-size: 0.925rem;
+  margin: 0;
+}
+
+.prose th {
+  color: var(--foreground);
+  background: #20262a;
+}
+
+.prose td,
+.prose th {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.prose td:first-child,
+.prose th:first-child {
+  border-left: 0;
+}
+
+.prose td:last-child,
+.prose th:last-child {
+  border-right: 0;
+}
+
+/* Syntax highlighting - Shiki integration */
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle) !important;
+}
+
+pre code {
+  display: block;
+  min-width: max-content;
+  background: transparent !important;
+  border: none !important;
+  padding: 1rem !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  color: inherit !important;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+code {
+  font-family: var(--font-mono);
+}
+
+/* Shiki dual-theme support */
+pre code span {
+  color: var(--shiki-light);
+}
+
+.dark pre code span {
+  color: var(--shiki-dark);
+}
+
+/* Code block line highlighting */
+pre code [data-highlighted-line] {
+  background-color: rgba(0, 0, 0, 0.05);
+  display: block;
+  margin: 0 -1rem;
+  padding: 0 1rem;
+}
+
+.dark pre code [data-highlighted-line] {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.556 0 0 / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.556 0 0 / 0.5);
+}

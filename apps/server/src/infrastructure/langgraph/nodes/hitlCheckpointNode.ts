@@ -1,6 +1,38 @@
 import { interrupt } from "@langchain/langgraph";
 import type { UBuildState, UBuildUpdate } from "../state.js";
-import type { HumanFeedback } from "@u-build/shared";
+import type { HumanFeedback, Spec, WorkspaceArtifactContext } from "@u-build/shared";
+import { createSpecRevisionId } from "../artifactContext.js";
+
+export function resolveSpecApproval(
+  userStoryId: string,
+  spec: Spec,
+  feedback: HumanFeedback,
+  currentArtifactContext?: WorkspaceArtifactContext
+): UBuildUpdate {
+  if (!feedback.approved) {
+    return {
+      humanFeedback: { [userStoryId]: feedback },
+      status: "cancelled",
+    };
+  }
+
+  const resolvedSpec = feedback.editedSpec ? feedback.editedSpec : spec;
+  const artifactContext = currentArtifactContext
+    ? {
+        ...currentArtifactContext,
+        specRevisionId: createSpecRevisionId(resolvedSpec),
+      }
+    : undefined;
+
+  return {
+    humanFeedback: { [userStoryId]: feedback },
+    specs: { [userStoryId]: resolvedSpec },
+    ...(artifactContext
+      ? { workspaceArtifactContext: { [userStoryId]: artifactContext } }
+      : {}),
+    status: "running",
+  };
+}
 
 export async function hitlCheckpointNode(
   state: UBuildState
@@ -21,7 +53,7 @@ export async function hitlCheckpointNode(
     );
   }
 
-  // Suspends the graph here. MemorySaver persists the full state.
+  // Suspends the graph here. The configured checkpointer persists the full state.
   // Resumes when graph.stream(new Command({ resume: feedback }), config) is called.
   // The interrupt argument is the payload surfaced to the caller (any shape);
   // the return value is the HumanFeedback sent back via Command({ resume }).
@@ -31,12 +63,10 @@ export async function hitlCheckpointNode(
     spec,
   }) as HumanFeedback;
 
-  const resolvedSpec =
-    feedback.approved && feedback.editedSpec ? feedback.editedSpec : spec;
-
-  return {
-    humanFeedback: { [userStory.id]: feedback },
-    specs: { [userStory.id]: resolvedSpec },
-    status: "running",
-  };
+  return resolveSpecApproval(
+    userStory.id,
+    spec,
+    feedback,
+    state.workspaceArtifactContext[userStory.id]
+  );
 }

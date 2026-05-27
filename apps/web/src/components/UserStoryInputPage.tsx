@@ -1,5 +1,5 @@
 import { useState, type JSX } from "react";
-import type { UserStory } from "@u-build/shared";
+import type { UserStory, WorkspaceFolder } from "@u-build/shared";
 
 interface StoryDraft {
   id: string;
@@ -27,18 +27,36 @@ const PRIORITY_LABELS: Record<StoryDraft["priority"], string> = {
 };
 
 const PRIORITY_COLORS: Record<StoryDraft["priority"], string> = {
-  low: "text-emerald-400 bg-emerald-950 border-emerald-800",
-  medium: "text-sky-400 bg-sky-950 border-sky-800",
-  high: "text-amber-400 bg-amber-950 border-amber-800",
-  critical: "text-rose-400 bg-rose-950 border-rose-800",
+  low: "priority-low",
+  medium: "priority-medium",
+  high: "priority-high",
+  critical: "priority-critical",
 };
 
 interface Props {
-  onSubmit: (stories: UserStory[]) => Promise<void>;
+  onSubmit: (stories: UserStory[], workspaceFolderId: string) => Promise<void>;
   initialStories?: UserStory[];
+  workspaceFolders: WorkspaceFolder[];
+  selectedWorkspaceFolderId: string;
+  isLoadingWorkspaceFolders?: boolean;
+  workspaceFolderError?: string | null;
+  onSelectWorkspaceFolder: (folderId: string) => void;
+  onCreateWorkspaceFolder: (name: string) => Promise<void>;
 }
 
-export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Element {
+export function UserStoryInputPage({
+  onSubmit,
+  initialStories,
+  workspaceFolders,
+  selectedWorkspaceFolderId,
+  isLoadingWorkspaceFolders = false,
+  workspaceFolderError,
+  onSelectWorkspaceFolder,
+  onCreateWorkspaceFolder,
+}: Props): JSX.Element {
+  const workspaceFolderSelectId = "story-workspace-folder-select";
+  const newFolderNameId = "story-new-folder-name";
+  const modalErrorId = "story-modal-error";
   const [drafts, setDrafts] = useState<StoryDraft[]>(() =>
     initialStories && initialStories.length > 0
       ? initialStories.map((s) => ({
@@ -51,6 +69,8 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
       : [createDraft()]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const updateDraft = <K extends keyof StoryDraft>(
@@ -104,6 +124,11 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
   };
 
   const handleSubmit = async () => {
+    if (!selectedWorkspaceFolderId) {
+      setError("Selecione ou crie uma pasta do workspace antes de gerar specs.");
+      return;
+    }
+
     for (const draft of drafts) {
       if (!draft.title.trim()) {
         setError("Todas as histórias precisam de um título.");
@@ -137,89 +162,181 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
     }));
 
     try {
-      await onSubmit(stories);
+      await onSubmit(stories, selectedWorkspaceFolderId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao iniciar o workflow.");
       setIsSubmitting(false);
     }
   };
 
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) {
+      setError("Informe um nome para iniciar uma pasta do workspace.");
+      return;
+    }
+
+    setIsCreatingFolder(true);
+    setError(null);
+    try {
+      await onCreateWorkspaceFolder(name);
+      setNewFolderName("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao criar pasta.");
+    } finally {
+      setIsCreatingFolder(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <div className="size-8 rounded-lg bg-violet-600 flex items-center justify-center">
-            <svg className="size-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-            </svg>
+    <section className="chat-panel">
+      <div className="panel-head">
+        <div>
+          <p className="panel-kicker">Briefing</p>
+          <h2 className="panel-title">Histórias para especificação</h2>
+        </div>
+        <span className="status-chip">
+          <span className="status-chip-label">queue</span>
+          <span className="status-chip-value">{drafts.length}</span>
+        </span>
+      </div>
+
+      <div className="panel-body">
+        <div className="form-grid">
+          <div className="story-card">
+            <div className="story-card-head">
+              <span className="story-index">Workspace</span>
+              <span className="status-chip">
+                <span className="status-chip-label">pastas</span>
+                <span className="status-chip-value">{workspaceFolders.length}</span>
+              </span>
+            </div>
+
+            <div className="field-row workspace-folder-row">
+              <div>
+                <label className="field-label" htmlFor={workspaceFolderSelectId}>
+                  Pasta de destino *
+                </label>
+                <select
+                  id={workspaceFolderSelectId}
+                  data-autofocus="story-modal"
+                  value={selectedWorkspaceFolderId}
+                  onChange={(e) => onSelectWorkspaceFolder(e.target.value)}
+                  className="select"
+                  disabled={isLoadingWorkspaceFolders || workspaceFolders.length === 0}
+                >
+                  <option value="">
+                    {isLoadingWorkspaceFolders
+                      ? "Carregando pastas..."
+                      : "Selecione uma pasta"}
+                  </option>
+                  {workspaceFolders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="field-label" htmlFor={newFolderNameId}>
+                  Nova pasta
+                </label>
+                <div className="workspace-folder-create">
+                  <input
+                    id={newFolderNameId}
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Nome da pasta"
+                    className="input"
+                  />
+                  <button
+                    type="button"
+                    className="panel-action"
+                    onClick={handleCreateFolder}
+                    disabled={isCreatingFolder}
+                  >
+                    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    {isCreatingFolder ? "Criando..." : "Iniciar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {(workspaceFolderError || workspaceFolders.length === 0) && (
+              <p
+                className="workflow-meta"
+                role={workspaceFolderError ? "alert" : "status"}
+                style={{ marginTop: 10 }}
+              >
+                {workspaceFolderError ??
+                  "Nenhuma pasta encontrada. Inicie uma pasta para direcionar estas user stories."}
+              </p>
+            )}
           </div>
-          <span className="font-semibold text-white tracking-tight">horus<span className="text-violet-400">.ai</span></span>
-        </div>
-      </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        {/* Page title */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2">Gerar Especificações</h1>
-          <p className="text-slate-400">
-            Descreva as histórias de usuário e deixe os agentes criarem as specs técnicas para você.
-          </p>
-        </div>
-
-        {/* Story cards */}
-        <div className="flex flex-col gap-5">
           {drafts.map((draft, storyIndex) => (
+            (() => {
+              const titleId = `story-title-${draft.id}`;
+              const priorityId = `story-priority-${draft.id}`;
+              const descriptionId = `story-description-${draft.id}`;
+              const criteriaLabelId = `story-criteria-label-${draft.id}`;
+
+              return (
             <div
               key={draft.id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-6 relative"
+              className="story-card"
             >
-              {/* Card header */}
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              <div className="story-card-head">
+                <span className="story-index">
                   História #{storyIndex + 1}
                 </span>
                 {drafts.length > 1 && (
                   <button
+                    type="button"
                     onClick={() => removeStory(draft.id)}
-                    className="size-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950 transition-colors"
+                    className="panel-action danger"
                     title="Remover história"
+                    aria-label="Remover história"
                   >
-                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
                   </button>
                 )}
               </div>
 
-              <div className="flex flex-col gap-4">
-                {/* Title + Priority row */}
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                      Título <span className="text-rose-400">*</span>
+              <div className="form-grid">
+                <div className="field-row">
+                  <div>
+                    <label className="field-label" htmlFor={titleId}>
+                      Título *
                     </label>
                     <input
+                      id={titleId}
                       type="text"
                       value={draft.title}
                       onChange={(e) => updateDraft(draft.id, "title", e.target.value)}
                       placeholder="Como usuário, quero…"
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition"
+                      className="input"
                     />
                   </div>
-                  <div className="w-32">
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  <div>
+                    <label className="field-label" htmlFor={priorityId}>
                       Prioridade
                     </label>
                     <select
+                      id={priorityId}
                       value={draft.priority}
                       onChange={(e) =>
                         updateDraft(draft.id, "priority", e.target.value as StoryDraft["priority"])
                       }
-                      className={`w-full border rounded-lg px-3 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition appearance-none cursor-pointer ${PRIORITY_COLORS[draft.priority]}`}
+                      className={`select ${PRIORITY_COLORS[draft.priority]}`}
                     >
                       {(["low", "medium", "high", "critical"] as const).map((p) => (
-                        <option key={p} value={p} className="bg-slate-800 text-slate-100 font-normal text-sm">
+                        <option key={p} value={p}>
                           {PRIORITY_LABELS[p]}
                         </option>
                       ))}
@@ -227,58 +344,66 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
                   </div>
                 </div>
 
-                {/* Description */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                    Descrição <span className="text-rose-400">*</span>
+                  <label className="field-label" htmlFor={descriptionId}>
+                    Descrição *
                   </label>
                   <textarea
+                    id={descriptionId}
                     value={draft.description}
                     onChange={(e) => updateDraft(draft.id, "description", e.target.value)}
                     placeholder="Descreva o contexto, motivação e comportamento esperado…"
                     rows={3}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition resize-none"
+                    className="textarea"
                   />
                 </div>
 
-                {/* Acceptance criteria */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-2">
-                    Critérios de Aceite <span className="text-rose-400">*</span>
-                  </label>
-                  <div className="flex flex-col gap-2">
+                  <span className="field-label" id={criteriaLabelId}>
+                    Critérios de aceite *
+                  </span>
+                  <div>
                     {draft.acceptanceCriteria.map((criterion, criterionIndex) => (
-                      <div key={criterionIndex} className="flex items-center gap-2">
-                        <span className="text-violet-500 text-xs font-mono select-none mt-px">
+                      <div key={criterionIndex} className="criteria-row">
+                        <span className="criteria-index">
                           {String(criterionIndex + 1).padStart(2, "0")}
                         </span>
                         <input
+                          id={`story-criterion-${draft.id}-${criterionIndex}`}
+                          aria-label={`Critério de aceite ${criterionIndex + 1} da história ${storyIndex + 1}`}
                           type="text"
                           value={criterion}
                           onChange={(e) =>
                             updateCriteria(draft.id, criterionIndex, e.target.value)
                           }
                           placeholder="Dado que… quando… então…"
-                          className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition"
+                          className="input"
                         />
                         {draft.acceptanceCriteria.length > 1 && (
                           <button
+                            type="button"
                             onClick={() => removeCriteria(draft.id, criterionIndex)}
-                            className="size-7 flex items-center justify-center rounded-lg text-slate-600 hover:text-rose-400 hover:bg-rose-950 transition-colors shrink-0"
+                            className="panel-action danger"
+                            aria-label="Remover critério"
                           >
-                            <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                             </svg>
                           </button>
+                        )}
+                        {draft.acceptanceCriteria.length === 1 && (
+                          <span aria-hidden="true" />
                         )}
                       </div>
                     ))}
                   </div>
                   <button
+                    type="button"
                     onClick={() => addCriteria(draft.id)}
-                    className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500 hover:text-violet-400 transition-colors"
+                    className="ghost-button"
+                    style={{ marginTop: 10 }}
                   >
-                    <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                     Adicionar critério
@@ -286,43 +411,54 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
                 </div>
               </div>
             </div>
+              );
+            })()
           ))}
         </div>
 
-        {/* Add story button */}
         <button
+          type="button"
           onClick={addStory}
-          className="mt-4 w-full flex items-center justify-center gap-2 border border-dashed border-slate-700 rounded-xl py-3.5 text-sm text-slate-500 hover:text-violet-400 hover:border-violet-700 hover:bg-violet-950/20 transition-all"
+          className="ghost-button"
+          style={{ width: "100%", marginTop: 14 }}
         >
-          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Adicionar história
         </button>
 
-        {/* Error */}
         {error && (
-          <div className="mt-6 flex items-start gap-3 bg-rose-950/50 border border-rose-800 rounded-xl px-4 py-3.5 text-sm text-rose-300">
-            <svg className="size-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div
+            id={modalErrorId}
+            className="error-banner"
+            role="alert"
+            style={{ marginTop: 14, marginBottom: 0 }}
+          >
+            <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
             </svg>
             {error}
           </div>
         )}
 
-        {/* Submit */}
-        <div className="mt-8 flex items-center justify-between">
-          <span className="text-xs text-slate-600">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 18 }}>
+          <span className="status-chip">
+            <span className="status-chip-label">total</span>
+            <span className="status-chip-value">
             {drafts.length} {drafts.length === 1 ? "história" : "histórias"}
+            </span>
           </span>
           <button
+            type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex items-center gap-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 text-sm"
+            disabled={isSubmitting || !selectedWorkspaceFolderId}
+            className="primary-button"
+            aria-describedby={error ? modalErrorId : undefined}
           >
             {isSubmitting ? (
               <>
-                <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <svg className="icon animate-spin" viewBox="0 0 24 24" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
@@ -330,15 +466,15 @@ export function UserStoryInputPage({ onSubmit, initialStories }: Props): JSX.Ele
               </>
             ) : (
               <>
-                Gerar Specs
-                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
+                Gerar Specs
               </>
             )}
           </button>
         </div>
-      </main>
-    </div>
+      </div>
+    </section>
   );
 }
