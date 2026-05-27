@@ -491,7 +491,6 @@
 }
 
 .agent-flow-node-description,
-.agent-flow-node-summary,
 .agent-flow-node-error,
 .agent-flow-drawer-section p,
 .agent-flow-event-row p {
@@ -502,8 +501,19 @@
   line-height: 1.4;
 }
 
-.agent-flow-node-summary {
-  color: var(--agent-flow-text);
+.agent-flow-node-description,
+.agent-flow-node-error {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.agent-flow-node-description {
+  -webkit-line-clamp: 2;
+}
+
+.agent-flow-node-error {
+  -webkit-line-clamp: 3;
 }
 
 .agent-flow-node-error,
@@ -566,6 +576,8 @@
 .agent-flow-edge-active {
   stroke: var(--agent-flow-teal);
   filter: none;
+  stroke-dasharray: 11 8;
+  animation: agent-flow-edge-progress 0.82s linear infinite;
 }
 
 .agent-flow-edge-failure,
@@ -582,6 +594,18 @@
 .agent-flow-edge-loop {
   stroke: rgb(127 139 147 / 0.62);
   stroke-dasharray: 8 7;
+}
+
+.agent-flow-edge-loop.agent-flow-edge-active,
+.agent-flow-edge-conditional.agent-flow-edge-active,
+.agent-flow-edge-agentExecution.agent-flow-edge-active {
+  stroke-dasharray: 11 8;
+}
+
+@keyframes agent-flow-edge-progress {
+  to {
+    stroke-dashoffset: -19;
+  }
 }
 
 .agent-flow-edge-manual {

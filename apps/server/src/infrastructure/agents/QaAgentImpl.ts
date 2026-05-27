@@ -28,6 +28,31 @@ export type QaOutput = z.infer<typeof QaOutputSchema> & {
   runtimeValidation?: RuntimeValidationEvidence | undefined;
 };
 
+function buildFallbackQaOutput(
+  spec: Spec,
+  executionBrief?: string
+): QaOutput {
+  const criteria =
+    spec.acceptanceCriteria.length > 0
+      ? spec.acceptanceCriteria
+      : ["A alteração solicitada deve ser visível no frontend sem quebrar a spec ativa."];
+  return {
+    testCases: criteria.map((criterion, index) => ({
+      id: `TC-${String(index + 1).padStart(2, "0")}`,
+      criterion,
+      steps: [
+        "Abrir o preview do projeto selecionado.",
+        "Verificar a tela principal em viewport desktop.",
+        ...(executionBrief
+          ? [`Confirmar que o pedido do chat foi atendido: ${executionBrief}`]
+          : []),
+      ],
+      expected:
+        "A tela atende ao critério sem regressões visuais, funcionais ou de acessibilidade.",
+    })),
+  };
+}
+
 export function buildRuntimeValidationEvidenceFromPreviewSmoke(input: {
   workflowThreadId?: string;
   userStoryId?: string;
@@ -154,12 +179,10 @@ IDs devem ser TC-01, TC-02, etc.`;
     } catch (err) {
       console.warn(`[QaAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {
-        throw new Error(
-          "QaAgent failed to produce structured test cases after 2 attempts."
-        );
+        return buildFallbackQaOutput(spec, executionBrief);
       }
     }
   }
 
-  throw new Error("QaAgent failed to produce structured test cases.");
+  return buildFallbackQaOutput(spec, executionBrief);
 }

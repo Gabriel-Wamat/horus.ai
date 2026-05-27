@@ -1,6 +1,10 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { CodeChangeSetSchema, type CodeChangeSet } from "@u-build/shared";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 import type { CodeChangeSetRepository } from "./contracts.js";
 
 export class FileCodeChangeSetRepository implements CodeChangeSetRepository {
@@ -8,13 +12,9 @@ export class FileCodeChangeSetRepository implements CodeChangeSetRepository {
 
   async save(changeSet: CodeChangeSet): Promise<CodeChangeSet> {
     const validated = CodeChangeSetSchema.parse(changeSet);
-    await fs.mkdir(this.workflowDir(validated.workflowThreadId), {
-      recursive: true,
-    });
-    await fs.writeFile(
+    await writeJsonFileAtomic(
       this.changeSetPath(validated.workflowThreadId, validated.id),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
+      validated
     );
     return validated;
   }
@@ -28,11 +28,10 @@ export class FileCodeChangeSetRepository implements CodeChangeSetRepository {
         entries
           .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
           .map(async (entry) => {
-            const raw = await fs.readFile(
+            return readJsonFile(
               join(this.workflowDir(threadId), entry.name),
-              "utf-8"
+              CodeChangeSetSchema
             );
-            return CodeChangeSetSchema.parse(JSON.parse(raw));
           })
       );
       return changeSets.sort((left, right) =>

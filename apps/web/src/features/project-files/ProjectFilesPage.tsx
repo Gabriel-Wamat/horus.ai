@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -18,6 +18,10 @@ import { FileTabs } from "./components/FileTabs.js";
 import { FileTree } from "./components/FileTree.js";
 import { ProjectFilesToolbar } from "./components/ProjectFilesToolbar.js";
 import { useProjectFilesState } from "./hooks/useProjectFilesState.js";
+import {
+  PROJECT_FILES_CHANGED_EVENT,
+  isProjectFilesChangedEvent,
+} from "./utils/projectFilesEvents.js";
 import "./styles/project-files.css";
 
 const projectFilesQueryClient = new QueryClient();
@@ -42,6 +46,8 @@ function ProjectFilesPageContent(): JSX.Element {
     queryFn: () => projectFilesApi.listProjects(),
     staleTime: 20_000,
     refetchInterval: 60_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
   const projects = projectsQuery.data?.projects ?? [];
   const state = useProjectFilesState(projects.map((project) => project.id));
@@ -61,7 +67,9 @@ function ProjectFilesPageContent(): JSX.Element {
       }),
     enabled: Boolean(state.selectedProjectId),
     staleTime: 10_000,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const fileQuery = useQuery({
@@ -73,8 +81,10 @@ function ProjectFilesPageContent(): JSX.Element {
         maxBytes: 1_000_000,
       }),
     enabled: Boolean(state.selectedProjectId && state.activePath),
-    staleTime: 120_000,
+    staleTime: 0,
     gcTime: 10 * 60_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const saveFileMutation = useMutation({
@@ -117,6 +127,65 @@ function ProjectFilesPageContent(): JSX.Element {
       return next;
     });
   }, []);
+
+  const refreshChangedFiles = useCallback(
+    async (paths?: readonly string[]): Promise<void> => {
+      if (!state.selectedProjectId) return;
+      const changedPaths = new Set(paths ?? []);
+      const shouldRefreshPath = (path: string | null): path is string =>
+        Boolean(path && (changedPaths.size === 0 || changedPaths.has(path)));
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["project-files", "projects"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["project-files", "tree", state.selectedProjectId],
+        }),
+      ]);
+
+      const pathsToRefresh = new Set(
+        state.openTabs
+          .map((tab) => tab.path)
+          .filter((path) => shouldRefreshPath(path) && !dirtyPaths.has(path))
+      );
+
+      if (
+        shouldRefreshPath(state.activePath) &&
+        state.activePath &&
+        !dirtyPaths.has(state.activePath)
+      ) {
+        pathsToRefresh.add(state.activePath);
+      }
+
+      await Promise.all(
+        [...pathsToRefresh].map((path) =>
+          queryClient.invalidateQueries({
+            queryKey: fileQueryKey(state.selectedProjectId, runId, path),
+          })
+        )
+      );
+    },
+    [
+      dirtyPaths,
+      queryClient,
+      runId,
+      state.activePath,
+      state.openTabs,
+      state.selectedProjectId,
+    ]
+  );
+
+  useEffect(() => {
+    const handleProjectFilesChanged = (event: Event): void => {
+      if (!isProjectFilesChangedEvent(event)) return;
+      if (event.detail.projectId !== state.selectedProjectId) return;
+      void refreshChangedFiles(event.detail.paths);
+    };
+
+    window.addEventListener(PROJECT_FILES_CHANGED_EVENT, handleProjectFilesChanged);
+    return () => {
+      window.removeEventListener(PROJECT_FILES_CHANGED_EVENT, handleProjectFilesChanged);
+    };
+  }, [refreshChangedFiles, state.selectedProjectId]);
 
   const confirmDirtyNavigation = useCallback((path: string | null): boolean => {
     if (!path || !dirtyPaths.has(path)) return true;
@@ -173,6 +242,21 @@ function ProjectFilesPageContent(): JSX.Element {
     state.closeFile(path);
   }, [confirmDirtyNavigation, setPathDirty, state]);
 
+  const downloadProject = useCallback((): void => {
+    if (!state.selectedProjectId) return;
+    if (
+      dirtyPaths.size > 0 &&
+      !window.confirm(
+        "Há arquivos com alterações não salvas. Baixar agora pode gerar um ZIP sem essas mudanças. Deseja continuar?"
+      )
+    ) {
+      return;
+    }
+    window.location.assign(
+      projectFilesApi.getDownloadUrl(state.selectedProjectId, { runId })
+    );
+  }, [dirtyPaths.size, runId, state.selectedProjectId]);
+
   const projectError =
     projectsQuery.error instanceof Error ? projectsQuery.error : null;
   const treeError = treeQuery.error instanceof Error ? treeQuery.error : null;
@@ -190,6 +274,7 @@ function ProjectFilesPageContent(): JSX.Element {
         isRefreshing={
           projectsQuery.isFetching || treeQuery.isFetching
         }
+        hasUnsavedFiles={dirtyPaths.size > 0}
         onSelectProject={selectProject}
         onChangeSearch={state.setSearch}
         onRefresh={() => {
@@ -197,6 +282,7 @@ function ProjectFilesPageContent(): JSX.Element {
           void treeQuery.refetch();
           if (state.activePath) void fileQuery.refetch();
         }}
+        onDownloadProject={downloadProject}
       />
 
       {projectError ? (

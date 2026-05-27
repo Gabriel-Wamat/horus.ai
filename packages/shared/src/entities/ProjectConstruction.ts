@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LlmSettingsReferenceSchema } from "./LlmSettings.js";
 
 export const ProjectTargetModeSchema = z.enum(["new_project", "existing_project"]);
 
@@ -227,6 +228,7 @@ export const StartProjectConstructionInputSchema = z.object({
   projectStack: z.string().trim().min(1).optional(),
   userStoryIds: z.array(z.string().uuid()).min(1),
   specIds: z.array(z.string()).default([]),
+  llmSettingsRef: LlmSettingsReferenceSchema.optional(),
 });
 
 export type ProjectTargetMode = z.infer<typeof ProjectTargetModeSchema>;

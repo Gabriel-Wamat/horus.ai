@@ -5,17 +5,22 @@ import type {
   HorusChatEvidenceSource,
   HorusChatIntent,
   HorusChatOutcome,
+  HorusChatStreamEvent,
   HorusChatTurnInput,
   HorusChatTurnResponse,
+  LlmSettings,
+  LlmSettingsReference,
   PreviewSession,
   Spec,
   UserStory,
   WorkspaceArtifactContext,
 } from "@u-build/shared";
 import {
+  HorusChatStreamEventSchema,
   HorusChatTurnInputSchema,
   HorusChatTurnResponseSchema,
 } from "@u-build/shared";
+import { v4 as uuidv4 } from "uuid";
 import type { ChatMemoryRepository } from "../../infrastructure/repositories/contracts.js";
 import { HorusOdinIntentRouter } from "../services/HorusOdinIntentRouter.js";
 
@@ -46,7 +51,15 @@ export interface HorusChatResponder {
     context: ChatAgentContextBundle;
     project?: FrontendProject;
     codeContext?: CodeContextBundle;
+    llmSettings?: LlmSettings;
   }): Promise<string>;
+  streamAnswer?(input: {
+    message: string;
+    context: ChatAgentContextBundle;
+    project?: FrontendProject;
+    codeContext?: CodeContextBundle;
+    llmSettings?: LlmSettings;
+  }): AsyncIterable<string>;
 }
 
 export interface ChatCodeChangeExecutor {
@@ -60,6 +73,7 @@ export interface ChatCodeChangeExecutor {
     sourceMessageId: string;
     executionBrief: string;
     previewSessionId?: string;
+    llmSettings?: LlmSettings;
   }): Promise<{ threadId: string }>;
 }
 
@@ -70,7 +84,14 @@ export interface SpecGenerationExecutor {
     chatSessionId: string;
     sourceMessageId: string;
     executionBrief: string;
+    llmSettings?: LlmSettings;
   }): Promise<{ threadId: string }>;
+}
+
+export interface HorusChatLlmSettingsResolver {
+  resolveReference(
+    reference?: LlmSettingsReference
+  ): Promise<LlmSettings | undefined>;
 }
 
 export class HorusChatContextMismatchError extends Error {
@@ -88,7 +109,8 @@ export class SubmitHorusChatTurnUseCase {
     private readonly codeContextReader: CodeContextReader,
     private readonly chatResponder: HorusChatResponder,
     private readonly chatCodeChangeExecutor?: ChatCodeChangeExecutor,
-    private readonly specGenerationExecutor?: SpecGenerationExecutor
+    private readonly specGenerationExecutor?: SpecGenerationExecutor,
+    private readonly llmSettingsResolver?: HorusChatLlmSettingsResolver
   ) {}
 
   async execute(input: HorusChatTurnInput): Promise<HorusChatTurnResponse> {
@@ -98,6 +120,9 @@ export class SubmitHorusChatTurnUseCase {
     );
 
     const project = await this.assertContextMatches(parsed, context);
+    const llmSettings = await this.llmSettingsResolver?.resolveReference(
+      parsed.llmSettingsRef
+    );
 
     const userMessage = await this.chatMemoryStore.appendMessage(
       parsed.chatSessionId,
@@ -117,6 +142,7 @@ export class SubmitHorusChatTurnUseCase {
     const intent = await this.intentRouter.classify({
       message: parsed.message,
       context,
+      ...(llmSettings ? { llmSettings } : {}),
     });
     const outcome = await buildOutcome(
       intent,
@@ -128,7 +154,8 @@ export class SubmitHorusChatTurnUseCase {
       this.chatResponder,
       this.chatCodeChangeExecutor,
       this.specGenerationExecutor,
-      userMessage.id
+      userMessage.id,
+      llmSettings
     );
     const assistantMessage = await this.chatMemoryStore.appendMessage(
       parsed.chatSessionId,
@@ -151,6 +178,177 @@ export class SubmitHorusChatTurnUseCase {
       intent,
       outcome,
     });
+  }
+
+  async *stream(input: HorusChatTurnInput): AsyncGenerator<HorusChatStreamEvent> {
+    let sequence = 0;
+    const emit = (event: Record<string, unknown>): HorusChatStreamEvent => HorusChatStreamEventSchema.parse({
+      sequence: ++sequence,
+      ...event,
+    });
+
+    try {
+      const parsed = HorusChatTurnInputSchema.parse(input);
+      yield emit({
+        type: "turn_started",
+        chatSessionId: parsed.chatSessionId,
+      });
+
+      const context = await this.chatMemoryStore.buildAgentContext(
+        parsed.chatSessionId
+      );
+      const project = await this.assertContextMatches(parsed, context);
+      const llmSettings = await this.llmSettingsResolver?.resolveReference(
+        parsed.llmSettingsRef
+      );
+      const userMessage = await this.chatMemoryStore.appendMessage(
+        parsed.chatSessionId,
+        {
+          role: "user",
+          body: parsed.message,
+          ...(parsed.workflowThreadId
+            ? { workflowThreadId: parsed.workflowThreadId }
+            : {}),
+          ...(parsed.projectId ? { projectId: parsed.projectId } : {}),
+          ...(parsed.previewSessionId
+            ? { previewSessionId: parsed.previewSessionId }
+            : {}),
+        }
+      );
+      yield emit({ type: "user_message_persisted", message: userMessage });
+
+      const intent = await this.intentRouter.classify({
+        message: parsed.message,
+        context,
+        ...(llmSettings ? { llmSettings } : {}),
+      });
+      yield emit({ type: "intent_classified", intent });
+
+      const streamedMessageId = `stream-${uuidv4()}`;
+      yield emit({
+        type: "assistant_message_started",
+        messageId: streamedMessageId,
+        createdAt: new Date().toISOString(),
+      });
+
+      let outcome: HorusChatOutcome;
+      if (intent.kind === "answer_question") {
+        const codeContext = project
+          ? await this.codeContextReader.buildContext({
+              project,
+              chatContext: context,
+              query: parsed.message,
+            })
+          : undefined;
+
+        if (codeContext) {
+          yield emit({
+            type: "evidence_sources",
+            messageId: streamedMessageId,
+            evidenceSources: buildEvidenceSources(codeContext),
+            groundingStatus: mapGroundingStatus(codeContext),
+          });
+        }
+
+        let summary = "";
+        for await (const delta of streamAnswerText(this.chatResponder, {
+          message: parsed.message,
+          context,
+          ...(project ? { project } : {}),
+          ...(codeContext ? { codeContext } : {}),
+          ...(llmSettings ? { llmSettings } : {}),
+        })) {
+          summary += delta;
+          yield emit({
+            type: "assistant_text_delta",
+            messageId: streamedMessageId,
+            delta,
+          });
+        }
+
+        outcome = {
+          ...buildOutcomeBase(parsed),
+          action: "answer",
+          status: "completed",
+          ...(codeContext ? { contextSources: codeContext.inspectedFiles } : {}),
+          ...(codeContext ? { evidenceSources: buildEvidenceSources(codeContext) } : {}),
+          ...(codeContext ? { groundingStatus: mapGroundingStatus(codeContext) } : {}),
+          summary: summary.trim() || "Horus não conseguiu gerar uma resposta para esta mensagem.",
+        };
+      } else {
+        const action = actionForIntent(intent);
+        yield emit({
+          type: "action_started",
+          action,
+          label: labelForIntent(intent),
+          ...(parsed.workflowThreadId ? { workflowThreadId: parsed.workflowThreadId } : {}),
+          ...(parsed.previewSessionId ? { previewSessionId: parsed.previewSessionId } : {}),
+        });
+        outcome = await buildOutcome(
+          intent,
+          parsed,
+          context,
+          project,
+          this.codeContextReader,
+          this.previewRuntime,
+          this.chatResponder,
+          this.chatCodeChangeExecutor,
+          this.specGenerationExecutor,
+          userMessage.id,
+          llmSettings
+        );
+        yield emit({
+          type: "action_updated",
+          action: outcome.action,
+          status: outcome.status,
+          summary: outcome.summary,
+          ...(outcome.workflowThreadId
+            ? { workflowThreadId: outcome.workflowThreadId }
+            : {}),
+          ...(outcome.previewSessionId
+            ? { previewSessionId: outcome.previewSessionId }
+            : {}),
+        });
+      }
+
+      const assistantMessage = await this.chatMemoryStore.appendMessage(
+        parsed.chatSessionId,
+        {
+          role: "agent",
+          body: outcome.summary,
+          ...(outcome.workflowThreadId
+            ? { workflowThreadId: outcome.workflowThreadId }
+            : {}),
+          ...(outcome.projectId ? { projectId: outcome.projectId } : {}),
+          ...(outcome.previewSessionId
+            ? { previewSessionId: outcome.previewSessionId }
+            : {}),
+        }
+      );
+
+      const response = HorusChatTurnResponseSchema.parse({
+        userMessage,
+        assistantMessage,
+        intent,
+        outcome,
+      });
+
+      yield emit({
+        type: "assistant_message_completed",
+        message: assistantMessage,
+        outcome,
+      });
+      yield emit({ type: "turn_completed", response });
+    } catch (err) {
+      yield emit({
+        type: "turn_failed",
+        errorCode: err instanceof HorusChatContextMismatchError
+          ? "context_mismatch"
+          : "horus_chat_stream_failed",
+        message: err instanceof Error ? err.message : "Falha ao processar mensagem.",
+        retryable: !(err instanceof HorusChatContextMismatchError),
+      });
+    }
   }
 
   private async assertContextMatches(
@@ -216,14 +414,10 @@ async function buildOutcome(
   chatResponder: HorusChatResponder,
   chatCodeChangeExecutor: ChatCodeChangeExecutor | undefined,
   specGenerationExecutor: SpecGenerationExecutor | undefined,
-  sourceMessageId: string
+  sourceMessageId: string,
+  llmSettings: LlmSettings | undefined
 ): Promise<HorusChatOutcome> {
-  const base = {
-    chatSessionId: input.chatSessionId,
-    ...(input.projectId ? { projectId: input.projectId } : {}),
-    ...(input.workflowThreadId ? { workflowThreadId: input.workflowThreadId } : {}),
-    ...(input.previewSessionId ? { previewSessionId: input.previewSessionId } : {}),
-  };
+  const base = buildOutcomeBase(input);
 
   switch (intent.kind) {
     case "answer_question": {
@@ -240,6 +434,7 @@ async function buildOutcome(
         context,
         ...(project ? { project } : {}),
         ...(codeContext ? { codeContext } : {}),
+        ...(llmSettings ? { llmSettings } : {}),
       });
       return {
         ...base,
@@ -268,7 +463,7 @@ async function buildOutcome(
           action: "error",
           status: "blocked",
           summary:
-            "Horus entendeu o pedido de alteração, mas esta user story ainda não tem uma spec ativa para orientar Front, QA e Curator.",
+            "Horus entendeu o pedido de alteração, mas esta user story ainda não tem uma spec ativa para orientar a mudança com segurança.",
         };
       }
 
@@ -282,6 +477,25 @@ async function buildOutcome(
         };
       }
 
+      let activePreviewSessionId: string | undefined;
+      try {
+        activePreviewSessionId = await ensurePreviewSessionForCodeChange(
+          previewRuntime,
+          project,
+          input.previewSessionId
+        );
+      } catch (err) {
+        return {
+          ...base,
+          action: "error",
+          status: "blocked",
+          summary:
+            `Horus entendeu o pedido de alteração, mas não conseguiu preparar um preview executável para QA/Curator: ${
+              err instanceof Error ? err.message : "erro desconhecido"
+            }`,
+        };
+      }
+
       const result = await chatCodeChangeExecutor.startChatCodeChange({
         workspaceFolderId: context.session.workspaceFolderId,
         userStory: context.activeUserStory,
@@ -291,18 +505,20 @@ async function buildOutcome(
         chatSessionId: input.chatSessionId,
         sourceMessageId,
         executionBrief: input.message,
-        ...(input.previewSessionId
-          ? { previewSessionId: input.previewSessionId }
+        ...(activePreviewSessionId
+          ? { previewSessionId: activePreviewSessionId }
           : {}),
+        ...(llmSettings ? { llmSettings } : {}),
       });
 
       return {
         ...base,
+        ...(activePreviewSessionId ? { previewSessionId: activePreviewSessionId } : {}),
         workflowThreadId: result.threadId,
         action: "code_change_started",
         status: "accepted",
         summary:
-          `Horus iniciou o modo executor para esta alteração. Thread ${result.threadId.slice(0, 8)} acionada com Front, QA e Curator usando o contexto isolado deste chat.`,
+          "Recebi o pedido. Vou trabalhar nessa alteração e mostrar os marcos importantes aqui no chat.",
       };
     }
     case "run_project": {
@@ -382,6 +598,7 @@ async function buildOutcome(
         chatSessionId: input.chatSessionId,
         sourceMessageId,
         executionBrief: input.message,
+        ...(llmSettings ? { llmSettings } : {}),
       });
 
       return {
@@ -390,7 +607,7 @@ async function buildOutcome(
         action: "spec_requested",
         status: "accepted",
         summary:
-          `Horus iniciou a geração de spec para esta user story. Thread ${result.threadId.slice(0, 8)} acionada com o contexto isolado deste chat.`,
+          "Recebi o pedido. Vou preparar a spec e avisar aqui quando precisar de revisão.",
       };
     }
     case "unsupported":
@@ -410,6 +627,79 @@ async function buildOutcome(
           "Horus precisa de mais contexto para decidir se deve responder, executar o projeto, gerar spec ou acionar agentes.",
       };
   }
+}
+
+function buildOutcomeBase(input: HorusChatTurnInput) {
+  return {
+    chatSessionId: input.chatSessionId,
+    ...(input.projectId ? { projectId: input.projectId } : {}),
+    ...(input.workflowThreadId ? { workflowThreadId: input.workflowThreadId } : {}),
+    ...(input.previewSessionId ? { previewSessionId: input.previewSessionId } : {}),
+  };
+}
+
+async function ensurePreviewSessionForCodeChange(
+  previewRuntime: PreviewRuntimeReader,
+  project: FrontendProject,
+  previewSessionId?: string
+): Promise<string> {
+  if (previewSessionId) {
+    const existing = await previewRuntime.getSession(previewSessionId);
+    if (existing.status === "running" || existing.status === "starting") {
+      return existing.id;
+    }
+    const started = await previewRuntime.startSession(existing.id);
+    return started.session.id;
+  }
+
+  const created = await previewRuntime.createSession({
+    projectId: project.id,
+    route: project.defaultRoute,
+    device: "pc",
+  });
+  const started = await previewRuntime.startSession(created.session.id);
+  return started.session.id;
+}
+
+async function* streamAnswerText(
+  responder: HorusChatResponder,
+  input: Parameters<HorusChatResponder["answer"]>[0]
+): AsyncIterable<string> {
+  if (responder.streamAnswer) {
+    for await (const delta of responder.streamAnswer(input)) {
+      if (delta) yield delta;
+    }
+    return;
+  }
+
+  const text = await responder.answer(input);
+  for (let index = 0; index < text.length; index += 24) {
+    yield text.slice(index, index + 24);
+  }
+}
+
+function actionForIntent(intent: HorusChatIntent): HorusChatOutcome["action"] {
+  if (intent.kind === "run_project") {
+    if (intent.previewAction === "stop") return "project_execution_stopped";
+    if (intent.previewAction === "reload") return "project_execution_reloaded";
+    return "project_execution_started";
+  }
+  if (intent.kind === "code_change") return "code_change_started";
+  if (intent.kind === "generate_spec") return "spec_requested";
+  if (intent.kind === "clarify") return "clarification_required";
+  return "error";
+}
+
+function labelForIntent(intent: HorusChatIntent): string {
+  if (intent.kind === "run_project") {
+    if (intent.previewAction === "stop") return "Parando preview";
+    if (intent.previewAction === "reload") return "Recarregando preview";
+    return "Iniciando preview";
+  }
+  if (intent.kind === "code_change") return "Preparando alteração";
+  if (intent.kind === "generate_spec") return "Preparando spec";
+  if (intent.kind === "clarify") return "Aguardando esclarecimento";
+  return "Bloqueando solicitação";
 }
 
 function buildEvidenceSources(codeContext: CodeContextBundle): HorusChatEvidenceSource[] {

@@ -1,5 +1,9 @@
 import { z } from "zod";
-import type { ChatAgentContextBundle, HorusChatIntent } from "@u-build/shared";
+import type {
+  ChatAgentContextBundle,
+  HorusChatIntent,
+  LlmSettings,
+} from "@u-build/shared";
 import {
   HorusChatIntentKindSchema,
   HorusChatIntentSchema,
@@ -11,6 +15,7 @@ import { createChatModel } from "../../infrastructure/llm/createChatModel.js";
 export interface HorusOdinIntentRouterInput {
   readonly message: string;
   readonly context: ChatAgentContextBundle;
+  readonly llmSettings?: LlmSettings;
 }
 
 export interface HorusIntentClassifier {
@@ -102,7 +107,7 @@ export class LlmHorusIntentClassifier implements HorusIntentClassifier {
     const model = createChatModel("horus", {
       temperature: 0,
       maxTokens: 900,
-    }).withStructuredOutput(LlmIntentSchema);
+    }, input.llmSettings).withStructuredOutput(LlmIntentSchema);
 
     const result = LlmIntentSchema.parse(await model.invoke(buildIntentPrompt(input)));
     return HorusChatIntentSchema.parse({

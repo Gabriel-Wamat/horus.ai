@@ -40,10 +40,16 @@ export const agentFlowApi = {
     const eventTypes = [
       "node_started",
       "node_completed",
+      "patch_proposed",
+      "patch_applied",
+      "validation_evidence",
       "awaiting_approval",
       "retry_started",
       "awaiting_retry_approval",
       "status_changed",
+      "tool_call_started",
+      "tool_call_finished",
+      "tool_call_blocked",
       "error",
     ];
     for (const type of eventTypes) {

@@ -3,7 +3,9 @@ import type {
   Spec,
   HumanFeedback,
   WorkflowState,
-  LlmSettings,
+  LlmSettingsDraft,
+  LlmSettingsProfile,
+  LlmSettingsReference,
   WorkspaceFolder,
   ProjectConstructionRun,
   ProjectWorkspace,
@@ -41,7 +43,7 @@ export const workflowApi = {
     userStories: UserStory[],
     workspaceFolderId: string,
     workflowMode: "standard" | "spec_generation" = "standard",
-    llmSettings?: LlmSettings,
+    llmSettingsRef?: LlmSettingsReference,
     frontendProjectId?: string
   ): Promise<StartWorkflowResponse> => {
     const res = await fetch(`${BASE}/workflow/start`, {
@@ -51,7 +53,7 @@ export const workflowApi = {
         workspaceFolderId,
         userStories,
         workflowMode,
-        ...(llmSettings ? { llmSettings } : {}),
+        ...(llmSettingsRef ? { llmSettingsRef } : {}),
         ...(frontendProjectId ? { frontendProjectId } : {}),
       }),
     });
@@ -193,6 +195,7 @@ export const workflowApi = {
     projectName?: string;
     userStoryIds: string[];
     specIds: string[];
+    llmSettingsRef?: LlmSettingsReference;
   }): Promise<StartProjectConstructionResponse> => {
     const res = await fetch(`${BASE}/project-construction/runs`, {
       method: "POST",
@@ -201,5 +204,72 @@ export const workflowApi = {
     });
     await requireOk(res, "Iniciar construção do projeto");
     return res.json() as Promise<StartProjectConstructionResponse>;
+  },
+
+  listLlmProviders: async (): Promise<{
+    providers: Array<{
+      provider: string;
+      label: string;
+      defaultBaseUrl: string;
+      supportsStructuredOutput: boolean;
+      supportsResponsesApi: boolean;
+      defaultModels: string[];
+    }>;
+  }> => {
+    const res = await fetch(`${BASE}/llm/providers`, { cache: "no-store" });
+    await requireOk(res, "Listar providers LLM");
+    return res.json() as Promise<{
+      providers: Array<{
+        provider: string;
+        label: string;
+        defaultBaseUrl: string;
+        supportsStructuredOutput: boolean;
+        supportsResponsesApi: boolean;
+        defaultModels: string[];
+      }>;
+    }>;
+  },
+
+  getLlmSettings: async (): Promise<LlmSettingsProfile | null> => {
+    const res = await fetch(`${BASE}/llm/settings`, { cache: "no-store" });
+    await requireOk(res, "Consultar provider LLM");
+    const body = (await res.json()) as { profile: LlmSettingsProfile | null };
+    return body.profile;
+  },
+
+  saveLlmSettings: async (
+    settings: LlmSettingsDraft & {
+      validationStatus?: "untested" | "valid" | "invalid";
+      validationMessage?: string;
+      validatedAt?: string;
+    }
+  ): Promise<LlmSettingsProfile> => {
+    const res = await fetch(`${BASE}/llm/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    await requireOk(res, "Salvar provider LLM");
+    const body = (await res.json()) as { profile: LlmSettingsProfile };
+    return body.profile;
+  },
+
+  testLlmSettings: async (
+    settings: LlmSettingsDraft
+  ): Promise<{ ok: boolean; message: string; testedAt: string }> => {
+    const res = await fetch(`${BASE}/llm/settings/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    await requireOk(res, "Testar provider LLM");
+    return res.json() as Promise<{ ok: boolean; message: string; testedAt: string }>;
+  },
+
+  deleteLlmSettings: async (profileId: string): Promise<void> => {
+    const res = await fetch(`${BASE}/llm/settings/${profileId}`, {
+      method: "DELETE",
+    });
+    await requireOk(res, "Remover provider LLM");
   },
 } as const;

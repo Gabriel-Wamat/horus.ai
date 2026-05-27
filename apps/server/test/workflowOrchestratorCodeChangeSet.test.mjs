@@ -79,7 +79,7 @@ function curatorResult(passed) {
   };
 }
 
-function createHarness({ graphChunks, projectRoot }) {
+function createHarness({ graphChunks, projectRoot, applier = new ProjectCodeChangeSetApplier() }) {
   let initialInput;
   let savedState;
   const savedChangeSets = [];
@@ -144,7 +144,7 @@ function createHarness({ graphChunks, projectRoot }) {
     undefined,
     undefined,
     sink,
-    new ProjectCodeChangeSetApplier()
+    applier
   );
 
   return {
@@ -280,5 +280,67 @@ test("WorkflowOrchestrator rejects latest proposed CodeChangeSet when curator fa
   await assert.rejects(
     () => readFile(join(projectRoot, "generated", "horus", "story.html"), "utf8"),
     { code: "ENOENT" }
+  );
+});
+
+test("WorkflowOrchestrator does not emit patch_applied when final applier returns failed validation", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-workflow-project-"));
+  const harness = createHarness({
+    projectRoot,
+    applier: {
+      apply: async ({ changeSet }) => ({
+        ...changeSet,
+        status: "failed",
+        failedReason: "terminal validation failed",
+        validation: [
+          {
+            command: "npm test",
+            cwd: projectRoot,
+            exitCode: 1,
+            status: "failed",
+            stderr: "src/App.tsx(1,1): error TS1005",
+          },
+        ],
+      }),
+    },
+    graphChunks: (input) => [
+      {
+        frontAgent: {
+          agentResults: {
+            [userStory.id]: [{ output: { codeChangeSet: codeChangeSet(input.threadId) } }],
+          },
+        },
+      },
+      {
+        curatorAgent: {
+          agentResults: {
+            [userStory.id]: [curatorResult(true)],
+          },
+          status: "completed",
+        },
+      },
+    ],
+  });
+
+  await startCodeChange(harness.orchestrator, harness.selectedProject);
+  const failed = await harness.waitForStatus("failed");
+  const error = await harness.waitForEvent("error");
+
+  assert.equal(failed.status, "failed");
+  assert.equal(error.message, "terminal validation failed");
+  assert.equal(
+    harness.getEmittedEvents().some((event) => event.type === "patch_applied"),
+    false
+  );
+  assert.equal(
+    harness
+      .getEmittedEvents()
+      .some(
+        (event) =>
+          event.type === "validation_evidence" &&
+          event.evidence.status === "failed" &&
+          event.evidence.commands[0]?.stderrTail.includes("TS1005")
+      ),
+    true
   );
 });

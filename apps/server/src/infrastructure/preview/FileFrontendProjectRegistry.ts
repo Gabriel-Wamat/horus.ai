@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -11,6 +11,10 @@ import {
   canonicalizeProjectRoot,
   FrontendProjectRootError,
 } from "./SeedFrontendProject.js";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 const PROJECTS_FILE = "projects.json";
 
@@ -22,6 +26,14 @@ export class FrontendProjectNotFoundError extends Error {
 }
 
 export { FrontendProjectRootError };
+
+function isInsideRoot(rootPath: string, candidatePath: string): boolean {
+  const relation = relative(rootPath, candidatePath);
+  return (
+    relation === "" ||
+    (!relation.startsWith("..") && !relation.includes(`..${sep}`))
+  );
+}
 
 function slugify(value: string): string {
   const slug = value
@@ -68,8 +80,11 @@ export class FileFrontendProjectRegistry {
   private async readProjects(): Promise<FrontendProject[]> {
     await this.ensureBaseDir();
     try {
-      const raw = await fs.readFile(this.projectsPath(), "utf-8");
-      return FrontendProjectSchema.array().parse(JSON.parse(raw));
+      const parsed = await readJsonFile(
+        this.projectsPath(),
+        FrontendProjectSchema.array()
+      );
+      return Promise.all(parsed.map((project) => this.toRuntimeProject(project)));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     }
@@ -81,12 +96,29 @@ export class FileFrontendProjectRegistry {
 
   private async writeProjects(projects: FrontendProject[]): Promise<void> {
     await this.ensureBaseDir();
-    const validated = FrontendProjectSchema.array().parse(projects);
-    await fs.writeFile(
-      this.projectsPath(),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
+    const validated = FrontendProjectSchema.array().parse(
+      await Promise.all(projects.map((project) => this.toPersistedProject(project)))
     );
+    await writeJsonFileAtomic(this.projectsPath(), validated);
+  }
+
+  private async toRuntimeProject(project: FrontendProject): Promise<FrontendProject> {
+    return FrontendProjectSchema.parse({
+      ...project,
+      rootPath: await this.canonicalizeProjectRoot(project.rootPath),
+    });
+  }
+
+  private async toPersistedProject(project: FrontendProject): Promise<FrontendProject> {
+    const repoRoot = await fs.realpath(this.repositoryRoot);
+    const rootPath = resolve(project.rootPath);
+    const persistedRootPath = isInsideRoot(repoRoot, rootPath)
+      ? relative(repoRoot, rootPath).split(sep).join("/")
+      : project.rootPath;
+    return FrontendProjectSchema.parse({
+      ...project,
+      rootPath: persistedRootPath || ".",
+    });
   }
 
   async listProjects(): Promise<FrontendProject[]> {

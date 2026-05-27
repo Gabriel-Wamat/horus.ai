@@ -113,4 +113,14 @@ export const projectFilesApi = {
     await requireOk(response, "Salvar arquivo");
     return response.json() as Promise<SaveProjectFileResponse>;
   },
+
+  getDownloadUrl: (
+    projectId: string,
+    options: { runId?: string | null } = {}
+  ): string => {
+    const params = new URLSearchParams();
+    appendOptionalParam(params, "runId", options.runId);
+    const query = params.toString();
+    return `${BASE}/project-files/projects/${projectId}/download${query ? `?${query}` : ""}`;
+  },
 } as const;

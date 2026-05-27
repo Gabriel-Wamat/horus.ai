@@ -12,6 +12,7 @@ import {
   type PreviewEvent,
   type PreviewEventType,
   type PreviewSession,
+  type PreviewStatus,
   type SetPreviewDeviceInput,
   type VisualInstructionDraft,
 } from "@u-build/shared";
@@ -41,6 +42,13 @@ const DEVICE_PRESETS: Record<PreviewDeviceName, PreviewDevice> = {
   tablet: { name: "tablet", width: 834, height: 1112 },
 };
 
+const STALE_PROCESS_STATUSES = new Set<PreviewStatus>([
+  "starting",
+  "running",
+  "inspecting",
+  "applying",
+]);
+
 function buildPreviewUrl(project: FrontendProject, route: string): string | null {
   if (!project.previewUrl) return null;
   const url = new URL(project.previewUrl);
@@ -66,6 +74,47 @@ export class PreviewRuntimeManager {
 
   async listTimeline(sessionId: string): Promise<PreviewEvent[]> {
     return this.store.listEvents(sessionId);
+  }
+
+  async recoverStaleRuntimeSessions(): Promise<PreviewSession[]> {
+    const sessions = await this.store.listSessions();
+    const recovered: PreviewSession[] = [];
+    for (const session of sessions) {
+      if (!STALE_PROCESS_STATUSES.has(session.status) && session.processId === null) {
+        continue;
+      }
+      if (!STALE_PROCESS_STATUSES.has(session.status) && session.processId !== null) {
+        const cleared = await this.store.saveSession({
+          ...session,
+          processId: null,
+          updatedAt: new Date().toISOString(),
+        });
+        recovered.push(cleared);
+        continue;
+      }
+
+      const updated = await this.store.saveSession({
+        ...session,
+        status: "stopped",
+        processId: null,
+        stoppedAt: session.stoppedAt ?? new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        errorMessage:
+          "Preview session was stopped because the server restarted and no longer owns the previous process.",
+      });
+      await this.recordEvent(
+        updated,
+        "preview_recovered_after_restart",
+        "Preview session recovered after server restart",
+        {
+          previousStatus: session.status,
+          previousProcessId: session.processId,
+          nextStatus: updated.status,
+        }
+      );
+      recovered.push(updated);
+    }
+    return recovered;
   }
 
   async createSession(input: CreatePreviewSessionInput): Promise<PreviewActionResult> {

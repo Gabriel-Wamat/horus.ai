@@ -56,7 +56,7 @@ Before acting, identify:
 ```yaml
 input_contract:
   user_request: "Current user story and generated technical spec"
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<repo-root>"
   target_files:
     - "project source files or generated index.html artifact"
   target_stack:

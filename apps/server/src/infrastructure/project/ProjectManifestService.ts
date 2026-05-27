@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type {
   HorusProjectConfig,
@@ -6,6 +5,10 @@ import type {
   ProjectCommand,
 } from "@u-build/shared";
 import { HorusProjectManifestSchema } from "@u-build/shared";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 export const HORUS_PROJECT_MANIFEST_FILENAME = "horus.project.json";
 
@@ -41,8 +44,10 @@ export class ProjectManifestService {
 
   async read(projectRoot: string): Promise<HorusProjectManifest | null> {
     try {
-      const raw = JSON.parse(await fs.readFile(this.manifestPath(projectRoot), "utf-8"));
-      return HorusProjectManifestSchema.parse(raw);
+      return await readJsonFile(
+        this.manifestPath(projectRoot),
+        HorusProjectManifestSchema
+      );
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw new ProjectManifestError(
@@ -78,11 +83,9 @@ export class ProjectManifestService {
     manifest: HorusProjectManifest
   ): Promise<HorusProjectManifest> {
     const validated = HorusProjectManifestSchema.parse(manifest);
-    await fs.writeFile(
-      this.manifestPath(projectRoot),
-      `${JSON.stringify(validated, null, 2)}\n`,
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.manifestPath(projectRoot), validated, {
+      trailingNewline: true,
+    });
     return validated;
   }
 

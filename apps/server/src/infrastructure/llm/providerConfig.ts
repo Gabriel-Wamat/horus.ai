@@ -110,7 +110,7 @@ export function resolveAgentModelConfig(
     model,
     apiKey,
     baseUrl:
-      firstNonEmpty(env[PROVIDER_BASE_URL_ENV[provider]]) ??
+      firstNonEmpty(runtimeSettings?.baseUrl, env[PROVIDER_BASE_URL_ENV[provider]]) ??
       DEFAULT_BASE_URL[provider],
     ...(temperature !== undefined ? { temperature } : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),

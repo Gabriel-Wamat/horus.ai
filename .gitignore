@@ -12,20 +12,36 @@ build/
 *.tsbuildinfo
 
 data/
+.horus/
 spec/
 *.log
 
 .vite/
+.next/
+.source/
 .playwright-cli/
+output/
+coverage/
 
 .DS_Store
 Thumbs.db
 
 # Root-level local reference files
-/*.md
+/AGENTS.md
+/CLAUDE.md
+/ID_VISUAL.md
+/UNPROTECT.md
 /*.png
 /*.jpg
 /*.jpeg
 /*.gif
 /*.webp
 /*.svg
+
+# Project implementation specs are versioned under docs/specs/
+
+# Official root docs are allowed even with broad local reference ignores above
+!/README.md
+!/CONTRIBUTING.md
+!/CHANGELOG.md
+!/LICENSE.md

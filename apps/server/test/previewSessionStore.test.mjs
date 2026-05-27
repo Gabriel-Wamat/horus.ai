@@ -50,6 +50,7 @@ test("FilePreviewSessionStore persists sessions, timeline events, and drafts", a
   });
 
   const storedSession = await store.getSession(session.id);
+  const sessions = await store.listSessions();
   const events = await store.listEvents(session.id);
   const drafts = await store.listDrafts(session.id);
   const rawSession = JSON.parse(
@@ -57,6 +58,8 @@ test("FilePreviewSessionStore persists sessions, timeline events, and drafts", a
   );
 
   assert.equal(storedSession.id, session.id);
+  assert.equal(sessions.length, 1);
+  assert.equal(sessions[0].id, session.id);
   assert.equal(events.length, 1);
   assert.equal(events[0].type, "preview_created");
   assert.equal(drafts.length, 1);

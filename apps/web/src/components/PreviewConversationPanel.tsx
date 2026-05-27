@@ -1,4 +1,4 @@
-import { useEffect, useRef, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import type {
   FrontendProject,
   HorusChatEvidenceSource,
@@ -14,9 +14,20 @@ export interface PreviewChatMessage {
   body: string;
   createdAt: string;
   projectId?: string;
+  workflowThreadId?: string;
   previewSessionId?: string;
   evidenceSources?: HorusChatEvidenceSource[];
   groundingStatus?: "grounded" | "partial" | "ungrounded";
+  isPending?: boolean;
+  isStreaming?: boolean;
+}
+
+export interface PreviewWorkflowActivity {
+  phase: "validating" | "reviewing" | "applying" | "retrying" | "completed" | "failed";
+  label: string;
+  detail: string;
+  active: boolean;
+  updatedAt: string;
 }
 
 function getStatusLabel(session: PreviewSession | null): string {
@@ -113,12 +124,101 @@ function ChatEvidence({
   );
 }
 
+function StreamingMessageBody({
+  message,
+}: {
+  readonly message: PreviewChatMessage;
+}): JSX.Element {
+  const shouldStream = message.role === "agent" && message.isStreaming && !message.isPending;
+  const [visibleLength, setVisibleLength] = useState(
+    shouldStream ? 0 : message.body.length
+  );
+  const previousBodyRef = useRef("");
+
+  useEffect(() => {
+    if (!shouldStream) {
+      setVisibleLength(message.body.length);
+      previousBodyRef.current = message.body;
+      return undefined;
+    }
+
+    const previousBody = previousBodyRef.current;
+    const startLength = message.body.startsWith(previousBody)
+      ? Math.min(previousBody.length, message.body.length)
+      : 0;
+    previousBodyRef.current = message.body;
+    setVisibleLength(startLength);
+    const stepSize = Math.max(1, Math.ceil(message.body.length / 140));
+    const interval = window.setInterval(() => {
+      setVisibleLength((current) => {
+        const next = Math.min(message.body.length, current + stepSize);
+        if (next >= message.body.length) {
+          window.clearInterval(interval);
+        }
+        return next;
+      });
+    }, 16);
+
+    return () => window.clearInterval(interval);
+  }, [message.body, shouldStream]);
+
+  const visibleBody = useMemo(
+    () => message.body.slice(0, visibleLength),
+    [message.body, visibleLength]
+  );
+  const isStreaming = shouldStream && visibleLength < message.body.length;
+
+  if (message.isPending) {
+    return (
+      <p className="preview-chat-thinking" aria-live="polite">
+        <span>Horus está pensando</span>
+        <i aria-hidden="true" />
+      </p>
+    );
+  }
+
+  return (
+    <p className={isStreaming ? "is-streaming" : undefined}>
+      {visibleBody}
+      {isStreaming ? <span className="preview-chat-stream-caret" aria-hidden="true" /> : null}
+    </p>
+  );
+}
+
+function WorkflowLiveActivity({
+  activity,
+}: {
+  readonly activity: PreviewWorkflowActivity | null;
+}): JSX.Element | null {
+  if (!activity) return null;
+
+  return (
+    <div
+      className={`preview-workflow-activity phase-${activity.phase}${
+        activity.active ? " is-active" : " is-settled"
+      }`}
+      aria-live="polite"
+      aria-label={`Status da execução: ${activity.label}. ${activity.detail}`}
+      title={activity.detail}
+    >
+      <span className="preview-workflow-activity-pulse" aria-hidden="true" />
+      <div className="preview-workflow-activity-copy">
+        <strong>{activity.label}</strong>
+      </div>
+      <div className="preview-workflow-activity-meter" aria-hidden="true">
+        <i />
+      </div>
+    </div>
+  );
+}
+
 export function PreviewConversationPanel({
   projects,
   selectedProjectId,
   selectedProject,
   session,
   chatMessages,
+  workflowActivity,
   route,
   isLoading,
   error,
@@ -138,6 +238,7 @@ export function PreviewConversationPanel({
   readonly selectedProject: FrontendProject | null;
   readonly session: PreviewSession | null;
   readonly chatMessages: PreviewChatMessage[];
+  readonly workflowActivity: PreviewWorkflowActivity | null;
   readonly route: string;
   readonly isLoading: boolean;
   readonly error: string | null;
@@ -248,25 +349,33 @@ export function PreviewConversationPanel({
           ) : (
             <div
               className="preview-chat-message-list"
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions text"
               ref={historyRef}
               onScroll={handleHistoryScroll}
             >
               {chatMessages.map((message) => (
                 <article
-                  className={`preview-chat-message ${message.role}`}
+                  className={`preview-chat-message ${message.role}${
+                    message.isPending ? " is-pending" : ""
+                  }`}
                   key={message.id}
                 >
                   <span>
                     {message.role === "user" ? "Você" : "Horus"}
                     <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
                   </span>
-                  <p>{message.body}</p>
-                  {message.role === "agent" ? <ChatEvidence message={message} /> : null}
+                  <StreamingMessageBody message={message} />
+                  {message.role === "agent" && !message.isPending ? (
+                    <ChatEvidence message={message} />
+                  ) : null}
                 </article>
               ))}
             </div>
           )}
         </div>
+        <WorkflowLiveActivity activity={workflowActivity} />
       </section>
 
       <VisualInstructionComposer

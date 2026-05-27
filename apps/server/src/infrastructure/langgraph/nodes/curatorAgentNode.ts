@@ -30,14 +30,36 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
       `[curatorAgentNode] Validating story: ${userStory.id} (attempt ${state.retryCount + 1})`
     );
 
-    const validation = await deps.validateOutput(
-      spec,
-      html,
-      qaOutput,
-      codeChangeSet,
-      deps.getRuntimeLlmSettings(state.threadId),
-      state.executionBrief
-    );
+    const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
+    const preflight =
+      codeChangeSet && state.frontendProjectRootPath && deps.preflightCodeChangeSet
+        ? await deps.preflightCodeChangeSet({
+            changeSet: codeChangeSet,
+            projectRootPath: state.frontendProjectRootPath,
+            workflowThreadId: state.threadId,
+            userStoryId: userStory.id,
+            ...(state.frontendProjectId ? { projectId: state.frontendProjectId } : {}),
+          })
+        : undefined;
+
+    const validation =
+      preflight && !preflight.passed
+        ? {
+            passed: false,
+            score: 0,
+            notes:
+              "Curador bloqueou a entrega porque a preflight terminal/estática falhou antes de aplicar o projeto.",
+            missingItems: preflight.issues,
+            fixTarget: "front" as const,
+          }
+        : await deps.validateOutput(
+            spec,
+            html,
+            qaOutput,
+            codeChangeSet,
+            llmSettings,
+            state.executionBrief
+          );
 
     const feedback: CuratorFeedback = {
       passed: validation.passed,
@@ -51,7 +73,20 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
       status: "success" as const,
       agentName: "curator" as const,
       userStoryId: userStory.id,
-      output: { ...validation, attempt: state.retryCount + 1 },
+      output: {
+        ...validation,
+        attempt: state.retryCount + 1,
+        ...(preflight
+          ? {
+              preflightValidation: {
+                passed: preflight.passed,
+                issues: preflight.issues,
+                validation: preflight.validation,
+              },
+              runtimeValidation: preflight.runtimeEvidence,
+            }
+          : {}),
+      },
       executionTimeMs: Date.now() - start,
       completedAt: new Date().toISOString(),
       ...agentArtifactFields(artifactContext, state),
