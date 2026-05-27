@@ -17,7 +17,7 @@ const QaOutputSchema = z.object({
 export type QaOutput = z.infer<typeof QaOutputSchema>;
 
 const model = new ChatAnthropic({
-  model: "private-model-sonnet-4-6",
+  model: "gpt-4.1-mini",
   temperature: 1,
 }).withStructuredOutput(QaOutputSchema);
 
