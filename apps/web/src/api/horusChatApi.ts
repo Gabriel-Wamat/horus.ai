@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   ChatSession,
   CreateChatSessionInput,
+  HorusChatStreamEvent,
   HorusChatTurnInput,
   HorusChatTurnResponse,
 } from "@u-build/shared";
@@ -63,5 +64,58 @@ export const horusChatApi = {
     });
     await requireOk(res, "Enviar mensagem para Horus");
     return res.json() as Promise<HorusChatTurnResponse>;
+  },
+
+  submitTurnStream: async (
+    input: HorusChatTurnInput,
+    onEvent: (event: HorusChatStreamEvent) => void,
+    signal?: AbortSignal
+  ): Promise<void> => {
+    const init: RequestInit = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      ...(signal ? { signal } : {}),
+    };
+    const res = await fetch(`${BASE}/horus/chat/turn/stream`, {
+      ...init,
+    });
+    await requireOk(res, "Enviar mensagem para Horus");
+    if (!res.body) {
+      throw new Error("Enviar mensagem para Horus falhou: stream indisponível.");
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const parseFrame = (frame: string): void => {
+      const data = frame
+        .split("\n")
+        .find((line) => line.startsWith("data: "))
+        ?.slice("data: ".length);
+      if (!data) return;
+      onEvent(JSON.parse(data) as HorusChatStreamEvent);
+    };
+
+    const flush = (chunk: string): void => {
+      buffer += chunk;
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) {
+        parseFrame(frame);
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      flush(decoder.decode(value, { stream: true }));
+    }
+    flush(decoder.decode());
+    if (buffer.trim()) {
+      parseFrame(buffer);
+      buffer = "";
+    }
   },
 } as const;

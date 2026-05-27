@@ -1,0 +1,22 @@
+{
+  "title": "Horus.AI",
+  "pages": [
+    "index",
+    "quickstart",
+    "---System---",
+    "architecture",
+    "api-reference",
+    "workflow",
+    "preview-runtime",
+    "persistence",
+    "security",
+    "---Operations---",
+    "configuration",
+    "runbook",
+    "testing",
+    "deployment",
+    "---Project---",
+    "chronology",
+    "contributing"
+  ]
+}

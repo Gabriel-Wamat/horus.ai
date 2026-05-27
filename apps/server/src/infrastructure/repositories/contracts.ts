@@ -96,6 +96,7 @@ export interface FrontendProjectRepository {
 export interface PreviewSessionRepository {
   saveSession(session: PreviewSession): Promise<PreviewSession>;
   getSession(sessionId: string): Promise<PreviewSession>;
+  listSessions(): Promise<PreviewSession[]>;
   appendEvent(event: PreviewEvent): Promise<PreviewEvent>;
   listEvents(sessionId: string): Promise<PreviewEvent[]>;
   saveDraft(draft: VisualInstructionDraft): Promise<VisualInstructionDraft>;

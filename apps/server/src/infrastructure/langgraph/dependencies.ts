@@ -15,6 +15,10 @@ import { decideRouting as defaultDecideRouting } from "../agents/OdinAgentImpl.j
 import { generateFrontend as defaultGenerateFrontend } from "../agents/FrontAgentImpl.js";
 import { generateQaTests as defaultGenerateQaTests } from "../agents/QaAgentImpl.js";
 import { validateOutput as defaultValidateOutput } from "../agents/CuratorAgentImpl.js";
+import {
+  CodeChangeSetPreflightService,
+  type CodeChangeSetPreflightResult,
+} from "../code/CodeChangeSetPreflightService.js";
 import { ReadOnlyCodeContextService } from "../../application/services/ReadOnlyCodeContextService.js";
 import {
   AgentToolRegistry,
@@ -29,7 +33,9 @@ export interface GenerateSpecInput {
 
 export interface LangGraphDependencies {
   loadAgentSkill(skillId: string): string;
-  getRuntimeLlmSettings(threadId: string): LlmSettings | undefined;
+  getRuntimeLlmSettings(
+    threadId: string
+  ): LlmSettings | undefined | Promise<LlmSettings | undefined>;
   generateSpec(userStory: UserStory, input: GenerateSpecInput): Promise<Spec>;
   decideRouting(spec: Spec, feedback?: CuratorFeedback): string[];
   generateFrontend(
@@ -77,10 +83,18 @@ export interface LangGraphDependencies {
     missingItems: string[];
     fixTarget: "front" | "qa" | "both";
   }>;
+  preflightCodeChangeSet?(input: {
+    changeSet: CodeChangeSet;
+    projectRootPath: string;
+    workflowThreadId?: string | null;
+    userStoryId?: string | null;
+    projectId?: string | null;
+  }): Promise<CodeChangeSetPreflightResult>;
   agentToolRegistry?: AgentToolRegistry;
 }
 
 const codeContextService = new ReadOnlyCodeContextService();
+const codeChangeSetPreflightService = new CodeChangeSetPreflightService();
 defaultAgentToolRegistry.register({
   toolName: "search_code_readonly",
   mutatesState: false,
@@ -108,5 +122,6 @@ export const defaultLangGraphDependencies: LangGraphDependencies = {
     }),
   generateQaTests: defaultGenerateQaTests,
   validateOutput: defaultValidateOutput,
+  preflightCodeChangeSet: (input) => codeChangeSetPreflightService.validate(input),
   agentToolRegistry: defaultAgentToolRegistry,
 };

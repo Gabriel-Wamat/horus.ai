@@ -72,6 +72,7 @@ export const PreviewEventTypeSchema = z.enum([
   "dom_snapshot_unavailable",
   "visual_instruction_drafted",
   "preview_error",
+  "preview_recovered_after_restart",
 ]);
 
 export const PreviewEventSchema = z.object({

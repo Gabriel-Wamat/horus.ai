@@ -1,7 +1,13 @@
 import { z } from "zod";
-import { LlmSettingsSchema, UserStorySchema } from "@u-build/shared";
+import {
+  LlmSettingsReferenceSchema,
+  LlmSettingsSchema,
+  UserStorySchema,
+} from "@u-build/shared";
 import type {
   FrontendProject,
+  LlmSettings,
+  LlmSettingsReference,
   Spec,
   UserStory,
   WorkflowMode,
@@ -15,6 +21,7 @@ export const StartWorkflowInputSchema = z.object({
   workflowMode: z.enum(["standard", "spec_generation"]).optional(),
   frontendProjectId: z.string().uuid().optional(),
   llmSettings: LlmSettingsSchema.optional(),
+  llmSettingsRef: LlmSettingsReferenceSchema.optional(),
 });
 
 export type StartWorkflowInput = z.infer<typeof StartWorkflowInputSchema>;
@@ -35,11 +42,19 @@ export interface WorkflowFrontendProjectReader {
   getProject(projectId: string): Promise<FrontendProject>;
 }
 
+export interface LlmSettingsResolverPort {
+  resolveReference(
+    reference?: LlmSettingsReference,
+    legacySettings?: LlmSettings
+  ): Promise<LlmSettings | undefined>;
+}
+
 export class StartWorkflowUseCase {
   constructor(
     private readonly orchestrator: WorkflowOrchestrator,
     private readonly workspaceStore: WorkspaceStoryStore,
-    private readonly frontendProjects?: WorkflowFrontendProjectReader
+    private readonly frontendProjects?: WorkflowFrontendProjectReader,
+    private readonly llmSettingsResolver?: LlmSettingsResolverPort
   ) {}
 
   async execute(input: unknown): Promise<{ threadId: string }> {
@@ -52,6 +67,12 @@ export class StartWorkflowUseCase {
       validated.frontendProjectId && this.frontendProjects
         ? await this.frontendProjects.getProject(validated.frontendProjectId)
         : undefined;
+    const llmSettings = this.llmSettingsResolver
+      ? await this.llmSettingsResolver.resolveReference(
+          validated.llmSettingsRef,
+          validated.llmSettings
+        )
+      : validated.llmSettings;
     return this.orchestrator.start({
       workspaceFolderId: validated.workspaceFolderId,
       userStories: resolved.userStories,
@@ -64,7 +85,7 @@ export class StartWorkflowUseCase {
             frontendProjectRootPath: frontendProject.rootPath,
           }
         : {}),
-      ...(validated.llmSettings ? { llmSettings: validated.llmSettings } : {}),
+      ...(llmSettings ? { llmSettings } : {}),
     });
   }
 }

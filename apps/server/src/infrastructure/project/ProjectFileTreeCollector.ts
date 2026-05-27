@@ -147,7 +147,7 @@ export class ProjectFileTreeCollector {
 
         const candidatePath = resolve(directoryPath, dirent.name);
         const relativePath = toPosixRelativePath(relative(rootRealPath, candidatePath));
-        if (shouldIgnorePath(relativePath, dirent.name)) {
+        if (shouldIgnoreProjectPath(relativePath, dirent.name)) {
           ignoredCount += 1;
           continue;
         }
@@ -202,7 +202,7 @@ export class ProjectFileTreeCollector {
   }
 }
 
-function shouldIgnorePath(relativePath: string, name: string): boolean {
+export function shouldIgnoreProjectPath(relativePath: string, name: string): boolean {
   if (isSensitiveProjectPath(relativePath)) return true;
   if (name === ".DS_Store") return true;
   if (name.startsWith(".") && name !== ".gitignore") return true;

@@ -10,9 +10,11 @@ import {
   ProjectFileBrowserError,
   type ProjectFileBrowserService,
 } from "../../project/ProjectFileBrowserService.js";
+import type { ProjectArchiveService } from "../../project/ProjectArchiveService.js";
 
 interface ProjectFileRouteDeps {
   fileBrowser: ProjectFileBrowserService;
+  archiveService: ProjectArchiveService;
 }
 
 export function createProjectFileRouter(deps: ProjectFileRouteDeps): Router {
@@ -58,6 +60,27 @@ export function createProjectFileRouter(deps: ProjectFileRouteDeps): Router {
     }
   });
 
+  router.get("/projects/:projectId/download", async (req: Request, res: Response) => {
+    try {
+      const params = ProjectFileProjectParamsSchema.parse(req.params);
+      const query = ProjectFileTreeQuerySchema.pick({ runId: true }).parse(req.query);
+      const input: Parameters<ProjectArchiveService["createManifest"]>[0] = {
+        projectId: params.projectId,
+      };
+      if (query.runId !== undefined) input.runId = query.runId;
+      const manifest = await deps.archiveService.createManifest(input);
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${manifest.fileName}"`
+      );
+      await deps.archiveService.streamZip(manifest, res);
+    } catch (err) {
+      handleProjectFileError(res, err);
+    }
+  });
+
   router.get("/projects/:projectId/file", async (req: Request, res: Response) => {
     try {
       const params = ProjectFileProjectParamsSchema.parse(req.params);
@@ -97,6 +120,10 @@ export function createProjectFileRouter(deps: ProjectFileRouteDeps): Router {
 }
 
 function handleProjectFileError(res: Response, err: unknown): void {
+  if (res.headersSent) {
+    res.destroy(err instanceof Error ? err : undefined);
+    return;
+  }
   if (err instanceof ZodError) {
     res.status(400).json({
       error: "invalid_request",

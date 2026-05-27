@@ -1,0 +1,112 @@
+---
+title: Chronology
+description: Engineering timeline and architecture milestones.
+---
+
+## Milestone Matrix
+
+| Phase | Shift | Result |
+| --- | --- | --- |
+| Foundation | Prompt pipeline to LangGraph workflow | Repeatable multi-agent routing |
+| Workspace | Ephemeral input to persisted artifacts | Versioned stories and specs |
+| Chat and preview | Static output to interactive runtime | Preview sessions and chat actions |
+| Orchestration | Agent output to curated changes | Approval before apply |
+| Project construction | Single app to generated workspaces | Safe file and command workflows |
+| Evidence | Trust by prose to trust by runtime data | Gates, events, smoke checks |
+| Frontend UX | Dense app to operational surfaces | Agent Flow, Project Files, Preview Console |
+| LLM settings | Env-only to configurable providers | OpenAI, OpenRouter, Groq paths |
+| Portability | Local defaults to runtime config | `HORUS_DATA_DIR`, Postgres, checkpoints |
+| Documentation | Markdown notes to docs site | Fumadocs/Unmint technical docs |
+
+## Foundation
+
+Horus started as an autonomous user-story-to-implementation loop:
+
+1. User story
+2. Spec generation
+3. ODIN routing
+4. Front and QA work
+5. Curator validation
+6. Retry or completion
+
+The first architecture question was not "which UI should be generated?" but "how can a system prove that generated UI satisfies a request?" That led to the explicit Spec, Front, QA, and Curator roles instead of a single monolithic generator.
+
+## Workspace And Artifact History
+
+The project added workspace folders, persisted user stories, specs, artifact context, and revision metadata. This made workflow state durable and inspectable.
+
+Key shift:
+
+| Before | After |
+| --- | --- |
+| User input existed mainly in the active run | Stories/specs became reusable workspace artifacts |
+| Specs were transient | Specs could be revised, approved, and referenced |
+| Debugging depended on console output | Workflow state and artifacts became inspectable |
+
+## Chat And Preview Runtime
+
+Horus added chat sessions, intent routing, preview sessions, timeline events, device settings, runtime evidence, and visual instruction drafts.
+
+This moved Horus from a batch generator toward an interactive builder. The system can now keep a conversation open while preview state, selected project, and generated code context influence the next action.
+
+## Orchestration Hardening
+
+The workflow was hardened so generated code is proposed before being applied. Curator approval is required before changes become project files.
+
+The important architectural boundary is "proposal before mutation." Front Agent output should be captured as proposed operations. Curator approval and application policy decide whether those operations become actual file changes.
+
+## Generated Project Construction
+
+Generated project workspaces became git-backed, policy-bounded, and inspectable through the project file browser.
+
+Project construction introduced a stronger need for portability. Generated workspaces cannot assume the developer's Desktop path, shell, or globally installed tooling. The runtime must receive workspace roots and command policies from configuration.
+
+## Evidence And Validation
+
+Runtime evidence became a first-class part of success semantics. QA preview smoke validation, quality gates, command evidence, and run-flow snapshots all contribute to the final verdict.
+
+Evidence sources now serve different audiences:
+
+| Audience | Evidence |
+| --- | --- |
+| User | Preview, status, chat explanation |
+| Engineer | Events, run-flow map, code change sets |
+| Curator | Spec, QA output, preview smoke, missing items |
+| Operator | Health, logs, persistent state, reset paths |
+
+## Portability
+
+Recent work centralized local persistence under `HORUS_DATA_DIR`, added atomic JSON writes, file-backed checkpoints, and Postgres alternatives.
+
+Portability work changed the engineering standard for the project:
+
+- Runtime data must be configurable.
+- Local defaults must be safe to ignore.
+- File mode and Postgres mode must share repository contracts.
+- Docs and README must explain macOS/Linux and Windows paths where commands differ.
+- Private local files, operator notes, and machine-specific instructions must stay out of Git.
+
+## Documentation System
+
+The documentation moved from Markdown notes into a dedicated Fumadocs/Unmint app. That gives the project:
+
+- Searchable technical docs.
+- Navigable architecture and operations pages.
+- A deployable documentation frontend.
+- A clear separation between public docs and local implementation specs.
+
+## Current Status
+
+Supported now:
+
+- pnpm development
+- File-mode persistence
+- Optional Postgres persistence
+- React/Vite product UI
+- Express/LangGraph backend
+- Fumadocs/Unmint documentation site
+
+Planned:
+
+- Docker runtime support
+- Continued documentation hardening before the next approved public deployment

@@ -1,10 +1,13 @@
-import { promises as fs } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   HorusProjectConfigSchema,
   type HorusProjectConfig,
 } from "@u-build/shared";
 import { assertRelativeWriteRoot, resolveInsideRoot } from "./ProjectPathSafety.js";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 export class ProjectConfigError extends Error {
   constructor(message: string) {
@@ -45,7 +48,7 @@ export class ProjectConfigService {
     const path = this.configPath(projectRoot);
     let raw: unknown;
     try {
-      raw = JSON.parse(await fs.readFile(path, "utf-8"));
+      raw = await readJsonFile(path, HorusProjectConfigSchema);
     } catch (err) {
       throw new ProjectConfigError(
         `Project config must exist and be JSON-compatible YAML: ${path}. ${
@@ -62,7 +65,7 @@ export class ProjectConfigService {
     const validated = HorusProjectConfigSchema.parse(config);
     this.validate(projectRoot, validated);
     const path = this.configPath(projectRoot);
-    await fs.writeFile(path, `${JSON.stringify(validated, null, 2)}\n`, "utf-8");
+    await writeJsonFileAtomic(path, validated, { trailingNewline: true });
     return path;
   }
 

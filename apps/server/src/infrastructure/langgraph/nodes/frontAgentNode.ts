@@ -37,12 +37,13 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
           })
         : undefined;
 
+    const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
     // Self-correction: pass curator feedback so the agent improves on retry.
     const frontendOutput = await deps.generateFrontend(
       userStory,
       spec,
       curatorFeedback,
-      deps.getRuntimeLlmSettings(state.threadId),
+      llmSettings,
       state.executionBrief,
       codeContext
     );

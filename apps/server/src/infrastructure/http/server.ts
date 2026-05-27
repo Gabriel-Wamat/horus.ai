@@ -37,6 +37,7 @@ import { createHorusChatRouter } from "./routes/horusChatRoutes.js";
 import { createAgentRunFlowRouter } from "./routes/agentRunFlowRoutes.js";
 import { createProjectConstructionRouter } from "./routes/projectConstructionRoutes.js";
 import { createProjectFileRouter } from "./routes/projectFileRoutes.js";
+import { createLlmSettingsRouter } from "./routes/llmSettingsRoutes.js";
 import { ProcessBrowserPreviewAdapter } from "../preview/ProcessBrowserPreviewAdapter.js";
 import type { BrowserPreviewAdapter } from "../preview/NoopBrowserPreviewAdapter.js";
 import { PreviewRuntimeManager } from "../preview/PreviewRuntimeManager.js";
@@ -48,6 +49,7 @@ import { createWorkflowCheckpointer } from "../langgraph/checkpointer.js";
 import { ProjectCodeChangeSetApplier } from "../code/ProjectCodeChangeSetApplier.js";
 import { PersistentWorkflowEventStream } from "../events/PersistentWorkflowEventStream.js";
 import { HorusRunFlowSnapshotBuilder } from "../../application/services/HorusRunFlowSnapshotBuilder.js";
+import { ProjectArchiveService } from "../project/ProjectArchiveService.js";
 import { ProjectFileBrowserService } from "../project/ProjectFileBrowserService.js";
 import {
   defaultLangGraphDependencies,
@@ -57,6 +59,9 @@ import {
   createRepositories,
   type PersistenceRepositories,
 } from "../repositories/createRepositories.js";
+import { FileLlmCredentialStore } from "../llm/LlmCredentialStore.js";
+import { LlmSettingsResolver } from "../llm/LlmSettingsResolver.js";
+import { getRuntimeLlmSettings } from "../llm/runtimeLlmSettings.js";
 
 export interface CreateAppOptions {
   env?: Record<string, string | undefined>;
@@ -88,6 +93,8 @@ export async function createApp(
 ): Promise<express.Application> {
   const env = options.env ?? process.env;
   const repositories = options.repositories ?? (await createRepositories(env));
+  const llmCredentials = new FileLlmCredentialStore(env);
+  const llmSettingsResolver = new LlmSettingsResolver(llmCredentials);
   const eventStream = new PersistentWorkflowEventStream(
     new SseEventStreamAdapter(),
     repositories.workflowEvents
@@ -100,12 +107,14 @@ export async function createApp(
   const projectFileBrowser = new ProjectFileBrowserService(
     repositories.projectConstruction
   );
+  const projectArchiveService = new ProjectArchiveService(projectFileBrowser);
   const previewRuntime = new PreviewRuntimeManager(
     repositories.frontendProjects,
     repositories.previewSessions,
     options.previewAdapter ?? new ProcessBrowserPreviewAdapter(),
     previewEventStream
   );
+  await previewRuntime.recoverStaleRuntimeSessions();
   const qaPreviewSmokeValidation = new QaPreviewSmokeValidationService(
     previewRuntime
   );
@@ -113,6 +122,9 @@ export async function createApp(
     options.langGraphDependencies ??
     ({
       ...defaultLangGraphDependencies,
+      getRuntimeLlmSettings: async (threadId: string) =>
+        getRuntimeLlmSettings(threadId) ??
+        (await llmSettingsResolver.resolveReference()),
       validatePreviewSmoke: (previewSessionId: string) =>
         qaPreviewSmokeValidation.validate(previewSessionId),
     } satisfies LangGraphDependencies);
@@ -122,6 +134,12 @@ export async function createApp(
       langGraphDependencies,
       await createWorkflowCheckpointer({
         driver: repositories.driver,
+        ...(repositories.driver === "file"
+          ? {
+              checkpointsDir:
+                repositories.runtimeConfig.paths.langgraphCheckpointsDir,
+            }
+          : {}),
         ...(repositories.pool ? { pool: repositories.pool } : {}),
       })
     );
@@ -139,7 +157,8 @@ export async function createApp(
   const startUseCase = new StartWorkflowUseCase(
     orchestrator,
     repositories.workspaceStore,
-    repositories.frontendProjects
+    repositories.frontendProjects,
+    llmSettingsResolver
   );
   const resumeUseCase = new ResumeWorkflowUseCase(orchestrator);
   const statusUseCase = new GetWorkflowStatusUseCase(orchestrator);
@@ -163,7 +182,8 @@ export async function createApp(
     undefined,
     undefined,
     env,
-    orchestrator
+    orchestrator,
+    llmSettingsResolver
   );
   const horusOdinIntentRouter =
     options.horusIntentRouter ?? new HorusOdinIntentRouter();
@@ -175,13 +195,22 @@ export async function createApp(
     options.codeContextReader ?? new ReadOnlyCodeContextService(),
     horusChatAgent,
     options.chatCodeChangeExecutor ?? orchestrator,
-    options.specGenerationExecutor ?? orchestrator
+    options.specGenerationExecutor ?? orchestrator,
+    llmSettingsResolver
   );
 
   const app = express();
 
   app.use(cors({ origin: readCorsOrigin(env), credentials: true }));
   app.use(express.json({ limit: "2mb" }));
+
+  app.use(
+    "/api/llm",
+    createLlmSettingsRouter({
+      credentials: llmCredentials,
+      resolver: llmSettingsResolver,
+    })
+  );
 
   app.use(
     "/api/workflow",
@@ -235,7 +264,10 @@ export async function createApp(
   );
   app.use(
     "/api/project-files",
-    createProjectFileRouter({ fileBrowser: projectFileBrowser })
+    createProjectFileRouter({
+      fileBrowser: projectFileBrowser,
+      archiveService: projectArchiveService,
+    })
   );
   app.use("/api/events", createEventRouter(eventStream));
 

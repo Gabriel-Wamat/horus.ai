@@ -2,6 +2,7 @@ import type {
   ChatAgentContextBundle,
   CodeContextBundle,
   FrontendProject,
+  LlmSettings,
 } from "@u-build/shared";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createChatModel } from "../llm/createChatModel.js";
@@ -12,10 +13,12 @@ export interface HorusChatAnswerInput {
   context: ChatAgentContextBundle;
   project?: FrontendProject;
   codeContext?: CodeContextBundle;
+  llmSettings?: LlmSettings;
 }
 
 export interface HorusChatResponder {
   answer(input: HorusChatAnswerInput): Promise<string>;
+  streamAnswer?(input: HorusChatAnswerInput): AsyncIterable<string>;
 }
 
 export class HorusChatAgentImpl implements HorusChatResponder {
@@ -23,7 +26,7 @@ export class HorusChatAgentImpl implements HorusChatResponder {
     const model = createChatModel("horus", {
       temperature: 0.2,
       maxTokens: input.codeContext?.excerpts.length ? 1400 : 700,
-    });
+    }, input.llmSettings);
     const response = await model.invoke([
       new SystemMessage(buildHorusSystemPrompt(input)),
       new HumanMessage(buildHorusUserPrompt(input)),
@@ -33,6 +36,22 @@ export class HorusChatAgentImpl implements HorusChatResponder {
       throw new Error("Horus LLM returned an empty response.");
     }
     return text;
+  }
+
+  async *streamAnswer(input: HorusChatAnswerInput): AsyncIterable<string> {
+    const model = createChatModel("horus", {
+      temperature: 0.2,
+      maxTokens: input.codeContext?.excerpts.length ? 1400 : 700,
+    }, input.llmSettings);
+    const messages = [
+      new SystemMessage(buildHorusSystemPrompt(input)),
+      new HumanMessage(buildHorusUserPrompt(input)),
+    ];
+    const stream = await model.stream(messages);
+    for await (const chunk of stream) {
+      const text = extractText(chunk.content);
+      if (text) yield text;
+    }
   }
 }
 

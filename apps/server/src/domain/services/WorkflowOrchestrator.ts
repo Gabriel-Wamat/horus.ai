@@ -333,7 +333,7 @@ export class WorkflowOrchestrator {
     const stored = await this.storage.load(threadId);
     const status = stored ? ` Last persisted status: ${stored.status}.` : "";
     throw new WorkflowResumeUnavailableError(
-      `Workflow ${threadId} cannot be resumed because its in-memory checkpoint "${nodeName}" is unavailable.${status} Start a new workflow.`
+      `Workflow ${threadId} cannot be resumed because checkpoint "${nodeName}" is unavailable in the active workflow checkpointer.${status} File mode stores restart-safe checkpoints under HORUS_DATA_DIR; Postgres mode stores them in the configured database. Start a new workflow if the checkpoint file or database row is missing.`
     );
   }
 
@@ -346,10 +346,6 @@ export class WorkflowOrchestrator {
     let userStoryId = currentUserStoryId ?? extractInputUserStoryId(input);
     let workspaceFolderId = await this.resolveWorkspaceFolderId(input, threadId);
     const frontendProjectRootPath = await this.resolveFrontendProjectRootPath(
-      input,
-      threadId
-    );
-    const sourceChatSessionId = await this.resolveSourceChatSessionId(
       input,
       threadId
     );
@@ -493,7 +489,7 @@ export class WorkflowOrchestrator {
           if (nodeName === "frontAgent") {
             await this.persistProposedCodeChangeSets(nodeUpdate);
           }
-          if (nodeName === "qaAgent") {
+          if (nodeName === "qaAgent" || nodeName === "curatorAgent") {
             const evidence = extractRuntimeValidationEvidence(nodeUpdate);
             if (evidence) {
               this.events.emit({
@@ -503,11 +499,6 @@ export class WorkflowOrchestrator {
                 evidence,
                 timestamp: new Date().toISOString(),
               });
-              await this.appendChatProgress(
-                sourceChatSessionId,
-                threadId,
-                summarizeRuntimeEvidence(evidence)
-              );
             }
           }
           this.events.emit({
@@ -518,11 +509,6 @@ export class WorkflowOrchestrator {
             status: "success",
             timestamp: new Date().toISOString(),
           });
-          await this.appendChatProgress(
-            sourceChatSessionId,
-            threadId,
-            `${agentDisplayName(agentName)} concluiu a etapa do modo executor.`
-          );
         }
 
         // ── Emit status_changed when any node signals a terminal state ─────
@@ -545,11 +531,6 @@ export class WorkflowOrchestrator {
       console.error(`[WorkflowOrchestrator] Graph execution failed: ${message}`);
       await this.persistState(threadId, message);
       clearRuntimeLlmSettings(threadId);
-      await this.appendChatProgress(
-        sourceChatSessionId,
-        threadId,
-        `A execução dos agentes falhou: ${message}`
-      );
       this.events.emit({
         type: "error",
         threadId,
@@ -646,24 +627,6 @@ export class WorkflowOrchestrator {
     return stored?.workspaceFolderId;
   }
 
-  private async resolveSourceChatSessionId(
-    input: Record<string, unknown> | Command,
-    threadId: string
-  ): Promise<string | undefined> {
-    if (
-      typeof input === "object" &&
-      input !== null &&
-      "sourceChatSessionId" in input &&
-      typeof (input as Record<string, unknown>)["sourceChatSessionId"] ===
-        "string"
-    ) {
-      return (input as Record<string, string>)["sourceChatSessionId"];
-    }
-
-    const stored = await this.storage.load(threadId);
-    return stored?.sourceChatSessionId;
-  }
-
   private async resolveFrontendProjectRootPath(
     input: Record<string, unknown> | Command,
     threadId: string
@@ -680,23 +643,6 @@ export class WorkflowOrchestrator {
 
     const stored = await this.storage.load(threadId);
     return stored?.frontendProjectRootPath;
-  }
-
-  private async appendChatProgress(
-    sessionId: string | undefined,
-    threadId: string,
-    body: string
-  ): Promise<void> {
-    if (!sessionId || !this.chatProgress) return;
-    try {
-      await this.chatProgress.appendMessage(sessionId, {
-        role: "agent",
-        body,
-        workflowThreadId: threadId,
-      });
-    } catch (err) {
-      console.warn("[WorkflowOrchestrator] Failed to append chat progress:", err);
-    }
   }
 
   private async persistProposedCodeChangeSets(
@@ -765,6 +711,24 @@ export class WorkflowOrchestrator {
       projectRootPath: input.frontendProjectRootPath,
     });
     await this.codeChangeSets.save(appliedChangeSet);
+    if (appliedChangeSet.status === "failed") {
+      this.events.emit({
+        type: "validation_evidence",
+        threadId: appliedChangeSet.workflowThreadId,
+        userStoryId: appliedChangeSet.userStoryId,
+        evidence: buildRuntimeEvidenceFromFailedChangeSet(appliedChangeSet),
+        timestamp: new Date().toISOString(),
+      });
+      this.events.emit({
+        type: "error",
+        threadId: appliedChangeSet.workflowThreadId,
+        message:
+          appliedChangeSet.failedReason ??
+          "CodeChangeSet failed final validation and was not delivered.",
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
     this.events.emit({
       type: "patch_applied",
       threadId: appliedChangeSet.workflowThreadId,
@@ -884,13 +848,40 @@ function extractRuntimeValidationEvidence(
   return undefined;
 }
 
-function summarizeRuntimeEvidence(
-  evidence: RuntimeValidationEvidence
-): string {
-  const failedCommands = evidence.commands.filter(
-    (command) => command.exitCode !== 0
-  ).length;
-  return `Validação runtime: ${evidence.status}; comandos ${evidence.commands.length}; falhas ${failedCommands}; preview ${evidence.preview.status}.`;
+function buildRuntimeEvidenceFromFailedChangeSet(
+  changeSet: CodeChangeSet
+): RuntimeValidationEvidence {
+  return RuntimeValidationEvidenceSchema.parse({
+    id: uuidv4(),
+    workflowThreadId: changeSet.workflowThreadId,
+    constructionRunId: null,
+    userStoryId: changeSet.userStoryId,
+    projectId: null,
+    status: "failed",
+    skippedReason: null,
+    commands: changeSet.validation.map((entry) => ({
+      commandId: entry.command,
+      command: entry.command,
+      cwd: entry.cwd,
+      exitCode: entry.exitCode,
+      stdoutTail: entry.stdout ?? "",
+      stderrTail: entry.stderr ?? "",
+      durationMs: 0,
+    })),
+    preview: {
+      status: "skipped",
+      url: null,
+      message:
+        changeSet.failedReason ??
+        "CodeChangeSet failed final validation and was not delivered.",
+      evidence: {
+        title: null,
+        bodySnippet: null,
+        screenshotPath: null,
+      },
+    },
+    createdAt: new Date().toISOString(),
+  });
 }
 
 function buildCuratorRejectionReason(verdict: CuratorVerdict): string {
@@ -915,17 +906,6 @@ function toErrorMessage(err: unknown): string {
 
 function isTerminalStatus(status: WorkflowStatus | undefined): boolean {
   return status === "completed" || status === "cancelled" || status === "error";
-}
-
-function agentDisplayName(agentName: AgentName): string {
-  const labels: Record<AgentName, string> = {
-    spec: "Spec Agent",
-    odin: "Horus/Odin",
-    front: "Front Agent",
-    qa: "QA Agent",
-    curator: "Curator Agent",
-  };
-  return labels[agentName];
 }
 
 function extractInputUserStoryId(

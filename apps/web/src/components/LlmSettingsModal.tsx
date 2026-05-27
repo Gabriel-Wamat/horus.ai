@@ -5,7 +5,12 @@ import {
   type FormEvent,
   type JSX,
 } from "react";
-import type { LlmProvider, LlmSettings } from "@u-build/shared";
+import { Eye, EyeOff, PlugZap, Trash2 } from "lucide-react";
+import type {
+  LlmProvider,
+  LlmSettingsDraft,
+  LlmSettingsProfile,
+} from "@u-build/shared";
 
 const PROVIDERS: Array<{ value: LlmProvider; label: string }> = [
   { value: "openai", label: "OpenAI" },
@@ -15,35 +20,63 @@ const PROVIDERS: Array<{ value: LlmProvider; label: string }> = [
 
 interface LlmSettingsModalProps {
   readonly isOpen: boolean;
-  readonly settings: LlmSettings | null;
-  readonly onSave: (settings: LlmSettings) => void;
+  readonly profile: LlmSettingsProfile | null;
+  readonly onSave: (
+    settings: LlmSettingsDraft & {
+      validationStatus?: "untested" | "valid" | "invalid";
+      validationMessage?: string;
+      validatedAt?: string;
+    }
+  ) => Promise<void>;
+  readonly onTest: (
+    settings: LlmSettingsDraft
+  ) => Promise<{ ok: boolean; message: string; testedAt: string }>;
+  readonly onDelete: () => Promise<void>;
   readonly onClose: () => void;
 }
 
 export function LlmSettingsModal({
   isOpen,
-  settings,
+  profile,
   onSave,
+  onTest,
+  onDelete,
   onClose,
 }: LlmSettingsModalProps): JSX.Element | null {
   const [provider, setProvider] = useState<LlmProvider>("openai");
   const [model, setModel] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [isRevealed, setIsRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [validation, setValidation] = useState<{
+    status: "untested" | "valid" | "invalid";
+    message?: string;
+    testedAt?: string;
+  }>({ status: "untested" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const firstFieldRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setProvider(settings?.provider ?? "openai");
-    setModel(settings?.model ?? "");
-    setApiKey(settings?.apiKey ?? "");
+    setProvider(profile?.provider ?? "openai");
+    setModel(profile?.model ?? "");
+    setBaseUrl(profile?.baseUrl ?? "");
+    setApiKey("");
     setIsRevealed(false);
     setError(null);
+    setNotice(null);
+    setValidation({
+      status: profile?.validationStatus ?? "untested",
+      ...(profile?.validationMessage ? { message: profile.validationMessage } : {}),
+      ...(profile?.validatedAt ? { testedAt: profile.validatedAt } : {}),
+    });
 
     window.setTimeout(() => firstFieldRef.current?.focus(), 0);
-  }, [isOpen, settings]);
+  }, [isOpen, profile]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -58,25 +91,73 @@ export function LlmSettingsModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-
+  const buildDraft = (): LlmSettingsDraft | null => {
     const trimmedModel = model.trim();
     const trimmedKey = apiKey.trim();
+    const trimmedBaseUrl = baseUrl.trim();
+
     if (!trimmedModel) {
       setError("Informe um modelo.");
-      return;
+      return null;
     }
-    if (!trimmedKey) {
+    if (!trimmedKey && !profile) {
       setError("Informe uma chave API.");
-      return;
+      return null;
     }
 
-    onSave({
+    return {
       provider,
       model: trimmedModel,
-      apiKey: trimmedKey,
-    });
+      persistenceMode: "persisted",
+      ...(trimmedKey ? { apiKey: trimmedKey } : {}),
+      ...(trimmedBaseUrl ? { baseUrl: trimmedBaseUrl } : {}),
+    };
+  };
+
+  const handleTest = async (): Promise<void> => {
+    const draft = buildDraft();
+    if (!draft) return;
+    if (!draft.apiKey) {
+      setError("Informe uma nova chave para testar. Chaves salvas não são expostas no navegador.");
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setIsTesting(true);
+    try {
+      const result = await onTest(draft);
+      setValidation({
+        status: result.ok ? "valid" : "invalid",
+        message: result.message,
+        testedAt: result.testedAt,
+      });
+      setNotice(result.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao testar provider.";
+      setValidation({ status: "invalid", message });
+      setError(message);
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const draft = buildDraft();
+    if (!draft) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    void onSave({
+      ...draft,
+      validationStatus: validation.status,
+      ...(validation.message ? { validationMessage: validation.message } : {}),
+      ...(validation.testedAt ? { validatedAt: validation.testedAt } : {}),
+    })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Falha ao salvar provider.");
+      })
+      .finally(() => setIsSubmitting(false));
   };
 
   return (
@@ -151,6 +232,7 @@ export function LlmSettingsModal({
               onChange={(event) => setApiKey(event.target.value)}
               autoComplete="new-password"
               spellCheck={false}
+              placeholder={profile?.keyLast4 ? `Chave salva terminando em ${profile.keyLast4}` : ""}
             />
             <button
               className="secret-toggle"
@@ -158,32 +240,71 @@ export function LlmSettingsModal({
               aria-label={isRevealed ? "Ocultar API key" : "Mostrar API key"}
               onClick={() => setIsRevealed((value) => !value)}
             >
-              <EyeIcon hidden={isRevealed} />
+              {isRevealed ? <EyeOff className="icon" /> : <Eye className="icon" />}
             </button>
           </div>
         </label>
 
+        <label className="field">
+          <span className="field-label">Base URL</span>
+          <input
+            className="field-control"
+            name="horus-llm-base-url"
+            value={baseUrl}
+            onChange={(event) => setBaseUrl(event.target.value)}
+            placeholder="Default do provider"
+            autoComplete="off"
+          />
+        </label>
+
+        {profile && (
+          <div className="settings-status">
+            <span>{profile.provider}</span>
+            <span>{profile.validationStatus}</span>
+            {profile.keyLast4 && <span>key ****{profile.keyLast4}</span>}
+          </div>
+        )}
+
+        {notice && <div className="form-notice">{notice}</div>}
         {error && <div className="form-error">{error}</div>}
 
         <div className="modal-actions">
+          {profile && (
+            <button
+              className="secondary-action danger-action"
+              type="button"
+              disabled={isSubmitting || isTesting}
+              onClick={() => {
+                setIsSubmitting(true);
+                void onDelete()
+                  .then(onClose)
+                  .catch((err) =>
+                    setError(err instanceof Error ? err.message : "Falha ao remover chave.")
+                  )
+                  .finally(() => setIsSubmitting(false));
+              }}
+            >
+              <Trash2 className="button-icon" />
+              Remover
+            </button>
+          )}
+          <button
+            className="secondary-action"
+            type="button"
+            disabled={isSubmitting || isTesting}
+            onClick={() => void handleTest()}
+          >
+            <PlugZap className="button-icon" />
+            {isTesting ? "Testando" : "Testar"}
+          </button>
           <button className="secondary-action" type="button" onClick={onClose}>
             Cancelar
           </button>
-          <button className="primary-action" type="submit">
-            Salvar
+          <button className="primary-action" type="submit" disabled={isSubmitting || isTesting}>
+            {isSubmitting ? "Salvando" : "Salvar"}
           </button>
         </div>
       </form>
     </div>
-  );
-}
-
-function EyeIcon({ hidden }: { hidden: boolean }): JSX.Element {
-  return (
-    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" />
-      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-      {hidden && <path d="m4 20 16-16" />}
-    </svg>
   );
 }

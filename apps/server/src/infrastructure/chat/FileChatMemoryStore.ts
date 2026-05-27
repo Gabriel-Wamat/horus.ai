@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -19,6 +18,10 @@ import {
   type UserStory,
   type WorkspaceArtifactContext,
 } from "@u-build/shared";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 interface ActiveStoryContextReader {
   getActiveStoryContext(
@@ -60,29 +63,15 @@ export class FileChatMemoryStore {
     return join(this.sessionDir(sessionId), MESSAGES_FILE);
   }
 
-  private async ensureBaseDir(): Promise<void> {
-    await fs.mkdir(this.baseDir, { recursive: true });
-  }
-
   private async readSessions(): Promise<ChatSession[]> {
-    await this.ensureBaseDir();
-    try {
-      const raw = await fs.readFile(this.sessionsPath(), "utf-8");
-      return ChatSessionSchema.array().parse(JSON.parse(raw));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-      throw err;
-    }
+    return readJsonFile(this.sessionsPath(), ChatSessionSchema.array(), {
+      defaultValue: [],
+    });
   }
 
   private async writeSessions(sessions: ChatSession[]): Promise<void> {
-    await this.ensureBaseDir();
     const validated = ChatSessionSchema.array().parse(sessions);
-    await fs.writeFile(
-      this.sessionsPath(),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.sessionsPath(), validated);
   }
 
   private async getSession(sessionId: string): Promise<ChatSession> {
@@ -95,26 +84,17 @@ export class FileChatMemoryStore {
 
   private async readMessages(sessionId: string): Promise<ChatMessage[]> {
     await this.getSession(sessionId);
-    try {
-      const raw = await fs.readFile(this.messagesPath(sessionId), "utf-8");
-      return ChatMessageSchema.array().parse(JSON.parse(raw));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-      throw err;
-    }
+    return readJsonFile(this.messagesPath(sessionId), ChatMessageSchema.array(), {
+      defaultValue: [],
+    });
   }
 
   private async writeMessages(
     sessionId: string,
     messages: ChatMessage[]
   ): Promise<void> {
-    await fs.mkdir(this.sessionDir(sessionId), { recursive: true });
     const validated = ChatMessageSchema.array().parse(messages);
-    await fs.writeFile(
-      this.messagesPath(sessionId),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.messagesPath(sessionId), validated);
   }
 
   private async buildSnapshot(

@@ -13,6 +13,7 @@ import { ProjectDefaultContractBuilder } from "./ProjectDefaultContractBuilder.j
 import { ProjectManifestService } from "./ProjectManifestService.js";
 import { resolveFrontendStackAdapter } from "./FrontendStackAdapters.js";
 import { isInsideRoot } from "./ProjectPathSafety.js";
+import { loadRuntimeConfig } from "../config/runtimeConfig.js";
 
 export class ProjectWorkspaceError extends Error {
   constructor(message: string) {
@@ -69,10 +70,17 @@ export class ProjectWorkspaceService {
   private readonly configService: ProjectConfigService;
   private readonly manifestService: ProjectManifestService;
   private readonly defaultContractBuilder: ProjectDefaultContractBuilder;
+  private readonly defaultProjectWorkspaceRoot: string;
+  private readonly defaultRunWorkspaceRoot: string;
 
   constructor(options: ProjectWorkspaceServiceOptions = {}) {
     this.env = options.env ?? process.env;
     this.repositoryRoot = resolve(options.repositoryRoot ?? DEFAULT_REPOSITORY_ROOT);
+    const runtimeConfig = loadRuntimeConfig(this.env, {
+      repositoryRoot: this.repositoryRoot,
+    });
+    this.defaultProjectWorkspaceRoot = runtimeConfig.paths.projectWorkspacesDir;
+    this.defaultRunWorkspaceRoot = runtimeConfig.paths.projectRunWorktreesDir;
     this.git = options.git ?? new GitCommandExecutor();
     this.configService = options.configService ?? new ProjectConfigService();
     this.manifestService = options.manifestService ?? new ProjectManifestService();
@@ -83,7 +91,11 @@ export class ProjectWorkspaceService {
   resolveProjectWorkspaceRoot(): string {
     return resolve(
       this.repositoryRoot,
-      readEnv(this.env, "HORUS_PROJECT_WORKSPACE_ROOT", "data/project-workspaces")
+      readEnv(
+        this.env,
+        "HORUS_PROJECT_WORKSPACE_ROOT",
+        this.defaultProjectWorkspaceRoot
+      )
     );
   }
 
@@ -300,7 +312,11 @@ export class ProjectWorkspaceService {
   private resolveRunWorkspaceRoot(targetRepoRoot: string): string {
     const configured = resolve(
       this.repositoryRoot,
-      readEnv(this.env, "HORUS_PROJECT_RUN_WORKSPACE_ROOT", "data/project-run-worktrees")
+      readEnv(
+        this.env,
+        "HORUS_PROJECT_RUN_WORKSPACE_ROOT",
+        this.defaultRunWorkspaceRoot
+      )
     );
     return isInsideRoot(targetRepoRoot, configured)
       ? resolve(dirname(targetRepoRoot), `.${targetRepoRoot.split(/[\\/]/u).pop()}-horus-worktrees`)

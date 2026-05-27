@@ -1,0 +1,129 @@
+---
+title: Contributing
+description: Engineering rules for changing Horus.AI safely.
+---
+
+## Principles
+
+- Read the owning module before changing it.
+- Preserve architecture boundaries.
+- Keep shared schemas explicit and validated.
+- Preserve evidence and validation semantics.
+- Do not introduce machine-specific paths.
+- Do not commit local runtime state.
+
+The project is agentic, but the engineering bar is conventional: small scoped changes, explicit contracts, real validation, and no hidden dependency on one developer's workstation.
+
+## Boundaries
+
+| Area | Path | Rule |
+| --- | --- | --- |
+| Shared contracts | `packages/shared` | Update schemas and tests together |
+| Server domain | `apps/server/src/domain` | Keep core workflow behavior framework-light |
+| Application layer | `apps/server/src/application` | Own use cases and orchestration services |
+| Infrastructure | `apps/server/src/infrastructure` | Own adapters, repositories, agents, preview, LLM, HTTP |
+| Product UI | `apps/web` | Keep operational UI evidence-driven |
+| Docs UI | `apps/docs` | Keep documentation beautiful and separate |
+| Agent skills | `skills/agents` | Keep runtime instructions specific to each agent |
+
+## Persistence Changes
+
+<Warning>
+Persistence changes must preserve file mode and Postgres mode unless the change is explicitly mode-specific.
+</Warning>
+
+Checklist:
+
+- Update repository contracts.
+- Update file repository implementation.
+- Update Postgres implementation when applicable.
+- Add migration tests for database changes.
+- Use atomic writes for file-mode JSON.
+- Keep secrets out of workflow/chat/event records.
+- Document new runtime directories or tables.
+- Update `.gitignore` when a new local runtime path is introduced.
+- Add reset or migration notes when operational behavior changes.
+
+## Configuration Changes
+
+Configuration changes are user-facing. Treat them as part of the public API.
+
+When adding an environment variable:
+
+- Add it to `.env.example` with a safe placeholder.
+- Document it in `apps/docs/content/docs/configuration.mdx`.
+- Explain whether it is required, optional, secret, or local-only.
+- Avoid defaults that include absolute paths or OS-specific assumptions.
+- Add tests for parsing and fallback behavior when the variable influences runtime behavior.
+
+## Workflow Changes
+
+When changing LangGraph routing:
+
+- Prevent infinite loops.
+- Preserve human checkpoints.
+- Preserve Curator approval before apply.
+- Preserve run-flow events.
+- Add routing or orchestrator tests.
+- Verify retry budget behavior.
+- Confirm persisted state is enough to resume or debug the new path.
+- Update workflow documentation when agent responsibilities or routing semantics change.
+
+## Agent Skill Changes
+
+Agent skills under `skills/agents` are executable project behavior, not loose notes.
+
+When editing a skill:
+
+- Keep the instruction scoped to that agent.
+- Avoid embedding local paths, secrets, or non-portable commands.
+- Preserve the expected output shape consumed by TypeScript code.
+- Update Curator/QA expectations if a skill changes validation semantics.
+- Run the workflow tests most closely related to the edited agent.
+
+## Frontend Changes
+
+Frontend work should keep the app dense, clear, and operational.
+
+Run:
+
+```bash
+pnpm --filter @u-build/web type-check
+pnpm --filter @u-build/web build
+pnpm --filter @u-build/web test:guards
+```
+
+Frontend changes should make evidence easier to inspect. Avoid UI that hides workflow state behind decorative surfaces or large marketing-style sections.
+
+## Docs Changes
+
+Docs live in two places:
+
+- `README.md` for repository overview.
+- `apps/docs/content/docs` for the Fumadocs/Unmint docs site.
+
+When docs change, run:
+
+```bash
+pnpm --filter @u-build/docs build
+```
+
+Documentation should stay operationally useful:
+
+- Prefer concrete commands over generic prose.
+- Name the owning package/path when describing behavior.
+- Separate supported behavior from planned behavior.
+- Keep private planning material out of public docs.
+- Update `README.md` when a major docs page or deployment URL changes.
+
+## Publication Hygiene
+
+Public repository content should include source code, examples, documentation, schemas, and safe defaults. It should not include:
+
+- Runtime secrets or local provider credentials.
+- Local runtime state generated while running workflows.
+- Build outputs, dependency folders, coverage output, or cache directories.
+- Private planning notes, operator-only files, or machine-specific instructions.
+- Generated project workspaces unless they are intentionally promoted as examples and reviewed as source.
+
+Official docs such as `README.md` and files under `apps/docs/content/docs` are intended to be tracked and reviewed like product code.

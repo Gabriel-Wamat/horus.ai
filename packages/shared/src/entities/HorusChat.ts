@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ChatMessageSchema } from "./ChatMemory.js";
+import { LlmSettingsReferenceSchema } from "./LlmSettings.js";
 
 export const HorusChatModeSchema = z.enum(["chat", "executor"]);
 
@@ -51,6 +52,7 @@ export const HorusChatTurnInputSchema = z.object({
   workspaceFolderId: z.string().uuid().optional(),
   userStoryId: z.string().uuid().optional(),
   workflowThreadId: z.string().uuid().optional(),
+  llmSettingsRef: LlmSettingsReferenceSchema.optional(),
 });
 
 export const HorusChatIntentSchema = z.object({
@@ -81,6 +83,71 @@ export const HorusChatTurnResponseSchema = z.object({
   outcome: HorusChatOutcomeSchema,
 });
 
+const HorusChatStreamBaseSchema = z.object({
+  sequence: z.number().int().positive(),
+});
+
+export const HorusChatStreamEventSchema = z.discriminatedUnion("type", [
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("turn_started"),
+    chatSessionId: z.string().uuid(),
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("user_message_persisted"),
+    message: ChatMessageSchema,
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("intent_classified"),
+    intent: HorusChatIntentSchema,
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("assistant_message_started"),
+    messageId: z.string().trim().min(1),
+    createdAt: z.string().datetime(),
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("assistant_text_delta"),
+    messageId: z.string().trim().min(1),
+    delta: z.string(),
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("evidence_sources"),
+    messageId: z.string().trim().min(1),
+    evidenceSources: z.array(HorusChatEvidenceSourceSchema),
+    groundingStatus: z.enum(["grounded", "partial", "ungrounded"]),
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("action_started"),
+    action: HorusChatOutcomeActionSchema,
+    label: z.string().trim().min(1),
+    workflowThreadId: z.string().uuid().optional(),
+    previewSessionId: z.string().uuid().optional(),
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("action_updated"),
+    action: HorusChatOutcomeActionSchema,
+    status: HorusChatOutcomeStatusSchema,
+    summary: z.string().trim().min(1).optional(),
+    workflowThreadId: z.string().uuid().optional(),
+    previewSessionId: z.string().uuid().optional(),
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("assistant_message_completed"),
+    message: ChatMessageSchema,
+    outcome: HorusChatOutcomeSchema,
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("turn_completed"),
+    response: HorusChatTurnResponseSchema,
+  }),
+  HorusChatStreamBaseSchema.extend({
+    type: z.literal("turn_failed"),
+    errorCode: z.string().trim().min(1),
+    message: z.string().trim().min(1),
+    retryable: z.boolean(),
+  }),
+]);
+
 export type HorusChatIntentKind = z.infer<typeof HorusChatIntentKindSchema>;
 export type HorusChatMode = z.infer<typeof HorusChatModeSchema>;
 export type HorusPreviewAction = z.infer<typeof HorusPreviewActionSchema>;
@@ -91,3 +158,4 @@ export type HorusChatTurnInput = z.infer<typeof HorusChatTurnInputSchema>;
 export type HorusChatIntent = z.infer<typeof HorusChatIntentSchema>;
 export type HorusChatOutcome = z.infer<typeof HorusChatOutcomeSchema>;
 export type HorusChatTurnResponse = z.infer<typeof HorusChatTurnResponseSchema>;
+export type HorusChatStreamEvent = z.infer<typeof HorusChatStreamEventSchema>;

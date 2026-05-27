@@ -136,6 +136,22 @@ export class ProjectFileBrowserService {
     });
   }
 
+  async resolveArchiveRoot(input: {
+    projectId: string;
+    runId?: string;
+  }): Promise<{
+    project: ProjectWorkspace;
+    run: ProjectConstructionRun | null;
+    rootPath: string;
+    rootLabel: string;
+  }> {
+    const resolved = await this.resolveReadableRoot(input);
+    return {
+      ...resolved,
+      rootLabel: basename(resolved.rootPath),
+    };
+  }
+
   async getFileContent(input: {
     projectId: string;
     runId?: string;

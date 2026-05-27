@@ -410,6 +410,88 @@ test("SubmitHorusChatTurnUseCase grounds code questions with file excerpts and e
   assert.equal(received?.codeContext?.excerpts[0]?.filePath, "src/App.tsx");
 });
 
+test("SubmitHorusChatTurnUseCase streams user persistence, text deltas, evidence and final response", async () => {
+  const { chat, chatSession, folder, project, useCase } = await setup({
+    intentClassifier: testIntentClassifier({
+      "Mostre o trecho de src/App.tsx que renderiza User stories.": {
+        kind: "answer_question",
+        mode: "chat",
+        confidence: 0.96,
+        rationale: "Test classifier selected grounded code question.",
+      },
+    }),
+    chatResponder: {
+      answer: async () => "fallback answer",
+      streamAnswer: async function* () {
+        yield "O trecho";
+        yield " está em src/App.tsx.";
+      },
+    },
+  });
+
+  const events = [];
+  for await (const event of useCase.stream({
+    chatSessionId: chatSession.id,
+    message: "Mostre o trecho de src/App.tsx que renderiza User stories.",
+    projectId: project.id,
+    workspaceFolderId: folder.id,
+    userStoryId: userStory.id,
+  })) {
+    events.push(event);
+  }
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    [
+      "turn_started",
+      "user_message_persisted",
+      "intent_classified",
+      "assistant_message_started",
+      "evidence_sources",
+      "assistant_text_delta",
+      "assistant_text_delta",
+      "assistant_message_completed",
+      "turn_completed",
+    ]
+  );
+  assert.equal(
+    events
+      .filter((event) => event.type === "assistant_text_delta")
+      .map((event) => event.delta)
+      .join(""),
+    "O trecho está em src/App.tsx."
+  );
+  assert.equal(events.find((event) => event.type === "evidence_sources")?.groundingStatus, "grounded");
+  assert.equal(events.at(-1)?.response.outcome.summary, "O trecho está em src/App.tsx.");
+
+  const messages = await chat.listMessages(chatSession.id);
+  assert.equal(messages.length, 2);
+  assert.equal(messages[1].body, "O trecho está em src/App.tsx.");
+});
+
+test("SubmitHorusChatTurnUseCase streams controlled preview action lifecycle", async () => {
+  const { chatSession, folder, preview, project, previewRuntime, useCase } = await setup();
+
+  const events = [];
+  for await (const event of useCase.stream({
+    chatSessionId: chatSession.id,
+    message: "Rode o projeto.",
+    previewSessionId: preview.session.id,
+    projectId: project.id,
+    workspaceFolderId: folder.id,
+    userStoryId: userStory.id,
+  })) {
+    events.push(event);
+  }
+
+  assert.ok(events.some((event) => event.type === "action_started"));
+  assert.ok(events.some((event) => event.type === "action_updated"));
+  const completed = events.find((event) => event.type === "turn_completed");
+  assert.equal(completed?.response.outcome.action, "project_execution_started");
+  assert.equal(completed?.response.outcome.previewSessionId, preview.session.id);
+  assert.equal((await previewRuntime.getSession(preview.session.id)).status, "running");
+});
+
 test("SubmitHorusChatTurnUseCase only requests spec generation when the user explicitly asks for it", async () => {
   let received;
   const { chat, chatSession, folder, project, useCase } = await setup({
@@ -434,6 +516,7 @@ test("SubmitHorusChatTurnUseCase only requests spec generation when the user exp
   assert.equal(result.outcome.action, "spec_requested");
   assert.equal(result.outcome.status, "accepted");
   assert.equal(result.outcome.workflowThreadId, "88888888-8888-4888-8888-888888888888");
+  assert.doesNotMatch(result.outcome.summary, /Thread|modo executor/);
   assert.equal(received?.workspaceFolderId, folder.id);
   assert.equal(received?.userStory.id, userStory.id);
   assert.equal(received?.chatSessionId, chatSession.id);
@@ -472,6 +555,7 @@ test("SubmitHorusChatTurnUseCase starts chat code-change orchestration without S
   assert.equal(result.intent.mode, "executor");
   assert.equal(result.outcome.action, "code_change_started");
   assert.equal(result.outcome.workflowThreadId, "99999999-9999-4999-8999-999999999999");
+  assert.doesNotMatch(result.outcome.summary, /Thread|modo executor|Front, QA/);
   assert.equal(received?.chatSessionId, chatSession.id);
   assert.equal(received?.userStory.id, userStory.id);
   assert.equal(received?.spec.id, spec.id);

@@ -216,7 +216,11 @@ export function App(): JSX.Element {
       </div>
     );
 
-  const llmStatus = workflow.llmSettings ? workflow.llmSettings.provider : "env";
+  const llmStatus = workflow.isLoadingLlmProfile
+    ? "checking"
+    : workflow.llmProfile
+    ? `${workflow.llmProfile.provider} ${workflow.llmProfile.validationStatus}`
+    : "env";
   const shellStatus = workflow.threadId
     ? [
         {
@@ -251,12 +255,14 @@ export function App(): JSX.Element {
       </Shell>
       <LlmSettingsModal
         isOpen={isSettingsOpen}
-        settings={workflow.llmSettings}
+        profile={workflow.llmProfile}
         onClose={() => setIsSettingsOpen(false)}
-        onSave={(settings) => {
-          workflow.setLlmSettings(settings);
+        onSave={async (settings) => {
+          await workflow.saveLlmSettings(settings);
           setIsSettingsOpen(false);
         }}
+        onTest={workflow.testLlmSettings}
+        onDelete={workflow.deleteLlmSettings}
       />
       <StoryCreationDialog
         isOpen={isStoryModalOpen}

@@ -10,6 +10,10 @@ import {
   type ProjectQualityGate,
   type ProjectWorkspace,
 } from "@u-build/shared";
+import {
+  readJsonFileRaw,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 import type { ProjectConstructionRepository } from "./contracts.js";
 
 const PROJECTS_FILE = "project-workspaces.json";
@@ -139,7 +143,7 @@ export class FileProjectConstructionRepository
   ): Promise<T[]> {
     await this.ensureBaseDir();
     try {
-      const parsed = JSON.parse(await fs.readFile(join(this.baseDir, filename), "utf-8"));
+      const parsed = await readJsonFileRaw(join(this.baseDir, filename));
       return Array.isArray(parsed) ? parsed.map((item) => schema.parse(item)) : [];
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -148,7 +152,8 @@ export class FileProjectConstructionRepository
   }
 
   private async writeArray(filename: string, value: unknown[]): Promise<void> {
-    await this.ensureBaseDir();
-    await fs.writeFile(join(this.baseDir, filename), `${JSON.stringify(value, null, 2)}\n`, "utf-8");
+    await writeJsonFileAtomic(join(this.baseDir, filename), value, {
+      trailingNewline: true,
+    });
   }
 }

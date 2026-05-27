@@ -8,6 +8,10 @@ import {
   type PreviewSession,
   type VisualInstructionDraft,
 } from "@u-build/shared";
+import {
+  readJsonFile,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 const SESSION_FILE = "session.json";
 const TIMELINE_FILE = "timeline.json";
@@ -45,23 +49,34 @@ export class FilePreviewSessionStore {
 
   async saveSession(session: PreviewSession): Promise<PreviewSession> {
     const validated = PreviewSessionSchema.parse(session);
-    await this.ensureSessionDir(validated.id);
-    await fs.writeFile(
-      this.sessionPath(validated.id),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.sessionPath(validated.id), validated);
     return validated;
   }
 
   async getSession(sessionId: string): Promise<PreviewSession> {
     try {
-      const raw = await fs.readFile(this.sessionPath(sessionId), "utf-8");
-      return PreviewSessionSchema.parse(JSON.parse(raw));
+      return await readJsonFile(this.sessionPath(sessionId), PreviewSessionSchema);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         throw new PreviewSessionNotFoundError(sessionId);
       }
+      throw err;
+    }
+  }
+
+  async listSessions(): Promise<PreviewSession[]> {
+    try {
+      const entries = await fs.readdir(this.baseDir, { withFileTypes: true });
+      const sessions = await Promise.all(
+        entries
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => this.getSession(entry.name))
+      );
+      return sessions.sort((left, right) =>
+        right.updatedAt.localeCompare(left.updatedAt)
+      );
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw err;
     }
   }
@@ -74,18 +89,16 @@ export class FilePreviewSessionStore {
       throw err;
     });
     const nextEvents = [...events, validated];
-    await fs.writeFile(
-      this.timelinePath(validated.sessionId),
-      JSON.stringify(nextEvents, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.timelinePath(validated.sessionId), nextEvents);
     return validated;
   }
 
   async listEvents(sessionId: string): Promise<PreviewEvent[]> {
     try {
-      const raw = await fs.readFile(this.timelinePath(sessionId), "utf-8");
-      return PreviewEventSchema.array().parse(JSON.parse(raw));
+      return await readJsonFile(
+        this.timelinePath(sessionId),
+        PreviewEventSchema.array()
+      );
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     }
@@ -101,18 +114,19 @@ export class FilePreviewSessionStore {
       if (err instanceof PreviewSessionNotFoundError) return [];
       throw err;
     });
-    await fs.writeFile(
-      this.draftsPath(validated.sessionId),
-      JSON.stringify([...drafts, validated], null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.draftsPath(validated.sessionId), [
+      ...drafts,
+      validated,
+    ]);
     return validated;
   }
 
   async listDrafts(sessionId: string): Promise<VisualInstructionDraft[]> {
     try {
-      const raw = await fs.readFile(this.draftsPath(sessionId), "utf-8");
-      return VisualInstructionDraftSchema.array().parse(JSON.parse(raw));
+      return await readJsonFile(
+        this.draftsPath(sessionId),
+        VisualInstructionDraftSchema.array()
+      );
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     }

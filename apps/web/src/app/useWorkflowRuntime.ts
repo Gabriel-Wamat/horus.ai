@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import type { LlmSettings, Spec, UserStory, WorkflowState } from "@u-build/shared";
+import type {
+  LlmSettingsDraft,
+  LlmSettingsProfile,
+  Spec,
+  UserStory,
+  WorkflowState,
+} from "@u-build/shared";
 import { workflowApi } from "../api/workflowApi.js";
 import { useEventStream } from "../hooks/useEventStream.js";
 import type { RetryApprovalPayload } from "../components/RetryApproval.js";
@@ -37,8 +43,19 @@ export function useWorkflowRuntime({
   setThreadId: (threadId: string | null) => void;
   workflowState: WorkflowState | null;
   setWorkflowState: Dispatch<SetStateAction<WorkflowState | null>>;
-  llmSettings: LlmSettings | null;
-  setLlmSettings: (settings: LlmSettings | null) => void;
+  llmProfile: LlmSettingsProfile | null;
+  isLoadingLlmProfile: boolean;
+  saveLlmSettings: (
+    settings: LlmSettingsDraft & {
+      validationStatus?: "untested" | "valid" | "invalid";
+      validationMessage?: string;
+      validatedAt?: string;
+    }
+  ) => Promise<LlmSettingsProfile>;
+  testLlmSettings: (
+    settings: LlmSettingsDraft
+  ) => Promise<{ ok: boolean; message: string; testedAt: string }>;
+  deleteLlmSettings: () => Promise<void>;
   pendingSpec: { userStoryId: string; spec: Spec } | null;
   setPendingSpec: Dispatch<SetStateAction<{ userStoryId: string; spec: Spec } | null>>;
   pendingRetry: RetryApprovalPayload | null;
@@ -60,7 +77,8 @@ export function useWorkflowRuntime({
 } {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
-  const [llmSettings, setLlmSettings] = useState<LlmSettings | null>(null);
+  const [llmProfile, setLlmProfile] = useState<LlmSettingsProfile | null>(null);
+  const [isLoadingLlmProfile, setIsLoadingLlmProfile] = useState(false);
   const [pendingSpec, setPendingSpec] = useState<{ userStoryId: string; spec: Spec } | null>(null);
   const [pendingRetry, setPendingRetry] = useState<RetryApprovalPayload | null>(null);
   const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
@@ -69,6 +87,15 @@ export function useWorkflowRuntime({
   const autoApproveBuildRef = useRef(false);
   const autoApprovedSpecIdsRef = useRef(new Set<string>());
   const processedCountRef = useRef(0);
+
+  useEffect(() => {
+    setIsLoadingLlmProfile(true);
+    void workflowApi
+      .getLlmSettings()
+      .then(setLlmProfile)
+      .catch(() => setLlmProfile(null))
+      .finally(() => setIsLoadingLlmProfile(false));
+  }, []);
 
   useEffect(() => {
     if (!threadId) return;
@@ -159,8 +186,7 @@ export function useWorkflowRuntime({
       const { threadId: id } = await workflowApi.start(
         stories,
         workspaceFolderId,
-        options.workflowMode ?? "standard",
-        llmSettings ?? undefined
+        options.workflowMode ?? "standard"
       );
       setPersistedStories(stories);
       setWorkspaceFolderArtifactsById((current) => ({
@@ -225,13 +251,39 @@ export function useWorkflowRuntime({
     setStorySpecTab("story");
   };
 
+  const saveLlmSettings = async (
+    settings: LlmSettingsDraft & {
+      validationStatus?: "untested" | "valid" | "invalid";
+      validationMessage?: string;
+      validatedAt?: string;
+    }
+  ): Promise<LlmSettingsProfile> => {
+    const profile = await workflowApi.saveLlmSettings(settings);
+    setLlmProfile(profile);
+    return profile;
+  };
+
+  const testLlmSettings = (
+    settings: LlmSettingsDraft
+  ): Promise<{ ok: boolean; message: string; testedAt: string }> =>
+    workflowApi.testLlmSettings(settings);
+
+  const deleteLlmSettings = async (): Promise<void> => {
+    if (!llmProfile) return;
+    await workflowApi.deleteLlmSettings(llmProfile.id);
+    setLlmProfile(null);
+  };
+
   return {
     threadId,
     setThreadId,
     workflowState,
     setWorkflowState,
-    llmSettings,
-    setLlmSettings,
+    llmProfile,
+    isLoadingLlmProfile,
+    saveLlmSettings,
+    testLlmSettings,
+    deleteLlmSettings,
     pendingSpec,
     setPendingSpec,
     pendingRetry,

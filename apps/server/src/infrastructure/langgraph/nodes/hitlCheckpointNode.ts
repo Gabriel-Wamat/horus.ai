@@ -53,7 +53,7 @@ export async function hitlCheckpointNode(
     );
   }
 
-  // Suspends the graph here. MemorySaver persists the full state.
+  // Suspends the graph here. The configured checkpointer persists the full state.
   // Resumes when graph.stream(new Command({ resume: feedback }), config) is called.
   // The interrupt argument is the payload surfaced to the caller (any shape);
   // the return value is the HumanFeedback sent back via Command({ resume }).

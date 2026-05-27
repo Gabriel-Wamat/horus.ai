@@ -26,6 +26,38 @@ test("Project Files tracks dirty state per path and does not use a global dirty 
   assert.doesNotMatch(page, /hasDirtyFile/);
 });
 
+test("Project Files refreshes from preview workflow file-change notifications", () => {
+  const page = read("src/features/project-files/ProjectFilesPage.tsx");
+  const events = read("src/features/project-files/utils/projectFilesEvents.ts");
+  const consoleSource = read("src/components/VisualPreviewConsole.tsx");
+
+  assert.match(events, /PROJECT_FILES_CHANGED_EVENT/);
+  assert.match(events, /emitProjectFilesChanged/);
+  assert.match(page, /isProjectFilesChangedEvent/);
+  assert.match(page, /refreshChangedFiles/);
+  assert.match(page, /refetchOnMount: "always"/);
+  assert.match(page, /dirtyPaths\.has\(state\.activePath\)/);
+  assert.match(page, /queryKey: \["project-files", "tree", state\.selectedProjectId\]/);
+  assert.match(consoleSource, /emitProjectFilesChanged/);
+  assert.match(consoleSource, /event\.type !== "patch_applied"/);
+  assert.match(consoleSource, /paths: event\.filePaths/);
+});
+
+test("Project Files exposes a guarded project ZIP download action", () => {
+  const page = read("src/features/project-files/ProjectFilesPage.tsx");
+  const toolbar = read("src/features/project-files/components/ProjectFilesToolbar.tsx");
+  const api = read("src/api/projectFilesApi.ts");
+
+  assert.match(api, /getDownloadUrl/);
+  assert.match(api, /\/project-files\/projects\/\$\{projectId\}\/download/);
+  assert.match(page, /downloadProject/);
+  assert.match(page, /dirtyPaths\.size > 0/);
+  assert.match(page, /window\.location\.assign/);
+  assert.match(toolbar, /Baixar projeto como ZIP/);
+  assert.match(toolbar, /onDownloadProject/);
+  assert.match(toolbar, /<Download size=\{16\}/);
+});
+
 test("Project file editor uses an IDE engine, not a click-to-edit highlight preview", () => {
   const viewer = read("src/features/project-files/components/CodeViewer.tsx");
   assert.match(viewer, /@monaco-editor\/react/);
@@ -35,6 +67,48 @@ test("Project file editor uses an IDE engine, not a click-to-edit highlight prev
   assert.doesNotMatch(viewer, /<textarea/);
   assert.doesNotMatch(viewer, /isEditing/);
   assert.doesNotMatch(viewer, /dangerouslySetInnerHTML/);
+});
+
+test("Preview chat uses the streaming turn endpoint with optimistic local messages", () => {
+  const consoleSource = read("src/components/VisualPreviewConsole.tsx");
+  const panel = read("src/components/PreviewConversationPanel.tsx");
+  const css = read("src/index.css");
+  const api = read("src/api/horusChatApi.ts");
+
+  assert.match(api, /submitTurnStream/);
+  assert.match(api, /\/horus\/chat\/turn\/stream/);
+  assert.match(api, /res\.body\.getReader\(\)/);
+  assert.match(consoleSource, /createLocalChatMessage/);
+  assert.match(consoleSource, /assistant_text_delta/);
+  assert.match(consoleSource, /user_message_persisted/);
+  assert.match(consoleSource, /previousIndex/);
+  assert.match(consoleSource, /streamWorkflowProgress/);
+  assert.match(consoleSource, /\/api\/agent-runs\/\$\{threadId\}\/events/);
+  assert.match(consoleSource, /new EventSource/);
+  assert.match(consoleSource, /workflow-progress-/);
+  assert.match(consoleSource, /selectWorkflowReplayEvents/);
+  assert.match(consoleSource, /workflowProgressQueuesRef/);
+  assert.match(consoleSource, /workflowActivityFromEvent/);
+  assert.match(consoleSource, /setWorkflowActivity/);
+  assert.match(consoleSource, /scheduleWorkflowActivityClear/);
+  assert.match(consoleSource, /patch_proposed/);
+  assert.match(consoleSource, /patch_applied/);
+  assert.match(consoleSource, /replayCompleted/);
+  assert.match(consoleSource, /isRecentWorkflowMessage/);
+  assert.match(consoleSource, /isLegacyWorkflowProgressMessage/);
+  assert.match(consoleSource, /contextSnapshot\.workflowThreadId/);
+  assert.match(panel, /role="log"/);
+  assert.match(panel, /PreviewWorkflowActivity/);
+  assert.match(panel, /preview-workflow-activity/);
+  assert.match(panel, /previousBodyRef/);
+  assert.match(css, /\.preview-chat-message p[\s\S]*white-space: pre-wrap/);
+  assert.match(css, /preview-workflow-meter/);
+  assert.match(css, /preview-workflow-pulse/);
+  assert.doesNotMatch(
+    consoleSource,
+    /function replaceChatMessage[\s\S]*return mergeChatMessages/
+  );
+  assert.doesNotMatch(consoleSource, /\.submitTurn\(\{/);
 });
 
 test("Agent flow marks manual viewport movement and allows node drag autopan", () => {

@@ -862,6 +862,11 @@ export function StorySpecWorkspace({
   };
 
   const handleSelectFolder = (folderId: string): void => {
+    if (folderExpansion.isFolderExpanded(folderId)) {
+      folderExpansion.toggleFolder(folderId);
+      return;
+    }
+
     folderExpansion.selectFolder(folderId, onSelectWorkspaceFolder);
   };
 
@@ -910,7 +915,11 @@ export function StorySpecWorkspace({
                 }
               >
                 <SpecIcon />
-                {isGeneratingSpecs ? "Gerando" : canGenerateSpecs ? "Specs" : "Specs OK"}
+                {isGeneratingSpecs
+                  ? "Gerando"
+                  : canGenerateSpecs
+                  ? "Gerar specs"
+                  : "Specs prontas"}
               </button>
               <button
                 type="button"
@@ -1099,7 +1108,6 @@ export function StorySpecWorkspace({
                           />
                           <span className="spec-story-copy">
                             <span className="workflow-title" title={story.title}>{story.title}</span>
-                            <span className="workflow-meta" title={storySlug}>{storySlug}</span>
                           </span>
                           <StatusPill label={status.label} tone={status.tone} />
                         </button>
@@ -1138,7 +1146,6 @@ export function StorySpecWorkspace({
                     <span className="step-dot" aria-hidden="true" />
                     <span className="spec-story-copy">
                       <span className="workflow-title" title={story.title}>{story.title}</span>
-                      <span className="workflow-meta" title={storySlug}>{storySlug}</span>
                     </span>
                     <StatusPill label={status.label} tone={status.tone} />
                   </button>

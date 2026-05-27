@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject, type JSX } from "react";
-import type { UserStory, LlmSettings, WorkspaceFolder } from "@u-build/shared";
+import type { UserStory, WorkspaceFolder } from "@u-build/shared";
 import { UserStoryInputPage } from "./UserStoryInputPage.js";
 
 export function StoryCreationDialog({
@@ -29,7 +29,6 @@ export function StoryCreationDialog({
     options?: {
       autoApproveAndBuild?: boolean;
       workflowMode?: "standard" | "spec_generation";
-      llmSettings?: LlmSettings;
     }
   ) => Promise<void>;
   onSelectWorkspaceFolder: (folderId: string) => void;

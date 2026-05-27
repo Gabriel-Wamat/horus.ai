@@ -151,6 +151,45 @@ test("PreviewRuntimeManager records preview_error when adapter startup fails", a
   );
 });
 
+test("PreviewRuntimeManager recovers stale runtime sessions after restart", async () => {
+  class Registry {
+    constructor(project) {
+      this.project = project;
+    }
+    async listProjects() {
+      return [this.project];
+    }
+    async getProject() {
+      return this.project;
+    }
+  }
+
+  const baseDir = await mkdtemp(join(tmpdir(), "horus-preview-runtime-recover-"));
+  const project = projectFixture(baseDir, null, "http://127.0.0.1:65530/");
+  const store = new FilePreviewSessionStore(join(baseDir, "sessions"));
+  await store.saveSession({
+    ...sessionFixture(project, project.previewUrl),
+    status: "running",
+    processId: 12345,
+    startedAt: "2026-05-26T00:00:00.000Z",
+  });
+  const runtime = new PreviewRuntimeManager(
+    new Registry(project),
+    store,
+    new NoopBrowserPreviewAdapter(),
+    new PreviewEventStreamAdapter()
+  );
+
+  const recovered = await runtime.recoverStaleRuntimeSessions();
+  const stored = await store.getSession(recovered[0].id);
+  const timeline = await store.listEvents(stored.id);
+
+  assert.equal(recovered.length, 1);
+  assert.equal(stored.status, "stopped");
+  assert.equal(stored.processId, null);
+  assert.equal(timeline.at(-1).type, "preview_recovered_after_restart");
+});
+
 test("NoopBrowserPreviewAdapter keeps existing lifecycle tests available", async () => {
   const project = projectFixture("/tmp", null, "http://localhost:5174/");
   const adapter = new NoopBrowserPreviewAdapter();

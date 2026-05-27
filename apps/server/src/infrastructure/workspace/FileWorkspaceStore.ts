@@ -10,6 +10,11 @@ import {
   type WorkspaceFolder,
   type WorkspaceArtifactContext,
 } from "@u-build/shared";
+import {
+  readJsonFile,
+  readJsonFileRaw,
+  writeJsonFileAtomic,
+} from "../storage/JsonFileStore.js";
 
 const INDEX_FILE = "folders.json";
 const USER_STORY_FILE = "user-story.json";
@@ -185,24 +190,14 @@ export class FileWorkspaceStore {
   }
 
   private async readFolders(): Promise<WorkspaceFolder[]> {
-    await this.ensureBaseDir();
-    try {
-      const raw = await fs.readFile(this.indexPath(), "utf-8");
-      return WorkspaceFolderSchema.array().parse(JSON.parse(raw));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-      throw err;
-    }
+    return readJsonFile(this.indexPath(), WorkspaceFolderSchema.array(), {
+      defaultValue: [],
+    });
   }
 
   private async writeFolders(folders: WorkspaceFolder[]): Promise<void> {
-    await this.ensureBaseDir();
     const validated = WorkspaceFolderSchema.array().parse(folders);
-    await fs.writeFile(
-      this.indexPath(),
-      JSON.stringify(validated, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.indexPath(), validated);
   }
 
   private async uniqueSlug(name: string, folders: WorkspaceFolder[]): Promise<string> {
@@ -277,8 +272,7 @@ export class FileWorkspaceStore {
   }
 
   private async readJsonFile(path: string): Promise<unknown> {
-    const raw = await fs.readFile(path, "utf-8");
-    return JSON.parse(raw);
+    return readJsonFileRaw(path);
   }
 
   private async readActiveStory(storyDir: string): Promise<UserStory> {
@@ -339,11 +333,7 @@ export class FileWorkspaceStore {
       savedAt: now,
       story: validated,
     };
-    await fs.writeFile(
-      join(revisionsDir, revisionFile),
-      JSON.stringify(revisionPayload, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(join(revisionsDir, revisionFile), revisionPayload);
 
     const activePayload: ActiveStoryFile = {
       folderId,
@@ -352,17 +342,13 @@ export class FileWorkspaceStore {
       updatedAt: now,
       story: validated,
     };
-    await fs.writeFile(
-      this.activeStoryPath(storyDir),
-      JSON.stringify(activePayload, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.activeStoryPath(storyDir), activePayload);
 
-    await fs.writeFile(
-      this.userStoryPath(storyDir),
-      JSON.stringify({ folderId, savedAt: now, story: validated }, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.userStoryPath(storyDir), {
+      folderId,
+      savedAt: now,
+      story: validated,
+    });
 
     const nextManifest: StoryManifest = {
       folderId,
@@ -375,11 +361,7 @@ export class FileWorkspaceStore {
         { revision: nextRevision, file: join(REVISIONS_DIR, revisionFile), createdAt: now },
       ],
     };
-    await fs.writeFile(
-      this.manifestPath(storyDir),
-      JSON.stringify(nextManifest, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.manifestPath(storyDir), nextManifest);
 
     return validated;
   }
@@ -519,11 +501,7 @@ export class FileWorkspaceStore {
       savedAt: now,
       spec: validated,
     };
-    await fs.writeFile(
-      join(revisionsDir, revisionFile),
-      JSON.stringify(revisionPayload, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(join(revisionsDir, revisionFile), revisionPayload);
 
     const activePayload: ActiveSpecFile = {
       folderId,
@@ -533,11 +511,7 @@ export class FileWorkspaceStore {
       updatedAt: now,
       spec: validated,
     };
-    await fs.writeFile(
-      this.activeSpecPath(specDir),
-      JSON.stringify(activePayload, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.activeSpecPath(specDir), activePayload);
 
     const nextManifest: SpecManifest = {
       folderId,
@@ -551,11 +525,7 @@ export class FileWorkspaceStore {
         { revision: nextRevision, file: join(REVISIONS_DIR, revisionFile), createdAt: now },
       ],
     };
-    await fs.writeFile(
-      this.specManifestPath(specDir),
-      JSON.stringify(nextManifest, null, 2),
-      "utf-8"
-    );
+    await writeJsonFileAtomic(this.specManifestPath(specDir), nextManifest);
 
     return validated;
   }

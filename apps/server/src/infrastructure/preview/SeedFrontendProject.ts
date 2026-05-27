@@ -87,6 +87,12 @@ async function discoverFrontendProjectRoot(
     });
   }
 
+  const defaultWebApp = join(appsRoot, "web");
+  const preferred = candidates.find(
+    (candidate) => candidate.isFrontend && candidate.path === defaultWebApp
+  );
+  if (preferred) return preferred.path;
+
   const selected =
     candidates.find((candidate) => candidate.isFrontend) ?? candidates[0];
   if (selected) return selected.path;

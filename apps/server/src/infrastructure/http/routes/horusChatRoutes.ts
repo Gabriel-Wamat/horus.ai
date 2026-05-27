@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
-import { HorusChatTurnInputSchema } from "@u-build/shared";
+import { HorusChatStreamEventSchema, HorusChatTurnInputSchema } from "@u-build/shared";
 import {
   HorusChatContextMismatchError,
   type SubmitHorusChatTurnUseCase,
@@ -26,6 +26,40 @@ export function createHorusChatRouter(deps: HorusChatRouteDeps): Router {
       const result = await deps.submitChatTurnUseCase.execute(input);
       res.status(201).json(result);
     } catch (err) {
+      handleHorusChatRouteError(err, res);
+    }
+  });
+
+  router.post("/chat/turn/stream", async (req: Request, res: Response) => {
+    try {
+      const input = HorusChatTurnInputSchema.parse(req.body);
+      res.status(200);
+      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders?.();
+
+      for await (const event of deps.submitChatTurnUseCase.stream(input)) {
+        if (res.writableEnded) break;
+        const parsed = HorusChatStreamEventSchema.parse(event);
+        res.write(`event: ${parsed.type}\n`);
+        res.write(`data: ${JSON.stringify(parsed)}\n\n`);
+      }
+      res.end();
+    } catch (err) {
+      if (res.headersSent) {
+        const event = HorusChatStreamEventSchema.parse({
+          type: "turn_failed",
+          sequence: 1,
+          errorCode: "horus_chat_stream_failed",
+          message: err instanceof Error ? err.message : "Falha ao processar mensagem.",
+          retryable: false,
+        });
+        res.write(`event: ${event.type}\n`);
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        res.end();
+        return;
+      }
       handleHorusChatRouteError(err, res);
     }
   });
