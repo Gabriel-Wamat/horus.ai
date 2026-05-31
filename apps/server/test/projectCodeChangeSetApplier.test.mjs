@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -70,6 +78,72 @@ test("ProjectCodeChangeSetApplier captures previous file content on update", asy
   assert.equal(result.operations[0].changeType, "update");
 });
 
+test("ProjectCodeChangeSetApplier deletes existing files and records restoration content", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-project-"));
+  await mkdir(join(projectRoot, "src"), { recursive: true });
+  await writeFile(join(projectRoot, "src", "obsolete.ts"), "export {};\n", "utf8");
+  const applier = new ProjectCodeChangeSetApplier();
+
+  const result = await applier.apply({
+    changeSet: {
+      ...baseChangeSet,
+      operations: [
+        {
+          targetPath: "src/obsolete.ts",
+          changeType: "delete",
+          beforeContent: null,
+          afterContent: null,
+          diff: "diff --git a/src/obsolete.ts b/src/obsolete.ts\n--- a/src/obsolete.ts\n+++ /dev/null",
+        },
+      ],
+    },
+    projectRootPath: projectRoot,
+  });
+
+  await assert.rejects(() => access(join(projectRoot, "src", "obsolete.ts")), {
+    code: "ENOENT",
+  });
+  assert.equal(result.status, "applied");
+  assert.equal(result.operations[0].changeType, "delete");
+  assert.equal(result.operations[0].beforeContent, "export {};\n");
+  assert.equal(result.operations[0].afterContent, null);
+});
+
+test("ProjectCodeChangeSetApplier rolls back deleted files after a later operation fails", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-project-"));
+  await mkdir(join(projectRoot, "src"), { recursive: true });
+  await writeFile(join(projectRoot, "src", "App.tsx"), "before", "utf8");
+  await writeFile(join(projectRoot, "blocked"), "not a directory", "utf8");
+  const applier = new ProjectCodeChangeSetApplier();
+
+  await assert.rejects(
+    () =>
+      applier.apply({
+        changeSet: {
+          ...baseChangeSet,
+          operations: [
+            {
+              targetPath: "src/App.tsx",
+              changeType: "delete",
+              beforeContent: null,
+              afterContent: null,
+              diff: "diff --git a/src/App.tsx b/src/App.tsx\n--- a/src/App.tsx\n+++ /dev/null",
+            },
+            {
+              ...baseChangeSet.operations[0],
+              targetPath: "blocked/new.ts",
+              afterContent: "after",
+            },
+          ],
+        },
+        projectRootPath: projectRoot,
+      }),
+    /ENOTDIR|EEXIST/
+  );
+
+  assert.equal(await readFile(join(projectRoot, "src", "App.tsx"), "utf8"), "before");
+});
+
 test("ProjectCodeChangeSetApplier rejects paths outside selected project root", async () => {
   const projectRoot = await mkdtemp(join(tmpdir(), "horus-project-"));
   const applier = new ProjectCodeChangeSetApplier();
@@ -111,6 +185,48 @@ test("ProjectCodeChangeSetApplier rejects absolute target paths", async () => {
         projectRootPath: projectRoot,
       }),
     /must be relative/
+  );
+});
+
+test("ProjectCodeChangeSetApplier rejects sensitive and symlink target paths", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-project-"));
+  const outsideRoot = await mkdtemp(join(tmpdir(), "horus-outside-"));
+  await mkdir(join(projectRoot, "src"), { recursive: true });
+  await symlink(outsideRoot, join(projectRoot, "src", "linked"));
+  const applier = new ProjectCodeChangeSetApplier();
+
+  await assert.rejects(
+    () =>
+      applier.apply({
+        changeSet: {
+          ...baseChangeSet,
+          operations: [
+            {
+              ...baseChangeSet.operations[0],
+              targetPath: ".env",
+            },
+          ],
+        },
+        projectRootPath: projectRoot,
+      }),
+    /sensitive/
+  );
+
+  await assert.rejects(
+    () =>
+      applier.apply({
+        changeSet: {
+          ...baseChangeSet,
+          operations: [
+            {
+              ...baseChangeSet.operations[0],
+              targetPath: "src/linked/file.ts",
+            },
+          ],
+        },
+        projectRootPath: projectRoot,
+      }),
+    /symlink/
   );
 });
 

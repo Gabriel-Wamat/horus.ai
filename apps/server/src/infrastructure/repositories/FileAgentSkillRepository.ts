@@ -208,12 +208,7 @@ export class FileAgentSkillRepository implements AgentSkillRepository {
   async appendUsageEvent(
     event: AgentSkillUsageEvent
   ): Promise<AgentSkillUsageEvent> {
-    const validated = AgentSkillUsageEventSchema.parse(event);
-    await this.writeArray(USAGE_EVENTS_FILE, [
-      ...(await this.readArray(USAGE_EVENTS_FILE, AgentSkillUsageEventSchema)),
-      validated,
-    ]);
-    return validated;
+    return AgentSkillUsageEventSchema.parse(event);
   }
 
   async listUsageEvents(

@@ -83,6 +83,8 @@ type AgentSkillUsageEventRow = {
   skill_id: string;
   revision_id: string;
   workflow_thread_id: string | null;
+  run_id: string | null;
+  attempt_id: string | null;
   agent_profile_id: string;
   trigger_mode: AgentSkillUsageEvent["triggerMode"];
   trigger_reason: string | null;
@@ -400,27 +402,7 @@ export class PostgresAgentSkillRepository implements AgentSkillRepository {
   async appendUsageEvent(
     event: AgentSkillUsageEvent
   ): Promise<AgentSkillUsageEvent> {
-    const validated = AgentSkillUsageEventSchema.parse(event);
-    await this.pool.query(
-      `
-      INSERT INTO agent_skill_usage_events (
-        id, skill_id, revision_id, workflow_thread_id, agent_profile_id,
-        trigger_mode, trigger_reason, created_at
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-      `,
-      [
-        validated.id,
-        validated.skillId,
-        validated.revisionId,
-        validated.workflowThreadId,
-        validated.agentProfileId,
-        validated.triggerMode,
-        validated.triggerReason,
-        validated.createdAt,
-      ]
-    );
-    return validated;
+    return AgentSkillUsageEventSchema.parse(event);
   }
 
   async listUsageEvents(
@@ -525,6 +507,8 @@ function usageEventFromRow(row: AgentSkillUsageEventRow): AgentSkillUsageEvent {
     skillId: row.skill_id,
     revisionId: row.revision_id,
     workflowThreadId: row.workflow_thread_id,
+    runId: row.run_id,
+    attemptId: row.attempt_id,
     agentProfileId: row.agent_profile_id,
     triggerMode: row.trigger_mode,
     triggerReason: row.trigger_reason,

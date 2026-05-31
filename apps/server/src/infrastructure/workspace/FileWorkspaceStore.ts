@@ -15,78 +15,26 @@ import {
   readJsonFileRaw,
   writeJsonFileAtomic,
 } from "../storage/JsonFileStore.js";
-
-const INDEX_FILE = "folders.json";
-const USER_STORY_FILE = "user-story.json";
-const ACTIVE_FILE = "active.json";
-const MANIFEST_FILE = "manifest.json";
-const REVISIONS_DIR = "revisions";
-const SPECS_DIR = "specs";
-
-interface StoryRevisionEntry {
-  revision: number;
-  file: string;
-  createdAt: string;
-}
-
-interface StoryManifest {
-  folderId: string;
-  storyId: string;
-  createdAt: string;
-  updatedAt: string;
-  activeRevision: number;
-  revisions: StoryRevisionEntry[];
-}
-
-interface ActiveStoryFile {
-  folderId: string;
-  storyId: string;
-  activeRevision: number;
-  updatedAt: string;
-  story: UserStory;
-}
-
-interface StoryRevisionFile {
-  folderId: string;
-  storyId: string;
-  revision: number;
-  savedAt: string;
-  story: UserStory;
-}
-
-interface SpecRevisionEntry {
-  revision: number;
-  file: string;
-  createdAt: string;
-}
-
-interface SpecManifest {
-  folderId: string;
-  storyId: string;
-  specId: string;
-  createdAt: string;
-  updatedAt: string;
-  activeRevision: number;
-  revisions: SpecRevisionEntry[];
-}
-
-interface ActiveSpecFile {
-  folderId: string;
-  storyId: string;
-  specId: string;
-  activeRevision: number;
-  updatedAt: string;
-  spec: Spec;
-}
-
-interface SpecRevisionFile {
-  folderId: string;
-  storyId: string;
-  specId: string;
-  revision: number;
-  savedAt: string;
-  spec: Spec;
-}
+import {
+  ACTIVE_FILE,
+  INDEX_FILE,
+  MANIFEST_FILE,
+  REVISIONS_DIR,
+  SPECS_DIR,
+  USER_STORY_FILE,
+  revisionFileName,
+  sameSpec,
+  sameStory,
+  slugify,
+  specRevisionFileName,
+  storyDirectoryName,
+  type ActiveSpecFile,
+  type ActiveStoryFile,
+  type SpecManifest,
+  type SpecRevisionFile,
+  type StoryManifest,
+  type StoryRevisionFile,
+} from "./FileWorkspaceArtifacts.js";
 
 export interface WorkspaceArtifactRevisionMetadata {
   activeRevision: number;
@@ -140,38 +88,6 @@ export class WorkspaceSpecNotFoundError extends Error {
     super(`Workspace spec not found: ${specId}`);
     this.name = "WorkspaceSpecNotFoundError";
   }
-}
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48);
-
-  return slug || "workspace";
-}
-
-function storyDirectoryName(story: UserStory): string {
-  return `${slugify(story.title)}-${story.id.slice(0, 8)}`;
-}
-
-function revisionFileName(revision: number): string {
-  return `${revision.toString().padStart(4, "0")}-user-story.json`;
-}
-
-function specRevisionFileName(revision: number): string {
-  return `${revision.toString().padStart(4, "0")}-spec.json`;
-}
-
-function sameStory(left: UserStory, right: UserStory): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function sameSpec(left: Spec, right: Spec): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export class FileWorkspaceStore {

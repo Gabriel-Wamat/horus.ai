@@ -1,0 +1,166 @@
+Horus.AI Restricted Non-Commercial License
+Version 1.0
+
+Copyright (c) 2026 Gabriel Wamat. All rights reserved.
+
+This repository, including its source code, documentation, designs, prompts,
+agent definitions, tests, configuration, and related materials, is proprietary
+software made available under the restricted terms below.
+
+By accessing, copying, cloning, downloading, installing, running, modifying,
+or otherwise using any part of this project, you agree to this license. If you
+do not agree, you must not use the project.
+
+1. Definitions
+
+"Project" means this repository and any file, asset, documentation, design,
+prompt, model configuration, agent workflow, derivative work, or distribution
+based on it.
+
+"Licensor" means Gabriel Wamat or any legal entity expressly authorized in
+writing to license the Project.
+
+"You" means any individual or legal entity accessing or using the Project.
+
+"Commercial Entity" means any corporation, company, partnership, startup,
+government contractor, consulting firm, agency, institution, or other
+organization using the Project for business, professional, revenue-generating,
+fundraising, client-service, or operational purposes. Employees, contractors,
+consultants, founders, agents, and representatives acting for or on behalf of a
+Commercial Entity are treated as that Commercial Entity.
+
+"Commercial Use" means any use intended for, connected to, or reasonably capable
+of producing commercial advantage, monetary compensation, business value,
+operational value, product value, client value, internal company value,
+fundraising value, marketing value, or competitive advantage, whether direct or
+indirect.
+
+2. Limited Permission for Non-Commercial Evaluation
+
+Subject to full compliance with this license, the Licensor grants you a limited,
+personal, revocable, non-exclusive, non-transferable, non-sublicensable license
+to access, run, and modify the Project solely for personal, non-commercial
+learning, private study, academic review, and technical evaluation.
+
+This permission does not transfer ownership. All rights not expressly granted
+are reserved by the Licensor.
+
+3. Strict Commercial Restrictions
+
+You may not use the Project for Commercial Use without a separate written
+commercial license signed by the Licensor.
+
+Without limiting the above, you may not:
+
+- use the Project inside a company, startup, agency, consultancy, client
+  engagement, professional service, internal tool, research and development
+  program, product team, or commercial organization;
+- sell, resell, rent, lease, sublicense, host, package, bundle, monetize, or
+  otherwise commercialize the Project or any derivative work;
+- offer the Project, a derivative work, or functionality substantially based on
+  the Project as a SaaS, API, managed service, hosted service, marketplace
+  product, template, framework, integration, plugin, or paid feature;
+- incorporate the Project into any proprietary, commercial, venture-backed,
+  client-facing, enterprise, or revenue-generating product or workflow;
+- use the Project to generate, test, operate, review, automate, or deliver work
+  for customers, employers, contractors, users, investors, sponsors, or clients;
+- use the Project in commercial benchmarking, marketing, sales demonstrations,
+  procurement processes, competitive analysis, or fundraising materials;
+- use the Project or its materials to train, fine-tune, distill, evaluate,
+  improve, benchmark, or build machine-learning models, agent systems, code
+  generation systems, developer tools, or competing products;
+- remove, obscure, or alter copyright notices, license notices, attribution,
+  provenance, or restriction notices;
+- circumvent technical, licensing, attribution, access-control, security, or
+  usage restrictions associated with the Project.
+
+4. Distribution Restrictions
+
+You may not distribute, publish, mirror, upload, share, or make available the
+Project or any derivative work except as expressly permitted by the Licensor in
+writing.
+
+Public forks, package registry publication, container image publication,
+template publication, hosted demos, or public deployments require prior written
+permission from the Licensor.
+
+5. No Trademark or Brand Rights
+
+This license grants no rights to use the names "Horus.AI", "Horus", or any
+associated names, logos, visual identity, domain names, product names, or brand
+assets, except for accurate non-commercial reference to the Project.
+
+6. Contributions
+
+Unless otherwise agreed in writing, any contribution, suggestion, issue,
+pull request, patch, idea, feedback, design, or documentation submitted to the
+Project grants the Licensor a perpetual, irrevocable, worldwide, royalty-free,
+fully paid, sublicensable right to use, reproduce, modify, distribute, display,
+perform, and commercialize that contribution without restriction.
+
+You represent that you have the right to submit any contribution and that it
+does not violate any third-party rights or confidential obligations.
+
+7. Confidentiality and Sensitive Material
+
+You must not use this Project to disclose, process, upload, or distribute
+secrets, credentials, private keys, proprietary data, confidential information,
+regulated data, or third-party materials unless you have all required rights and
+permissions.
+
+8. Termination
+
+Any violation of this license automatically terminates all rights granted to you.
+Upon termination, you must immediately stop using the Project and delete all
+copies, derivatives, deployments, and materials under your control, unless a
+separate written agreement with the Licensor states otherwise.
+
+The Licensor may terminate or modify the permissions granted by this license at
+any time for future use of the Project.
+
+9. Enforcement
+
+Unauthorized Commercial Use, unauthorized distribution, or removal of notices is
+strictly prohibited and may result in legal action, including claims for
+injunctive relief, damages, disgorgement, fees, and any other remedies available
+under applicable law.
+
+10. No Warranty
+
+THE PROJECT IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT,
+SECURITY, RELIABILITY, ACCURACY, OR AVAILABILITY.
+
+11. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR WILL NOT BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, PUNITIVE, OR
+OTHER DAMAGES, INCLUDING LOST PROFITS, LOST REVENUE, LOST DATA, BUSINESS
+INTERRUPTION, SECURITY INCIDENTS, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+OR ANY DAMAGES ARISING FROM OR RELATED TO THE PROJECT OR THIS LICENSE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+12. Third-Party Components
+
+Third-party dependencies, packages, frameworks, and libraries included in or
+used by the Project remain subject to their own licenses. This license applies
+only to the Project materials owned or licensable by the Licensor.
+
+13. Separate Commercial License
+
+Commercial use requires a separate written license agreement signed by the
+Licensor. No email, issue, pull request, documentation text, repository setting,
+package metadata, or informal statement grants commercial rights unless it is a
+written agreement expressly identified as a commercial license and signed by the
+Licensor.
+
+14. Governing Terms
+
+If any provision of this license is held unenforceable, the remaining provisions
+will remain in effect. Failure to enforce any provision is not a waiver of the
+Licensor's rights.
+
+This license is intended to be interpreted as restrictively as permitted by
+applicable law to prevent unauthorized Commercial Use and unauthorized
+commercialization of the Project.

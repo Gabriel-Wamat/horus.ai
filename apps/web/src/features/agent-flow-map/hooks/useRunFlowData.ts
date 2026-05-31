@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { WorkflowEvent, WorkflowState } from "@u-build/shared";
-import type { HorusRunSnapshot } from "../types/api.types.js";
+import type { HorusRunLocator, HorusRunSnapshot } from "../types/api.types.js";
 import { agentFlowApi } from "../utils/agentFlowApi.js";
 import { deriveHorusRunSnapshot } from "../utils/deriveHorusRunSnapshot.js";
 
@@ -11,6 +11,7 @@ interface UseRunFlowDataOptions {
 }
 
 const WORKING_STATUSES = new Set(["running", "awaiting_human"]);
+const RUN_LIST_LIMIT = 12;
 
 export function useRunFlowData({ workflowState, events }: UseRunFlowDataOptions) {
   const localRun = useMemo(
@@ -18,10 +19,15 @@ export function useRunFlowData({ workflowState, events }: UseRunFlowDataOptions)
     [events, workflowState]
   );
   const [activeRunId, setActiveRunId] = useState<string | null>(localRun?.threadId ?? null);
+  const selectedProjectId = useMemo(() => readSelectedProjectId(), []);
 
   const runsQuery = useQuery({
-    queryKey: ["agent-flow-runs"],
-    queryFn: agentFlowApi.listRuns,
+    queryKey: ["agent-flow-runs", selectedProjectId, RUN_LIST_LIMIT],
+    queryFn: () =>
+      agentFlowApi.listRunsWithProjectFallback({
+        projectId: selectedProjectId,
+        limit: RUN_LIST_LIMIT,
+      }),
     refetchInterval: 6000,
   });
 
@@ -49,6 +55,7 @@ export function useRunFlowData({ workflowState, events }: UseRunFlowDataOptions)
       options.unshift({
         threadId: localRun.threadId,
         workspaceFolderId: localRun.workspaceFolderId,
+        frontendProjectId: localRun.sourceState.frontendProjectId,
         workflowMode: localRun.workflowMode,
         status: localRun.status,
         title: localRun.currentUserStoryTitle ?? localRun.threadId,
@@ -57,12 +64,23 @@ export function useRunFlowData({ workflowState, events }: UseRunFlowDataOptions)
         currentNode: localRun.currentNode,
       });
     }
-    return options.filter((option) => {
+    const uniqueOptions = options.filter((option) => {
       if (seen.has(option.threadId)) return false;
       seen.add(option.threadId);
       return true;
     });
-  }, [localRun, runsQuery.data]);
+    if (!selectedProjectId) return uniqueOptions;
+    const projectOptions = uniqueOptions.filter((option) =>
+      runBelongsToSelectedProject(option, selectedProjectId)
+    );
+    return projectOptions.length > 0 ? projectOptions : uniqueOptions;
+  }, [localRun, runsQuery.data, selectedProjectId]);
+
+  useEffect(() => {
+    if (!activeRunId || runOptions.length === 0) return;
+    if (runOptions.some((option) => option.threadId === activeRunId)) return;
+    setActiveRunId(runOptions[0]?.threadId ?? null);
+  }, [activeRunId, runOptions]);
 
   return {
     activeRunId,
@@ -72,4 +90,16 @@ export function useRunFlowData({ workflowState, events }: UseRunFlowDataOptions)
     isLoading: runsQuery.isLoading || runQuery.isLoading,
     error: runsQuery.error ?? runQuery.error,
   };
+}
+
+function readSelectedProjectId(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("projectId");
+}
+
+function runBelongsToSelectedProject(
+  run: HorusRunLocator,
+  projectId: string
+): boolean {
+  return run.frontendProjectId === projectId || run.workspaceFolderId === projectId;
 }

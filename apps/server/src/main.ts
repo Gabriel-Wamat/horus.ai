@@ -2,7 +2,7 @@ import "dotenv/config";
 import { loadRuntimeConfig } from "./infrastructure/config/runtimeConfig.js";
 import { createApp } from "./infrastructure/http/server.js";
 
-const PORT = Number(process.env["PORT"] ?? 3000);
+const PORT = Number(process.env["PORT"] ?? 3001);
 const HOST = process.env["HOST"]?.trim();
 const runtimeConfig = loadRuntimeConfig(process.env);
 

@@ -1,4 +1,6 @@
 export type {
+  AgentRunbookEntry,
+  AgentFileOperationTelemetry,
   HorusAgentExecutionSnapshot,
   HorusAgentEvidenceSummary,
   HorusRunEventSnapshot,

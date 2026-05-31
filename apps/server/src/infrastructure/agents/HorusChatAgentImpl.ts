@@ -6,7 +6,10 @@ import type {
 } from "@u-build/shared";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createChatModel } from "../llm/createChatModel.js";
-import { HORUS_CHAT_ROUTING_PROMPT } from "../../application/services/HorusOdinIntentRouter.js";
+import {
+  buildChatModelInvokeOptions,
+  invokeChatModel,
+} from "../llm/invokeChatModel.js";
 
 export interface HorusChatAnswerInput {
   message: string;
@@ -14,6 +17,7 @@ export interface HorusChatAnswerInput {
   project?: FrontendProject;
   codeContext?: CodeContextBundle;
   llmSettings?: LlmSettings;
+  signal?: AbortSignal;
 }
 
 export interface HorusChatResponder {
@@ -27,10 +31,10 @@ export class HorusChatAgentImpl implements HorusChatResponder {
       temperature: 0.2,
       maxTokens: input.codeContext?.excerpts.length ? 1400 : 700,
     }, input.llmSettings);
-    const response = await model.invoke([
+    const response = await invokeChatModel(model, [
       new SystemMessage(buildHorusSystemPrompt(input)),
       new HumanMessage(buildHorusUserPrompt(input)),
-    ]);
+    ], input.signal);
     const text = extractText(response.content).trim();
     if (!text) {
       throw new Error("Horus LLM returned an empty response.");
@@ -47,7 +51,10 @@ export class HorusChatAgentImpl implements HorusChatResponder {
       new SystemMessage(buildHorusSystemPrompt(input)),
       new HumanMessage(buildHorusUserPrompt(input)),
     ];
-    const stream = await model.stream(messages);
+    const stream = await model.stream(
+      messages,
+      buildChatModelInvokeOptions(input.signal)
+    );
     for await (const chunk of stream) {
       const text = extractText(chunk.content);
       if (text) yield text;
@@ -58,37 +65,54 @@ export class HorusChatAgentImpl implements HorusChatResponder {
 function buildHorusSystemPrompt(input: HorusChatAnswerInput): string {
   const { context, project, codeContext } = input;
   const chatHistory = context.messages
-    .slice(-12)
-    .map((message) => `${message.role}: ${message.body}`)
+    .map((message) => `${message.role}: ${message.compactBody ?? message.body}`)
     .join("\n");
   const inspectedFiles =
     codeContext && codeContext.inspectedFiles.length > 0
       ? codeContext.inspectedFiles.join(", ")
       : "nenhum arquivo inspecionado";
+  const retrievalNotes =
+    codeContext && codeContext.retrievalNotes.length > 0
+      ? codeContext.retrievalNotes.join(" | ")
+      : "sem notas";
   const codeExcerpts = formatCodeExcerpts(codeContext);
 
   return `# Identidade
-Voce e Horus, o orquestrador conversacional do projeto. Voce e a camada de
-entrada do usuario na tela de preview: escuta, entende o contexto isolado do
-chat e decide como responder sem confundir conversa com execucao.
+Voce e Horus, o agente conversacional e executivo do projeto. Voce e a entrada
+do usuario na tela de preview: conversa de forma natural, entende o contexto
+isolado do chat e, quando o usuario pede uma acao mutavel com clareza, o sistema
+pode acionar fluxos controlados de execucao.
 
-Voce nao e o Spec Agent. Voce nao deve transformar toda mensagem do usuario em
-spec. Voce nao e o Front Agent, QA Agent ou Curator Agent. Voce coordena esses
-agentes apenas quando o modo executor for acionado por outro fluxo controlado.
-Neste prompt, o modo atual e exclusivamente chat/ASK.
+Voce nao e o Spec Agent, Front Agent, QA Agent ou Curator Agent isoladamente.
+Voce coordena essas capacidades como produto: conversa, consulta contexto,
+prepara decisoes e encaminha execucoes controladas quando o roteador classifica
+a mensagem como acao. Nesta chamada voce esta redigindo uma resposta; nao afirme
+que arquivos foram alterados se o outcome recebido pelo chat nao indicar isso.
 
-# Politica de decisao Ask vs Action
-${HORUS_CHAT_ROUTING_PROMPT}
+# Capacidades controladas
+Horus pode operar em dois caminhos de produto, sem expor jargao interno ao
+usuario:
+- resposta conversacional: explicar, analisar, consultar contexto e orientar;
+- execucao controlada: quando a mensagem do usuario for imperativa e clara, o
+  backend pode iniciar preview, gerar spec ou acionar alteracao de codigo no
+  projeto selecionado.
 
-# Contrato do modo atual
-O modo atual e ASK / chat. Isso significa:
+Nao chame isso de "ASK" ou "ACTION" para o usuario. Fale em portugues natural:
+"posso editar quando voce pedir a mudanca", "posso acionar os agentes", "posso
+validar e mostrar o diff".
+
+# Contrato da resposta conversacional
+Nesta resposta:
 - responda ao usuario;
-- use apenas contexto fornecido abaixo ou contexto explicitamente consultado em
-  modo somente leitura;
+- use apenas contexto fornecido abaixo ou contexto explicitamente consultado;
 - nao declare que alterou codigo, arquivos, specs, preview, schema ou agentes;
-- nao diga que "vai executar" como se uma acao ja estivesse agendada;
-- se a mensagem pedir acao, explique que isso precisa seguir o modo executor e
-  seja especifico sobre qual acao seria necessaria;
+- nao diga que "vai executar" como se uma acao ja estivesse agendada nesta
+  resposta;
+- se o usuario perguntar se voce consegue editar arquivos, responda que sim:
+  quando ele fizer um pedido imperativo claro, Horus pode acionar edicao
+  controlada do projeto selecionado, com diffs e validacao;
+- se a mensagem pedir uma acao mas chegou nesta resposta conversacional,
+  explique a acao que Horus pode acionar sem se declarar incapaz;
 - se a mensagem for somente uma saudacao, responda naturalmente, sem pedir
   contexto de roteamento;
 - se faltar contexto para responder com seguranca, diga exatamente qual dado
@@ -115,10 +139,11 @@ O modo atual e ASK / chat. Isso significa:
 - Se os arquivos consultados forem insuficientes, diga que a resposta e parcial.
 - Se houver spec ativa, use-a como contrato de implementacao.
 - Se nao houver spec ativa, nao invente uma; apenas reconheca a ausencia.
-- Se o usuario perguntar "o que voce pode fazer?", responda com capacidades em
-  termos de Horus: explicar contexto, analisar codigo em leitura, orientar
-  proximas acoes e, quando o usuario pedir de forma explicita, encaminhar para
-  o modo executor.
+- Se o usuario perguntar "o que voce pode fazer?", responda com capacidades
+  reais em termos de produto: conversar sobre o projeto, consultar codigo do
+  projeto selecionado, iniciar/recarregar/parar preview registrado, gerar specs,
+  acionar agentes de implementacao React/TypeScript, aplicar diffs com validacao
+  quando houver uma mudanca segura, e reportar o resultado.
 
 # Contexto isolado
 workspace_folder_id: ${context.session.workspaceFolderId}
@@ -130,8 +155,10 @@ active_spec_summary: ${context.activeSpec?.summary ?? "sem spec ativa"}
 selected_project_name: ${project?.name ?? "nenhum"}
 selected_project_root: ${project?.rootPath ?? "nenhum"}
 selected_project_route: ${project?.defaultRoute ?? "nenhuma"}
-read_only_files_consulted: ${inspectedFiles}
+files_consulted_for_answer: ${inspectedFiles}
 retrieval_status: ${codeContext?.retrievalStatus ?? "sem consulta"}
+retrieval_notes: ${retrievalNotes}
+context_messages_in_prompt: ${context.messages.length}
 
 ${codeExcerpts}
 
@@ -141,9 +168,9 @@ ${chatHistory || "sem mensagens anteriores"}
 }
 
 function formatCodeExcerpts(codeContext: CodeContextBundle | undefined): string {
-  if (!codeContext) return "# Codigo consultado em modo somente leitura\nnenhum";
+  if (!codeContext) return "# Codigo consultado para esta resposta\nnenhum";
   if (codeContext.retrievalStatus === "no_match" || codeContext.excerpts.length === 0) {
-    return `# Codigo consultado em modo somente leitura
+    return `# Codigo consultado para esta resposta
 Nenhum trecho de codigo compativel foi encontrado. Se a pergunta exigir codigo real,
 diga isso explicitamente e nao invente implementacoes.`;
   }
@@ -155,11 +182,40 @@ motivo: ${excerpt.reason}
 ${excerpt.content}
 \`\`\``)
     .join("\n\n");
-  return `# Codigo consultado em modo somente leitura
+  return `# Codigo consultado para esta resposta
 Use estes trechos como fonte primaria. Ao responder sobre codigo, cite arquivo e linhas.
 Nao invente codigo que nao esteja nos trechos.
 
-${blocks}`;
+${blocks}
+
+${formatStructuralContext(codeContext)}`;
+}
+
+function formatStructuralContext(codeContext: CodeContextBundle): string {
+  const context = codeContext.structuralContext;
+  if (!context) return "# Contexto estrutural AST\nindisponivel";
+  const symbols = context.symbols
+    .slice(0, 16)
+    .map(
+      (symbol) =>
+        `- ${symbol.path}:${symbol.startLine}-${symbol.endLine} ${symbol.kind} ${symbol.name}`
+    )
+    .join("\n");
+  const diagnostics = context.diagnostics
+    .slice(0, 8)
+    .map(
+      (diagnostic) =>
+        `- ${diagnostic.severity} ${diagnostic.path}${diagnostic.startLine ? `:${diagnostic.startLine}` : ""} ${diagnostic.code}: ${diagnostic.message}`
+    )
+    .join("\n");
+  return `# Contexto estrutural AST
+status=${context.status}; parsed=${context.parsedDocumentCount}; symbols=${context.symbolCount}; diagnostics=${context.diagnosticCount}
+
+## Simbolos relevantes
+${symbols || "nenhum"}
+
+## Diagnosticos estruturais
+${diagnostics || "nenhum"}`;
 }
 
 function buildHorusUserPrompt(input: HorusChatAnswerInput): string {

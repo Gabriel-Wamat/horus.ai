@@ -3,6 +3,8 @@ import type {
   AgentToolResult,
   AgentProfileId,
   AgentToolName,
+  ShellCommandResult,
+  ShellCommandOutputEvent,
 } from "@u-build/shared";
 import {
   AgentToolCallSchema,
@@ -23,16 +25,41 @@ export interface AgentToolExecutionInput<TInput = unknown> {
   readonly toolName: AgentToolName;
   readonly input: TInput;
   readonly reason?: string;
+  readonly signal?: AbortSignal;
+  readonly projectRootOverride?: string | undefined;
+  readonly onShellOutput?:
+    | ((event: ShellCommandOutputEvent) => void)
+    | undefined;
+  readonly onShellCommandComplete?:
+    | ((event: ShellCommandResult) => void)
+    | undefined;
 }
 
-type AgentToolHandler = (input: unknown) => Promise<unknown>;
+export interface AgentToolExecutionContext {
+  readonly signal?: AbortSignal;
+  readonly projectRootOverride?: string | undefined;
+  readonly onShellOutput?:
+    | ((event: ShellCommandOutputEvent) => void)
+    | undefined;
+  readonly onShellCommandComplete?:
+    | ((event: ShellCommandResult) => void)
+    | undefined;
+}
+
+type AgentToolHandler = (
+  input: unknown,
+  context: AgentToolExecutionContext
+) => Promise<unknown>;
 
 export interface AgentToolDefinition<TInput = unknown, TOutput = unknown> {
   readonly toolName: AgentToolName;
   readonly mutatesState: boolean;
   readonly inputSchema: z.ZodType<TInput>;
   readonly outputSchema: z.ZodType<TOutput>;
-  readonly handler: (input: TInput) => Promise<TOutput>;
+  readonly handler: (
+    input: TInput,
+    context: AgentToolExecutionContext
+  ) => Promise<TOutput>;
 }
 
 export interface AgentToolAuditSink {
@@ -66,8 +93,10 @@ export class AgentToolRegistry {
       if (!legacyHandler) {
         throw new AgentToolRegistrationError(`Missing handler for ${definitionOrName}`);
       }
+      const toolName = AgentToolNameSchema.parse(definitionOrName);
+      this.profiles.assertToolRegistration(toolName, false);
       this.tools.set(definitionOrName, {
-        toolName: AgentToolNameSchema.parse(definitionOrName),
+        toolName,
         mutatesState: false,
         inputSchema: passthroughSchema(),
         outputSchema: passthroughSchema(),
@@ -77,6 +106,7 @@ export class AgentToolRegistry {
     }
 
     const toolName = AgentToolNameSchema.parse(definitionOrName.toolName);
+    this.profiles.assertToolRegistration(toolName, definitionOrName.mutatesState);
     this.tools.set(toolName, {
       toolName,
       mutatesState: definitionOrName.mutatesState,
@@ -84,6 +114,24 @@ export class AgentToolRegistry {
       outputSchema: definitionOrName.outputSchema as z.ZodType<unknown>,
       handler: definitionOrName.handler as AgentToolHandler,
     });
+  }
+
+  listRegisteredTools(): AgentToolName[] {
+    return [...this.tools.keys()].sort();
+  }
+
+  hasTool(toolName: AgentToolName): boolean {
+    return this.tools.has(AgentToolNameSchema.parse(toolName));
+  }
+
+  canUseTool(agentProfileId: AgentProfileId, toolName: AgentToolName): boolean {
+    return this.profiles.canUseTool(agentProfileId, toolName);
+  }
+
+  isMutatingTool(toolName: AgentToolName): boolean {
+    const parsedToolName = AgentToolNameSchema.parse(toolName);
+    return this.tools.get(parsedToolName)?.mutatesState ??
+      this.profiles.isToolMutating(parsedToolName);
   }
 
   async execute<TOutput = unknown>(
@@ -94,7 +142,7 @@ export class AgentToolRegistry {
     const agentProfileId = AgentProfileIdSchema.parse(input.agentProfileId);
     const toolName = AgentToolNameSchema.parse(input.toolName);
     const tool = this.tools.get(toolName);
-    const mutatesState = tool?.mutatesState ?? false;
+    const mutatesState = tool?.mutatesState ?? this.profiles.isToolMutating(toolName);
 
     if (!this.profiles.canUseTool(agentProfileId, toolName)) {
       const error = new AgentToolAccessBlockedError(
@@ -118,6 +166,7 @@ export class AgentToolRegistry {
       throw new AgentToolNotRegisteredError(`Tool ${toolName} is not registered`);
     }
 
+    assertToolNotAborted(input.signal, toolName);
     const parsedInput = tool.inputSchema.parse(input.input);
     await this.auditSink?.record(
       AgentToolCallSchema.parse({
@@ -136,7 +185,24 @@ export class AgentToolRegistry {
     );
 
     try {
-      const output = tool.outputSchema.parse(await tool.handler(parsedInput));
+      const output = tool.outputSchema.parse(
+        await tool.handler(
+          parsedInput,
+          {
+            ...(input.signal ? { signal: input.signal } : {}),
+            ...(input.projectRootOverride
+              ? { projectRootOverride: input.projectRootOverride }
+              : {}),
+            ...(input.onShellOutput
+              ? { onShellOutput: input.onShellOutput }
+              : {}),
+            ...(input.onShellCommandComplete
+              ? { onShellCommandComplete: input.onShellCommandComplete }
+              : {}),
+          }
+        )
+      );
+      assertToolNotAborted(input.signal, toolName);
       await this.recordToolResult({
         callId,
         agentProfileId,
@@ -215,6 +281,13 @@ export class AgentToolAccessBlockedError extends AgentToolAccessDeniedError {
   }
 }
 
+export class AgentToolAbortedError extends Error {
+  constructor(toolName: AgentToolName) {
+    super(`Tool ${toolName} aborted by agent runtime signal.`);
+    this.name = "AgentToolAbortedError";
+  }
+}
+
 function passthroughSchema(): z.ZodType<unknown> {
   return z.unknown();
 }
@@ -233,6 +306,15 @@ export function redact(value: unknown): unknown {
     );
   }
   return value;
+}
+
+function assertToolNotAborted(
+  signal: AbortSignal | undefined,
+  toolName: AgentToolName
+): void {
+  if (signal?.aborted) {
+    throw new AgentToolAbortedError(toolName);
+  }
 }
 
 export const defaultAgentToolRegistry = new AgentToolRegistry();

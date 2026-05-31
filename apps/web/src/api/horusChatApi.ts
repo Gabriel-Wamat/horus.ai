@@ -45,8 +45,16 @@ export const horusChatApi = {
     return body.session;
   },
 
-  listMessages: async (chatSessionId: string): Promise<ChatMessage[]> => {
-    const res = await fetch(`${BASE}/chat/sessions/${chatSessionId}/messages`, {
+  listMessages: async (
+    chatSessionId: string,
+    filter?: { afterSequence?: number }
+  ): Promise<ChatMessage[]> => {
+    const params = new URLSearchParams();
+    if (filter?.afterSequence !== undefined) {
+      params.set("after_sequence", String(filter.afterSequence));
+    }
+    const query = params.size > 0 ? `?${params.toString()}` : "";
+    const res = await fetch(`${BASE}/chat/sessions/${chatSessionId}/messages${query}`, {
       cache: "no-store",
     });
     await requireOk(res, "Listar mensagens do chat");
@@ -92,8 +100,9 @@ export const horusChatApi = {
     const parseFrame = (frame: string): void => {
       const data = frame
         .split("\n")
-        .find((line) => line.startsWith("data: "))
-        ?.slice("data: ".length);
+        .filter((line) => line.startsWith("data: "))
+        .map((line) => line.slice("data: ".length))
+        .join("\n");
       if (!data) return;
       onEvent(JSON.parse(data) as HorusChatStreamEvent);
     };

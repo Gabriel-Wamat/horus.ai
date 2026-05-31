@@ -57,16 +57,14 @@ export class ValidationGateAggregator {
     const gates: ValidationGateResult[] = [];
     if (input.runtimeEvidence) {
       for (const command of input.runtimeEvidence.commands) {
+        const commandStatus = commandGateStatus(command);
         gates.push(
           ValidationGateResultSchema.parse({
             id: `command:${command.commandId}`,
             label: `Command ${command.commandId}`,
-            status: command.exitCode === 0 ? "passed" : "failed",
+            status: commandStatus,
             required: true,
-            message:
-              command.exitCode === 0
-                ? "Command completed successfully."
-                : command.stderrTail || `Command failed with exit code ${command.exitCode}.`,
+            message: commandGateMessage(command, commandStatus),
             evidenceType: "command",
             commandId: command.commandId,
             filePaths: [],
@@ -122,6 +120,30 @@ export class ValidationGateAggregator {
     }
     return gates;
   }
+}
+
+function commandGateStatus(
+  command: RuntimeValidationEvidence["commands"][number]
+): ValidationGateResult["status"] {
+  if (command.interactivePromptDetected) return "blocked";
+  if (command.approvalRequired && !command.approved) return "blocked";
+  return command.exitCode === 0 ? "passed" : "failed";
+}
+
+function commandGateMessage(
+  command: RuntimeValidationEvidence["commands"][number],
+  status: ValidationGateResult["status"]
+): string {
+  if (status === "passed") return "Command completed successfully.";
+  if (command.interactivePromptDetected) {
+    return `Command is waiting for interactive input: ${
+      command.interactivePromptText ?? command.commandId
+    }.`;
+  }
+  if (command.approvalRequired && !command.approved) {
+    return command.policyReason ?? "Command requires explicit approval.";
+  }
+  return command.stderrTail || `Command failed with exit code ${command.exitCode}.`;
 }
 
 function messageForStatus(

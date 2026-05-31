@@ -36,9 +36,18 @@ interface ChatSessionRow {
 interface ChatMessageRow {
   id: string;
   session_id: string;
+  sequence: number;
   role: ChatMessage["role"];
+  event_type: ChatMessage["eventType"];
+  visibility: ChatMessage["visibility"];
+  delivery_status: ChatMessage["deliveryStatus"];
   body: string;
+  compact_body: string | null;
+  turn_id: string | null;
+  run_id: string | null;
+  attempt_id: string | null;
   context_snapshot: unknown;
+  metadata: unknown;
   created_at: Date;
 }
 
@@ -131,54 +140,106 @@ export class PostgresChatMemoryRepository implements ChatMemoryRepository {
         : {}),
     });
     const now = new Date().toISOString();
-    const message = ChatMessageSchema.parse({
-      id: uuidv4(),
-      sessionId,
-      role: validated.role,
-      body: validated.body,
-      contextSnapshot: snapshot,
-      createdAt: now,
-    });
-
-    await this.pool.query(
-      `
-      INSERT INTO chat_messages (id, session_id, role, body, context_snapshot, created_at)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6)
-      `,
-      [
-        message.id,
-        message.sessionId,
-        message.role,
-        message.body,
-        json(message.contextSnapshot),
-        message.createdAt,
-      ]
-    );
-    await this.pool.query(
-      `
-      UPDATE chat_sessions
-      SET active_user_story_revision_id = $2,
-          active_spec_revision_id = $3,
-          workflow_thread_id = COALESCE($4, workflow_thread_id),
-          updated_at = $5
-      WHERE id = $1
-      `,
-      [
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT id FROM chat_sessions WHERE id = $1 FOR UPDATE", [
         sessionId,
-        snapshot.userStoryRevisionId ?? null,
-        snapshot.specRevisionId ?? null,
-        snapshot.workflowThreadId ?? null,
-        now,
-      ]
-    );
-    return message;
+      ]);
+      const sequenceResult = await client.query<{ sequence: number }>(
+        "SELECT COALESCE(MAX(sequence), 0) + 1 AS sequence FROM chat_messages WHERE session_id = $1",
+        [sessionId]
+      );
+      const sequence = sequenceResult.rows[0]?.sequence ?? 1;
+      const message = ChatMessageSchema.parse({
+        id: uuidv4(),
+        sessionId,
+        sequence,
+        role: validated.role,
+        eventType: validated.eventType,
+        visibility: validated.visibility,
+        deliveryStatus: validated.deliveryStatus,
+        body: validated.body,
+        ...(validated.compactBody ? { compactBody: validated.compactBody } : {}),
+        ...(validated.turnId ? { turnId: validated.turnId } : {}),
+        ...(validated.runId ? { runId: validated.runId } : {}),
+        ...(validated.attemptId ? { attemptId: validated.attemptId } : {}),
+        contextSnapshot: snapshot,
+        metadata: validated.metadata,
+        createdAt: now,
+      });
+
+      await client.query(
+        `
+        INSERT INTO chat_messages (
+          id, session_id, sequence, role, event_type, visibility, delivery_status,
+          body, compact_body, turn_id, run_id, attempt_id, context_snapshot,
+          metadata, created_at
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15)
+        `,
+        [
+          message.id,
+          message.sessionId,
+          message.sequence,
+          message.role,
+          message.eventType,
+          message.visibility,
+          message.deliveryStatus,
+          message.body,
+          message.compactBody ?? null,
+          message.turnId ?? null,
+          message.runId ?? null,
+          message.attemptId ?? null,
+          json(message.contextSnapshot),
+          json(message.metadata),
+          message.createdAt,
+        ]
+      );
+      await client.query(
+        `
+        UPDATE chat_sessions
+        SET active_user_story_revision_id = $2,
+            active_spec_revision_id = $3,
+            workflow_thread_id = COALESCE($4, workflow_thread_id),
+            updated_at = $5
+        WHERE id = $1
+        `,
+        [
+          sessionId,
+          snapshot.userStoryRevisionId ?? null,
+          snapshot.specRevisionId ?? null,
+          snapshot.workflowThreadId ?? null,
+          now,
+        ]
+      );
+      await client.query("COMMIT");
+      return message;
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
-  async listMessages(sessionId: string): Promise<ChatMessage[]> {
+  async listMessages(
+    sessionId: string,
+    filter?: { afterSequence?: number }
+  ): Promise<ChatMessage[]> {
     await this.getSession(sessionId);
+    const values: Array<string | number> = [sessionId];
+    const afterClause =
+      filter?.afterSequence === undefined
+        ? ""
+        : `AND sequence > $${values.push(filter.afterSequence)}`;
     const result = await this.pool.query<ChatMessageRow>(
-      "SELECT * FROM chat_messages WHERE session_id = $1 ORDER BY created_at",
-      [sessionId]
+      `
+      SELECT * FROM chat_messages
+      WHERE session_id = $1 ${afterClause}
+      ORDER BY sequence, created_at
+      `,
+      values
     );
     return result.rows.map(messageFromRow);
   }
@@ -280,9 +341,18 @@ function messageFromRow(row: ChatMessageRow): ChatMessage {
   return ChatMessageSchema.parse({
     id: row.id,
     sessionId: row.session_id,
+    sequence: row.sequence,
     role: row.role,
+    eventType: row.event_type,
+    visibility: row.visibility,
+    deliveryStatus: row.delivery_status,
     body: row.body,
+    ...(row.compact_body ? { compactBody: row.compact_body } : {}),
+    ...(row.turn_id ? { turnId: row.turn_id } : {}),
+    ...(row.run_id ? { runId: row.run_id } : {}),
+    ...(row.attempt_id ? { attemptId: row.attempt_id } : {}),
     contextSnapshot: row.context_snapshot,
+    metadata: row.metadata,
     createdAt: toIso(row.created_at),
   });
 }

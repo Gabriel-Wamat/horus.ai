@@ -6,6 +6,30 @@ import { WorkspaceArtifactContextSchema } from "./WorkflowState.js";
 
 export const ChatRoleSchema = z.enum(["user", "agent", "system"]);
 
+export const ChatMessageEventTypeSchema = z.enum([
+  "message",
+  "progress",
+  "evidence",
+  "warning",
+  "error",
+  "action_state",
+  "trace",
+]);
+
+export const ChatMessageVisibilitySchema = z.enum([
+  "user",
+  "developer",
+  "hidden",
+]);
+
+export const ChatMessageDeliveryStatusSchema = z.enum([
+  "pending",
+  "streaming",
+  "persisted",
+  "failed",
+  "superseded",
+]);
+
 export const ChatContextSnapshotSchema = z.object({
   workspaceFolderId: z.string().uuid(),
   userStoryId: z.string().uuid(),
@@ -30,9 +54,18 @@ export const ChatSessionSchema = z.object({
 export const ChatMessageSchema = z.object({
   id: z.string().uuid(),
   sessionId: z.string().uuid(),
+  sequence: z.number().int().nonnegative().default(0),
   role: ChatRoleSchema,
+  eventType: ChatMessageEventTypeSchema.default("message"),
+  visibility: ChatMessageVisibilitySchema.default("user"),
+  deliveryStatus: ChatMessageDeliveryStatusSchema.default("persisted"),
   body: z.string().trim().min(1),
+  compactBody: z.string().trim().min(1).optional(),
+  turnId: z.string().uuid().optional(),
+  runId: z.string().uuid().optional(),
+  attemptId: z.string().uuid().optional(),
   contextSnapshot: ChatContextSnapshotSchema,
+  metadata: z.record(z.string(), z.unknown()).default({}),
   createdAt: z.string().datetime(),
 });
 
@@ -45,6 +78,14 @@ export const CreateChatSessionInputSchema = z.object({
 export const AppendChatMessageInputSchema = z.object({
   role: ChatRoleSchema,
   body: z.string().trim().min(1),
+  eventType: ChatMessageEventTypeSchema.default("message"),
+  visibility: ChatMessageVisibilitySchema.default("user"),
+  deliveryStatus: ChatMessageDeliveryStatusSchema.default("persisted"),
+  compactBody: z.string().trim().min(1).optional(),
+  turnId: z.string().uuid().optional(),
+  runId: z.string().uuid().optional(),
+  attemptId: z.string().uuid().optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
   workflowThreadId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   previewSessionId: z.string().uuid().optional(),
@@ -60,13 +101,18 @@ export const ChatAgentContextBundleSchema = z.object({
 });
 
 export type ChatRole = z.infer<typeof ChatRoleSchema>;
+export type ChatMessageEventType = z.infer<typeof ChatMessageEventTypeSchema>;
+export type ChatMessageVisibility = z.infer<typeof ChatMessageVisibilitySchema>;
+export type ChatMessageDeliveryStatus = z.infer<
+  typeof ChatMessageDeliveryStatusSchema
+>;
 export type ChatContextSnapshot = z.infer<typeof ChatContextSnapshotSchema>;
 export type ChatSession = z.infer<typeof ChatSessionSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export type CreateChatSessionInput = z.infer<
   typeof CreateChatSessionInputSchema
 >;
-export type AppendChatMessageInput = z.infer<
+export type AppendChatMessageInput = z.input<
   typeof AppendChatMessageInputSchema
 >;
 export type ChatAgentContextBundle = z.infer<

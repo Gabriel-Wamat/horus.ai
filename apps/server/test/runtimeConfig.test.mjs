@@ -19,6 +19,10 @@ test("loadRuntimeConfig resolves file-mode data paths from HORUS_DATA_DIR", asyn
   assert.equal(config.paths.dataDir, resolve(repoRoot, ".portable/data"));
   assert.equal(config.paths.workflowsDir, resolve(repoRoot, ".portable/data/workflows"));
   assert.equal(
+    config.paths.codingTasksDir,
+    resolve(repoRoot, ".portable/data/coding-tasks")
+  );
+  assert.equal(
     config.paths.projectWorkspacesDir,
     resolve(repoRoot, ".portable/data/project-workspaces")
   );
@@ -32,6 +36,45 @@ test("loadRuntimeConfig rejects unsupported persistence drivers", () => {
   assert.throws(
     () => loadRuntimeConfig({ PERSISTENCE_DRIVER: "sqlite" }),
     /Unsupported PERSISTENCE_DRIVER/
+  );
+});
+
+test("loadRuntimeConfig fails closed for file driver in production", () => {
+  assert.throws(
+    () =>
+      loadRuntimeConfig({
+        NODE_ENV: "production",
+        PERSISTENCE_DRIVER: "file",
+      }),
+    /PERSISTENCE_DRIVER=file is not production-safe/
+  );
+
+  assert.equal(
+    loadRuntimeConfig({
+      NODE_ENV: "production",
+      PERSISTENCE_DRIVER: "file",
+      HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION: "true",
+    }).persistenceDriver,
+    "file"
+  );
+});
+
+test("loadRuntimeConfig requires postgres for explicit multi-user mode", () => {
+  assert.throws(
+    () =>
+      loadRuntimeConfig({
+        HORUS_MULTI_USER: "true",
+        PERSISTENCE_DRIVER: "file",
+      }),
+    /HORUS_MULTI_USER=true/
+  );
+
+  assert.equal(
+    loadRuntimeConfig({
+      HORUS_MULTI_USER: "true",
+      PERSISTENCE_DRIVER: "postgres",
+    }).persistenceDriver,
+    "postgres"
   );
 });
 

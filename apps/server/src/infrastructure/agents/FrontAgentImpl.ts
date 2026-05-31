@@ -1,60 +1,42 @@
-import { z } from "zod";
 import {
   ProjectExecutionPlanSchema,
   type CodeContextBundle,
   type DesignContextBundle,
   type LlmSettings,
+  type PromptContextBundle,
   type ProjectExecutionPlan,
   type Spec,
+  type StructuralPatchIntent,
   type UserStory,
 } from "@u-build/shared";
 import type { CuratorFeedback } from "../langgraph/state.js";
-import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import {
+  appendRuntimeAgentSkills,
+  loadAgentSkill,
+} from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
+import { invokeChatModel } from "../llm/invokeChatModel.js";
 import type { FrontendFileOperationPlan } from "../code/buildFrontendCodeChangeSet.js";
 import type { ProjectWorkspaceContextSnapshot } from "../project/ProjectExecutionService.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
+import {
+  CodeAwareFrontendOutputSchema,
+  ProjectExecutionPlanLlmSchema,
+  type CodeAwareFrontendOutput,
+  type ProjectExecutionPlanLlm,
+} from "./front/frontAgentOutputSchemas.js";
+import {
+  buildProjectManagerAppCss,
+  buildProjectManagerAppTsx,
+} from "./front/frontAgentFallbackTemplates.js";
 
 export interface FrontendOutput {
   html: string;
   operations?: FrontendFileOperationPlan[];
+  structuralPatchIntents?: StructuralPatchIntent[];
   inspectedFiles?: string[];
 }
-
-const FrontendOperationPlanSchema = z.object({
-  targetPath: z.string().trim().min(1),
-  afterContent: z.string().min(1),
-  rationale: z.string().trim().min(1),
-});
-
-const CodeAwareFrontendOutputSchema = z.object({
-  summary: z.string().trim().min(1),
-  previewHtml: z.string().nullable(),
-  operations: z.array(FrontendOperationPlanSchema).min(1),
-});
-
-const ProjectFileOperationPlanSchema = z.object({
-  operation: z.enum(["write", "delete"]),
-  path: z.string().trim().min(1),
-  reason: z.string().trim().min(1),
-  content: z.string().nullable(),
-  contentBase64: z.string().nullable(),
-});
-
-const ProjectCommandRequestPlanSchema = z.object({
-  commandId: z.string().trim().min(1),
-  reason: z.string().trim().min(1),
-});
-
-const ProjectExecutionPlanLlmSchema = z.object({
-  summary: z.string().trim().min(1),
-  fileOperations: z.array(ProjectFileOperationPlanSchema),
-  commandRequests: z.array(ProjectCommandRequestPlanSchema),
-  validationCommandIds: z.array(z.string().trim().min(1)),
-  risks: z.array(z.string()),
-});
-
-type ProjectExecutionPlanLlm = z.infer<typeof ProjectExecutionPlanLlmSchema>;
 
 export async function generateFrontend(
   userStory: UserStory,
@@ -63,7 +45,8 @@ export async function generateFrontend(
   llmSettings?: LlmSettings,
   executionBrief?: string,
   codeContext?: CodeContextBundle,
-  designContext?: DesignContextBundle
+  designContext?: DesignContextBundle,
+  promptContext?: PromptContextBundle
 ): Promise<FrontendOutput> {
   const components = spec.components
     .map((c) => `- ${c.name} (${c.type}): ${c.description}`)
@@ -113,9 +96,19 @@ Use este pedido como a intenção executora atual. Não gere uma nova spec; apli
   const designContextBlock = formatDesignContextForPrompt(designContext);
   const timeoutMs = resolveFrontAgentTimeoutMs();
 
-  const skill = loadAgentSkill("front-design-frontend");
+  const skill = appendRuntimeAgentSkills(
+    loadAgentSkill("front-design-frontend"),
+    promptContext?.runtimeSkills ?? []
+  );
+  const promptContextBlock = formatPromptContextForPrompt(promptContext);
 
   if (codeContext) {
+    const exactTextEdit = buildExactTextEditFrontendOutput(
+      executionBrief,
+      codeContext
+    );
+    if (exactTextEdit) return exactTextEdit;
+
     const filesBlock = codeContext.files
       .map(
         (file) => `## ${file.path}
@@ -125,13 +118,15 @@ ${file.content}
       )
       .join("\n\n");
 
-    const prompt = `Você é o Front Agent do Horus. Sua tarefa é alterar o frontend real do projeto, usando operações completas de arquivo.
+    const prompt = `Você é o Front Agent do Horus. Sua tarefa é alterar o frontend real do projeto, usando AST/StructuralPatchIntent sempre que a alteração puder ser limitada a símbolos, imports ou inserções em arquivos existentes.
 
 # Skill obrigatória do agente
 ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
 ${visualContractBlock}
+
+${promptContextBlock}
 
 ${designContextBlock}
 
@@ -160,7 +155,21 @@ ${filesBlock}
 
 # Regras de implementação
 - Retorne operações para arquivos reais do projeto, preferencialmente arquivos já inspecionados.
-- Cada operação deve conter o conteúdo completo final do arquivo em afterContent.
+- Prefira structuralPatchIntents para editar arquivos existentes sem reescrever o arquivo inteiro.
+- Use structuralPatchIntents para:
+  - kind="replace": substituir componente, função, hook, tipo ou constante existente por nome.
+  - kind="delete": remover símbolo existente por nome.
+  - kind="insert": inserir conteúdo em file_start, file_end, after_imports, before_symbol ou after_symbol.
+  - kind="add_import" ou kind="remove_import": alterar imports.
+  - kind="rename_local": renomear identificador local simples quando o alvo for inequívoco.
+- Cada structuralPatchIntent deve ter id estável curto, targetPath real, rationale e os campos necessários para o kind.
+- Para replace/delete/rename_local, informe targetSymbolName e targetSymbolKind quando souber. Use component para componentes React.
+- Para replace/update_export, content deve conter apenas o novo trecho do símbolo alvo, não o arquivo inteiro.
+- Retorne operations=[] quando structuralPatchIntents cobrir toda a alteração.
+- Use operações completas apenas para criar arquivos novos, deletar arquivos obsoletos, ou quando a mudança for ampla demais para AST.
+- Cada operação completa deve ter operation="write" para criar/atualizar arquivo ou operation="delete" para remover arquivo obsoleto.
+- Operações write devem conter o conteúdo completo final do arquivo em afterContent.
+- Operações delete devem omitir afterContent ou usar afterContent=null.
 - Preserve arquitetura, imports, componentes, estilos e padrões existentes.
 - Não use CDNs externos, chamadas de rede inventadas, mock/fake adapters, Math.random, fixtures ou dados simulados em runtime.
 - Não crie HTML standalone em generated/horus quando houver projeto real com package.json, src/main.tsx, src/App.tsx, rotas ou componentes existentes.
@@ -175,6 +184,14 @@ ${filesBlock}
 - Trate o visualContract e o contexto visual como contrato obrigatório: preserve tokens, componentes, densidade, estados e antiPatterns salvo pedido explícito de redesign.
 - Não use cores high-light, gradientes fortes ou frames extras se não existirem no contexto visual do projeto.
 - previewHtml pode ser null. Use previewHtml apenas como descrição visual auxiliar, não como fonte da mudança.
+- Exemplos obrigatórios de formato:
+  - Alterar texto dentro de componente existente:
+    {"summary":"Pattern: operational-dashboard. Ajusta copy do botão via AST.","previewHtml":null,"operations":[],"structuralPatchIntents":[{"id":"replace-app-copy","kind":"replace","targetPath":"src/App.tsx","targetSymbolName":"App","targetSymbolKind":"component","content":"export function App() {\\n  return <button>Início</button>;\\n}","rationale":"Substitui somente o componente App já inspecionado."}]}
+  - Adicionar import em arquivo existente:
+    {"summary":"Pattern: workflow-map. Adiciona icon sem reescrever arquivo.","previewHtml":null,"operations":[],"structuralPatchIntents":[{"id":"add-search-import","kind":"add_import","targetPath":"src/App.tsx","importSource":"lucide-react","namedImports":["Search"],"rationale":"Import necessário para o componente existente."}]}
+  - Criar arquivo novo:
+    {"summary":"Pattern: form-crud-tool. Cria componente novo e integra pelo entrypoint.","previewHtml":null,"structuralPatchIntents":[],"operations":[{"operation":"write","targetPath":"src/components/NewPanel.tsx","afterContent":"export function NewPanel() {\\n  return <section>Novo</section>;\\n}\\n","rationale":"Arquivo novo não tem símbolo AST pré-existente."}]}
+- Se o pedido for "troque X por Y" em arquivo existente, escolha structuralPatchIntents primeiro. Só use operation write se não houver símbolo claro ou se a alteração realmente exigir reescrever o arquivo inteiro.
 - Não inclua markdown. Retorne apenas o objeto estruturado do schema.`;
 
     const model = createChatModel("front", {
@@ -182,11 +199,11 @@ ${filesBlock}
       maxTokens: 8192,
     }, llmSettings).withStructuredOutput(CodeAwareFrontendOutputSchema);
 
-    let result: z.infer<typeof CodeAwareFrontendOutputSchema>;
+    let result: CodeAwareFrontendOutput;
     try {
       result = CodeAwareFrontendOutputSchema.parse(
         await withTimeout(
-          model.invoke(prompt),
+          invokeChatModel(model, prompt),
           timeoutMs,
           `FrontAgent timed out after ${timeoutMs / 1000}s while generating project file operations.`
         )
@@ -204,7 +221,26 @@ ${filesBlock}
     }
     return {
       html: result.previewHtml ?? result.summary,
-      operations: result.operations,
+      operations: result.operations.map((operation) =>
+        operation.operation === "delete"
+          ? {
+              operation: "delete",
+              targetPath: operation.targetPath,
+              rationale: operation.rationale,
+            }
+          : {
+              operation: "write",
+              targetPath: operation.targetPath,
+              afterContent: operation.afterContent,
+              rationale: operation.rationale,
+            }
+      ),
+      structuralPatchIntents: result.structuralPatchIntents.map(
+        (intent, index) => ({
+          ...intent,
+          id: intent.id ?? `front-structural-${index + 1}`,
+        })
+      ),
       inspectedFiles: codeContext.inspectedFiles,
     };
   }
@@ -216,6 +252,8 @@ ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
 ${visualContractBlock}
+
+${promptContextBlock}
 
 ${designContextBlock}
 
@@ -260,7 +298,7 @@ ${criteria}
     maxTokens: 8192,
   }, llmSettings);
   const response = await withTimeout(
-    model.invoke(prompt),
+    invokeChatModel(model, prompt),
     timeoutMs,
     `FrontAgent timed out after ${timeoutMs / 1000}s while generating HTML.`
   );
@@ -279,6 +317,82 @@ ${criteria}
   return { html };
 }
 
+function buildExactTextEditFrontendOutput(
+  executionBrief: string | undefined,
+  codeContext: CodeContextBundle
+): FrontendOutput | null {
+  if (!executionBrief) return null;
+  const quoted = [...executionBrief.matchAll(/"([^"]+)"/gu)].map(
+    (match) => match[1]
+  );
+  if (quoted.length < 2) return null;
+  const [oldText, newText] = quoted;
+  if (!oldText || !newText || oldText === newText) return null;
+
+  const matches: Array<{
+    file: CodeContextBundle["files"][number];
+    afterContent: string;
+  }> = [];
+  for (const file of codeContext.files) {
+    const afterContent = replaceUniqueTextOccurrence(
+      file.content,
+      oldText,
+      newText
+    );
+    if (afterContent) matches.push({ file, afterContent });
+  }
+  if (matches.length !== 1) return null;
+
+  const match = matches[0]!;
+  return {
+    html: `Exact text edit: ${match.file.path}`,
+    operations: [
+      {
+        operation: "write",
+        targetPath: match.file.path,
+        afterContent: match.afterContent,
+        rationale:
+          "Aplicar substituicao textual exata com ocorrencia unica em arquivo inspecionado.",
+      },
+    ],
+    inspectedFiles: codeContext.inspectedFiles,
+  };
+}
+
+function replaceUniqueTextOccurrence(
+  content: string,
+  oldText: string,
+  newText: string
+): string | null {
+  const literalCount = countOccurrences(content, oldText);
+  if (literalCount === 1) return content.replace(oldText, newText);
+  if (literalCount > 1) return null;
+
+  const whitespaceTolerantPattern = buildWhitespaceTolerantTextPattern(oldText);
+  if (!whitespaceTolerantPattern) return null;
+
+  const matches = [...content.matchAll(whitespaceTolerantPattern)];
+  if (matches.length !== 1) return null;
+
+  const match = matches[0];
+  if (!match || match.index === undefined) return null;
+  return (
+    content.slice(0, match.index) +
+    newText +
+    content.slice(match.index + match[0].length)
+  );
+}
+
+function buildWhitespaceTolerantTextPattern(text: string): RegExp | null {
+  const tokens = text.trim().split(/\s+/u).filter(Boolean);
+  if (tokens.length < 2) return null;
+  return new RegExp(tokens.map(escapeRegExp).join("\\s+"), "gu");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
 export async function generateProjectExecutionPlan(
   input: {
     userStory: UserStory;
@@ -287,6 +401,7 @@ export async function generateProjectExecutionPlan(
     llmSettings?: LlmSettings;
     executionBrief?: string;
     designContext?: DesignContextBundle;
+    promptContext?: PromptContextBundle;
   }
 ): Promise<ProjectExecutionPlan> {
   const components = input.spec.components
@@ -317,9 +432,13 @@ ${input.executionBrief}
 Trate este pedido como a intenção executora atual. Se o pedido for uma alteração, edite o código existente com operações de arquivo.
 `
     : "";
-  const skill = loadAgentSkill("front-design-frontend");
+  const skill = appendRuntimeAgentSkills(
+    loadAgentSkill("front-design-frontend"),
+    input.promptContext?.runtimeSkills ?? []
+  );
   const visualContractBlock = buildVisualContractPromptBlock(input.spec);
   const designContextBlock = formatDesignContextForPrompt(input.designContext);
+  const promptContextBlock = formatPromptContextForPrompt(input.promptContext);
   const timeoutMs = resolveFrontAgentTimeoutMs();
 
   const prompt = `Você é o Front Agent do Horus em modo executor. Você tem capacidade real de criar, editar, atualizar e deletar arquivos dentro do workspace isolado do projeto.
@@ -328,6 +447,8 @@ Trate este pedido como a intenção executora atual. Se o pedido for uma altera�
 ${skill}
 ${executionBriefBlock}
 ${visualContractBlock}
+
+${promptContextBlock}
 
 ${designContextBlock}
 
@@ -424,7 +545,7 @@ Corrija o plano. Para toda operação "write", entregue exatamente um payload: c
     try {
       raw = ProjectExecutionPlanLlmSchema.parse(
         await withTimeout(
-          model.invoke(`${prompt}${repairBlock}`),
+          invokeChatModel(model, `${prompt}${repairBlock}`),
           timeoutMs,
           `FrontAgent timed out after ${timeoutMs / 1000}s while planning project execution.`
         )
@@ -547,787 +668,6 @@ function buildReactViteFallbackProjectPlan(
   });
 }
 
-function buildProjectManagerAppTsx(input: {
-  userStory: UserStory;
-  spec: Spec;
-  codeContext?: CodeContextBundle;
-  workspaceContext?: ProjectWorkspaceContextSnapshot;
-}): string {
-  const title = sanitizeTsString(
-    input.userStory.title.replace(/^PM-\d+\s*-\s*/i, "") ||
-      "Gerenciamento de projeto"
-  );
-  const summary = sanitizeTsString(input.spec.summary || input.userStory.description);
-  const exportStyle = detectReactAppExportStyle(input);
-  const appDeclaration =
-    exportStyle === "default" ? "function App()" : "export function App()";
-  const appExport =
-    exportStyle === "default" || exportStyle === "both"
-      ? "\nexport default App;\n"
-      : "\n";
-
-  return `import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
-
-type View = "home" | "tasks" | "calendar";
-type TaskWindow = "day" | "week" | "month";
-type TaskStatus = "pending" | "progress" | "done" | "overdue";
-type TaskPriority = "Alta" | "Media" | "Baixa";
-
-interface Task {
-  id: number;
-  title: string;
-  owner: string;
-  dueDate: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-}
-
-const initialTasks: Task[] = [
-  { id: 1, title: "Revisar escopo do dashboard", owner: "Ana", dueDate: "2026-05-27", priority: "Alta", status: "progress" },
-  { id: 2, title: "Publicar lista de entregas do dia", owner: "Bruno", dueDate: "2026-05-27", priority: "Media", status: "pending" },
-  { id: 3, title: "Validar prototipo mobile", owner: "Clara", dueDate: "2026-05-28", priority: "Alta", status: "done" },
-  { id: 4, title: "Ajustar dependencias do calendario", owner: "Davi", dueDate: "2026-05-22", priority: "Baixa", status: "overdue" },
-];
-
-const navItems: Array<{ id: View; label: string }> = [
-  { id: "home", label: "Home" },
-  { id: "tasks", label: "Tarefas" },
-  { id: "calendar", label: "Calendario" },
-];
-
-const statusLabel: Record<TaskStatus, string> = {
-  pending: "Pendente",
-  progress: "Em curso",
-  done: "Concluida",
-  overdue: "Atrasada",
-};
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isInWindow(taskDate: string, window: TaskWindow) {
-  const today = new Date(todayIso());
-  const date = new Date(taskDate);
-  const diffDays = Math.floor((date.getTime() - today.getTime()) / 86400000);
-
-  if (window === "day") return taskDate === todayIso();
-  if (window === "week") return diffDays >= -6 && diffDays <= 6;
-  return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-}
-
-${appDeclaration} {
-  const [activeView, setActiveView] = useState<View>("home");
-  const [taskWindow, setTaskWindow] = useState<TaskWindow>("day");
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [selectedDay, setSelectedDay] = useState(27);
-  const [form, setForm] = useState({
-    title: "",
-    owner: "",
-    dueDate: todayIso(),
-    priority: "Media" as TaskPriority,
-  });
-
-  const visibleTasks = useMemo(
-    () => tasks.filter((task) => isInWindow(task.dueDate, taskWindow)),
-    [tasks, taskWindow]
-  );
-
-  const metrics = useMemo(() => {
-    const done = tasks.filter((task) => task.status === "done").length;
-    const overdue = tasks.filter((task) => task.status === "overdue").length;
-    const inProgress = tasks.filter((task) => task.status === "progress").length;
-    const completion = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
-    return { done, overdue, inProgress, completion };
-  }, [tasks]);
-
-  function createTask(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!form.title.trim()) return;
-    setTasks((current) => [
-      {
-        id: Date.now(),
-        title: form.title.trim(),
-        owner: form.owner.trim() || "Sem dono",
-        dueDate: form.dueDate,
-        priority: form.priority,
-        status: "pending",
-      },
-      ...current,
-    ]);
-    setForm({ title: "", owner: "", dueDate: todayIso(), priority: "Media" });
-  }
-
-  const selectedDate = \`2026-05-\${String(selectedDay).padStart(2, "0")}\`;
-  const selectedTasks = tasks.filter((task) => task.dueDate === selectedDate);
-
-  return (
-    <main className="pm-shell">
-      <aside className="pm-sidebar">
-        <div>
-          <span className="pm-logo">H</span>
-          <p className="pm-kicker">Project OS</p>
-          <h1>${title}</h1>
-          <p className="pm-summary">${summary}</p>
-        </div>
-        <nav className="pm-nav" aria-label="Navegacao principal">
-          {navItems.map((item) => (
-            <button
-              className={activeView === item.id ? "is-active" : ""}
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              type="button"
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      <section className="pm-workspace">
-        <header className="pm-topbar">
-          <div>
-            <p className="pm-kicker">Status do projeto</p>
-            <strong>{metrics.completion}% concluido</strong>
-          </div>
-          <div className="pm-live-pill">
-            <span />
-            Atualizado agora
-          </div>
-        </header>
-
-        {activeView === "home" && (
-          <section className="pm-page">
-            <div className="pm-section-head">
-              <p className="pm-kicker">Home</p>
-              <h2>Desempenho do projeto</h2>
-            </div>
-
-            <div className="pm-metrics">
-              <article>
-                <span>Concluidas</span>
-                <strong>{metrics.done}</strong>
-                <small>tarefas fechadas</small>
-              </article>
-              <article>
-                <span>Em progresso</span>
-                <strong>{metrics.inProgress}</strong>
-                <small>frentes ativas</small>
-              </article>
-              <article>
-                <span>Atrasadas</span>
-                <strong>{metrics.overdue}</strong>
-                <small>pedem decisao</small>
-              </article>
-            </div>
-
-            <div className="pm-dashboard-grid">
-              <article className="pm-panel pm-chart">
-                <div className="pm-section-head compact">
-                  <p className="pm-kicker">Semana</p>
-                  <h3>Produtividade</h3>
-                </div>
-                <div className="pm-bars" aria-label="Grafico simples de produtividade semanal">
-                  {[42, 58, 64, 72, 54, 81, metrics.completion].map((value, index) => (
-                    <span key={index} style={{ height: \`\${value}%\` }} />
-                  ))}
-                </div>
-              </article>
-
-              <article className="pm-panel">
-                <div className="pm-section-head compact">
-                  <p className="pm-kicker">Marcos</p>
-                  <h3>Proximas entregas</h3>
-                </div>
-                <ul className="pm-timeline">
-                  <li><span />Design aprovado para home</li>
-                  <li><span />Fluxo diario de tarefas</li>
-                  <li><span />Calendario pronto para revisao</li>
-                </ul>
-              </article>
-            </div>
-          </section>
-        )}
-
-        {activeView === "tasks" && (
-          <section className="pm-page">
-            <div className="pm-section-head">
-              <p className="pm-kicker">Tarefas</p>
-              <h2>Criar e acompanhar listas</h2>
-            </div>
-
-            <div className="pm-task-layout">
-              <form className="pm-panel pm-form" onSubmit={createTask}>
-                <label>
-                  Titulo
-                  <input
-                    onChange={(event) => setForm({ ...form, title: event.target.value })}
-                    placeholder="Nova tarefa"
-                    value={form.title}
-                  />
-                </label>
-                <label>
-                  Responsavel
-                  <input
-                    onChange={(event) => setForm({ ...form, owner: event.target.value })}
-                    placeholder="Nome"
-                    value={form.owner}
-                  />
-                </label>
-                <div className="pm-form-row">
-                  <label>
-                    Data
-                    <input
-                      onChange={(event) => setForm({ ...form, dueDate: event.target.value })}
-                      type="date"
-                      value={form.dueDate}
-                    />
-                  </label>
-                  <label>
-                    Prioridade
-                    <select
-                      onChange={(event) => setForm({ ...form, priority: event.target.value as TaskPriority })}
-                      value={form.priority}
-                    >
-                      <option>Alta</option>
-                      <option>Media</option>
-                      <option>Baixa</option>
-                    </select>
-                  </label>
-                </div>
-                <button className="pm-primary" type="submit">Criar tarefa</button>
-              </form>
-
-              <article className="pm-panel pm-list-panel">
-                <div className="pm-filter-tabs" aria-label="Filtro de periodo">
-                  {(["day", "week", "month"] as TaskWindow[]).map((item) => (
-                    <button
-                      className={taskWindow === item ? "is-active" : ""}
-                      key={item}
-                      onClick={() => setTaskWindow(item)}
-                      type="button"
-                    >
-                      {item === "day" ? "Dia" : item === "week" ? "Semana" : "Mes"}
-                    </button>
-                  ))}
-                </div>
-                <div className="pm-task-list">
-                  {visibleTasks.length === 0 ? (
-                    <p className="pm-empty">Nenhuma tarefa para este periodo.</p>
-                  ) : (
-                    visibleTasks.map((task) => (
-                      <article className="pm-task-item" key={task.id}>
-                        <div>
-                          <strong>{task.title}</strong>
-                          <span>{task.owner} · {task.dueDate}</span>
-                        </div>
-                        <div className="pm-task-meta">
-                          <small>{task.priority}</small>
-                          <em className={\`status-\${task.status}\`}>{statusLabel[task.status]}</em>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </article>
-            </div>
-          </section>
-        )}
-
-        {activeView === "calendar" && (
-          <section className="pm-page">
-            <div className="pm-section-head">
-              <p className="pm-kicker">Calendario</p>
-              <h2>Maio 2026</h2>
-            </div>
-            <div className="pm-calendar-layout">
-              <article className="pm-panel pm-calendar">
-                {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
-                  <button
-                    className={selectedDay === day ? "is-selected" : ""}
-                    key={day}
-                    onClick={() => setSelectedDay(day)}
-                    type="button"
-                  >
-                    <span>{day}</span>
-                    {tasks.some((task) => task.dueDate.endsWith(String(day).padStart(2, "0"))) && <i />}
-                  </button>
-                ))}
-              </article>
-              <aside className="pm-panel pm-day-panel">
-                <p className="pm-kicker">Dia {selectedDay}</p>
-                <h3>Agenda selecionada</h3>
-                {selectedTasks.length === 0 ? (
-                  <p className="pm-empty">Sem entregas nesse dia.</p>
-                ) : (
-                  selectedTasks.map((task) => (
-                    <article className="pm-day-task" key={task.id}>
-                      <strong>{task.title}</strong>
-                      <span>{task.owner} · {statusLabel[task.status]}</span>
-                    </article>
-                  ))
-                )}
-              </aside>
-            </div>
-          </section>
-        )}
-      </section>
-    </main>
-  );
-}
-${appExport}`;
-}
-
-type ReactAppExportStyle = "named" | "default" | "both";
-
-function detectReactAppExportStyle(input: {
-  codeContext?: CodeContextBundle;
-  workspaceContext?: ProjectWorkspaceContextSnapshot;
-}): ReactAppExportStyle {
-  const files = [
-    ...(input.codeContext?.files ?? []),
-    ...(input.workspaceContext?.files ?? []),
-  ];
-  const main = files.find((file) => file.path === "src/main.tsx")?.content ?? "";
-  const app = files.find((file) => file.path === "src/App.tsx")?.content ?? "";
-
-  const importsNamedApp =
-    /import\s*\{\s*App\s*\}\s*from\s*["']\.\/App["']/u.test(main) ||
-    /import\s*\{\s*App\s*\}\s*from\s*["']\.\/App\.(tsx|ts|jsx|js)["']/u.test(main);
-  const importsDefaultApp =
-    /import\s+App\s+from\s*["']\.\/App["']/u.test(main) ||
-    /import\s+App\s+from\s*["']\.\/App\.(tsx|ts|jsx|js)["']/u.test(main);
-
-  if (importsNamedApp && importsDefaultApp) return "both";
-  if (importsNamedApp) return "named";
-  if (importsDefaultApp) return "default";
-
-  if (/export\s+function\s+App\b/u.test(app) || /export\s+const\s+App\b/u.test(app)) {
-    return "named";
-  }
-  if (/export\s+default\s+App\b/u.test(app) || /export\s+default\s+function\s+App\b/u.test(app)) {
-    return "default";
-  }
-
-  return "named";
-}
-
-function buildProjectManagerAppCss(): string {
-  return `.pm-shell {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 18px;
-  padding: clamp(16px, 2vw, 28px);
-  color: #edf6f2;
-}
-
-.pm-sidebar,
-.pm-workspace,
-.pm-panel,
-.pm-metrics article {
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(18, 23, 22, 0.78);
-  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.2);
-}
-
-.pm-sidebar {
-  position: sticky;
-  top: 18px;
-  height: calc(100vh - 36px);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border-radius: 22px;
-  padding: 22px;
-}
-
-.pm-logo {
-  width: 42px;
-  height: 42px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 14px;
-  color: #07100d;
-  background: #35c99b;
-  font-weight: 800;
-}
-
-.pm-kicker {
-  margin: 0 0 8px;
-  color: #8d9a96;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 12px;
-  font-size: clamp(1.7rem, 4vw, 2.45rem);
-  line-height: 1.04;
-}
-
-.pm-summary {
-  color: #aab8b2;
-  line-height: 1.55;
-}
-
-.pm-nav {
-  display: grid;
-  gap: 8px;
-}
-
-button,
-input,
-select {
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 14px;
-  color: inherit;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-button {
-  min-height: 42px;
-  cursor: pointer;
-}
-
-.pm-nav button,
-.pm-filter-tabs button {
-  text-align: left;
-  padding: 0 14px;
-  color: #aab8b2;
-}
-
-button.is-active,
-.pm-primary {
-  color: #06110e;
-  border-color: rgba(53, 201, 155, 0.54);
-  background: #35c99b;
-}
-
-.pm-workspace {
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 24px;
-}
-
-.pm-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 22px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.pm-topbar strong {
-  font-size: 1.1rem;
-}
-
-.pm-live-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 999px;
-  padding: 9px 12px;
-  color: #b8c5c0;
-  background: rgba(255, 255, 255, 0.04);
-  font-weight: 700;
-}
-
-.pm-live-pill span {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #35c99b;
-}
-
-.pm-page {
-  padding: clamp(18px, 3vw, 34px);
-}
-
-.pm-section-head {
-  margin-bottom: 20px;
-}
-
-.pm-section-head h2 {
-  margin: 0;
-  font-size: clamp(1.7rem, 4vw, 3rem);
-  letter-spacing: 0;
-}
-
-.pm-section-head.compact h3 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.pm-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.pm-metrics article,
-.pm-panel {
-  border-radius: 18px;
-  padding: 18px;
-}
-
-.pm-metrics span,
-.pm-metrics small,
-.pm-task-item span,
-.pm-day-task span,
-.pm-empty {
-  color: #8d9a96;
-}
-
-.pm-metrics strong {
-  display: block;
-  margin: 10px 0 6px;
-  font-size: 2.15rem;
-}
-
-.pm-dashboard-grid,
-.pm-task-layout,
-.pm-calendar-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
-  gap: 14px;
-}
-
-.pm-chart {
-  min-height: 320px;
-}
-
-.pm-bars {
-  height: 220px;
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  align-items: end;
-  gap: 10px;
-  padding-top: 22px;
-}
-
-.pm-bars span {
-  min-height: 28px;
-  border-radius: 999px 999px 6px 6px;
-  background: linear-gradient(180deg, rgba(53, 201, 155, 0.82), rgba(53, 201, 155, 0.22));
-}
-
-.pm-timeline {
-  display: grid;
-  gap: 16px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.pm-timeline li {
-  display: flex;
-  gap: 10px;
-  color: #dce7e2;
-}
-
-.pm-timeline span,
-.pm-calendar i {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
-  margin-top: 8px;
-  border-radius: 999px;
-  background: #35c99b;
-}
-
-.pm-form {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-}
-
-.pm-form label {
-  display: grid;
-  gap: 8px;
-  color: #aab8b2;
-  font-weight: 700;
-}
-
-.pm-form input,
-.pm-form select {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
-}
-
-.pm-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.pm-primary {
-  font-weight: 800;
-}
-
-.pm-filter-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.pm-filter-tabs button {
-  flex: 1;
-  text-align: center;
-}
-
-.pm-task-list {
-  display: grid;
-  gap: 10px;
-}
-
-.pm-task-item,
-.pm-day-task {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.13);
-  border-radius: 14px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.pm-task-item strong,
-.pm-day-task strong {
-  display: block;
-  margin-bottom: 5px;
-}
-
-.pm-task-meta {
-  display: grid;
-  justify-items: end;
-  gap: 6px;
-}
-
-.pm-task-meta small,
-.pm-task-meta em {
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 0.74rem;
-  font-style: normal;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.status-done {
-  color: #35c99b;
-}
-
-.status-overdue {
-  color: #ff8d8d;
-}
-
-.status-progress {
-  color: #d4d8dc;
-}
-
-.status-pending {
-  color: #aab8b2;
-}
-
-.pm-calendar {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.pm-calendar button {
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  position: relative;
-}
-
-.pm-calendar button.is-selected {
-  border-color: rgba(53, 201, 155, 0.72);
-  background: rgba(53, 201, 155, 0.14);
-}
-
-.pm-calendar i {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  margin: 0;
-}
-
-.pm-day-panel {
-  min-height: 360px;
-}
-
-.pm-empty {
-  margin: 0;
-  line-height: 1.5;
-}
-
-@media (max-width: 980px) {
-  .pm-shell,
-  .pm-dashboard-grid,
-  .pm-task-layout,
-  .pm-calendar-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .pm-sidebar {
-    position: static;
-    height: auto;
-    gap: 22px;
-  }
-
-  .pm-nav {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .pm-nav button {
-    text-align: center;
-  }
-}
-
-@media (max-width: 640px) {
-  .pm-shell {
-    padding: 10px;
-  }
-
-  .pm-topbar,
-  .pm-task-item {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .pm-metrics,
-  .pm-form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .pm-calendar {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-`;
-}
-
-function sanitizeTsString(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$/g, "\\$");
-}
-
 function resolveFrontAgentTimeoutMs(
   env: Record<string, string | undefined> = process.env
 ): number {
@@ -1392,6 +732,17 @@ function validateProjectExecutionPlanPayloads(
     }
   }
   return null;
+}
+
+function countOccurrences(content: string, search: string): number {
+  let count = 0;
+  let offset = 0;
+  while (true) {
+    const index = content.indexOf(search, offset);
+    if (index === -1) return count;
+    count += 1;
+    offset = index + search.length;
+  }
 }
 
 function buildVisualContractPromptBlock(spec: Spec): string {

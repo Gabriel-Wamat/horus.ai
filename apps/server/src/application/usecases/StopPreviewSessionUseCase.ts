@@ -1,10 +1,10 @@
 import type {
   PreviewActionResult,
-  PreviewRuntimeManager,
-} from "../../infrastructure/preview/PreviewRuntimeManager.js";
+  PreviewRuntimePort,
+} from "../ports/PreviewRuntimePort.js";
 
 export class StopPreviewSessionUseCase {
-  constructor(private readonly previewRuntime: PreviewRuntimeManager) {}
+  constructor(private readonly previewRuntime: PreviewRuntimePort) {}
 
   async execute(sessionId: string): Promise<PreviewActionResult> {
     return this.previewRuntime.stopSession(sessionId);

@@ -8,11 +8,22 @@ import {
   type WorkspaceArtifactContext,
 } from "@u-build/shared";
 
-export interface FrontendFileOperationPlan {
+export interface FrontendWriteFileOperationPlan {
+  operation?: "write";
   targetPath: string;
   afterContent: string;
   rationale: string;
 }
+
+export interface FrontendDeleteFileOperationPlan {
+  operation: "delete";
+  targetPath: string;
+  rationale: string;
+}
+
+export type FrontendFileOperationPlan =
+  | FrontendWriteFileOperationPlan
+  | FrontendDeleteFileOperationPlan;
 
 export interface FrontendCodeChangeSetInput {
   workflowThreadId: string;
@@ -39,6 +50,16 @@ export function buildFrontendCodeChangeSet(
     status: "proposed",
     operations: input.operations.map((operation) => {
       const beforeContent = currentFiles.get(operation.targetPath) ?? null;
+      if (operation.operation === "delete") {
+        return {
+          targetPath: operation.targetPath,
+          changeType: "delete",
+          beforeContent,
+          afterContent: null,
+          diff: createDeleteFileDiff(operation.targetPath, beforeContent),
+        };
+      }
+
       return {
         targetPath: operation.targetPath,
         changeType: beforeContent === null ? "create" : "update",
@@ -87,5 +108,29 @@ function createReplacementDiff(
     "@@",
     ...beforeLines,
     ...afterLines,
+  ].join("\n");
+}
+
+function createDeleteFileDiff(
+  targetPath: string,
+  beforeContent: string | null
+): string {
+  const beforeHash =
+    beforeContent === null
+      ? "0000000"
+      : createHash("sha256").update(beforeContent).digest("hex").slice(0, 12);
+  const beforeLines =
+    beforeContent?.split("\n").map((line) => `-${line}`) ?? [
+      "-<missing file>",
+    ];
+
+  return [
+    `diff --git a/${targetPath} b/${targetPath}`,
+    "deleted file mode 100644",
+    `index ${beforeHash}..0000000`,
+    `--- a/${targetPath}`,
+    "+++ /dev/null",
+    "@@",
+    ...beforeLines,
   ].join("\n");
 }

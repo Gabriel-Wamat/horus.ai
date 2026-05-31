@@ -1,12 +1,14 @@
 import type {
   AgentName,
   AgentResult,
-  AgentRunActorKind,
-  AgentRunLoopEventType,
   AgentRunPhase,
   WorkflowEvent,
   WorkflowState,
   WorkflowStatus,
+} from "@u-build/shared";
+import {
+  HORUS_NODE_LABELS as NODE_LABELS,
+  mapWorkflowEventToHorusRunEvent,
 } from "@u-build/shared";
 import type {
   HorusAgentExecutionSnapshot,
@@ -17,25 +19,15 @@ import type {
 } from "../types/api.types.js";
 import { HORUS_NODE_BY_AGENT } from "./nodeMetadata.js";
 
-const NODE_LABELS: Record<HorusWorkflowNodeId, string> = {
-  specAgent: "Spec Agent",
-  hitlCheckpoint: "Human review",
-  odinAgent: "Odin router",
-  frontAgent: "Front Agent",
-  qaAgent: "QA Agent",
-  curatorAgent: "Curator Agent",
-  retryCheckpoint: "Retry approval",
-  finalize: "Finalizado",
-  fail: "Falha",
-};
-
 export function deriveHorusRunSnapshot(
   state: WorkflowState | null,
   events: WorkflowEvent[]
 ): HorusRunSnapshot | null {
   if (!state) return null;
 
-  const normalizedEvents = events.map((event, index) => mapWorkflowEvent(event, index + 1));
+  const normalizedEvents = events.map((event, index) =>
+    mapWorkflowEventToHorusRunEvent(event, index + 1)
+  );
   const agentExecutions = deriveAgentExecutions(state);
   const currentStory = state.userStories[state.currentUSIndex] ?? null;
   const currentNode = resolveCurrentNode(state, normalizedEvents, agentExecutions);
@@ -62,6 +54,7 @@ export function deriveHorusRunSnapshot(
     agentExecutions,
     events: normalizedEvents,
     evidenceSummaries: [],
+    runbookEntries: [],
     validationSummary: {
       finalStatus: state.status === "completed" ? "completed" : "completed_unverified",
       gates: state.validationGates ?? [],
@@ -75,213 +68,11 @@ export function deriveHorusRunSnapshot(
   };
 }
 
-function mapWorkflowEvent(event: WorkflowEvent, sequence: number): HorusRunEventSnapshot {
-  const agentName = "agentName" in event ? event.agentName : undefined;
-  const nodeId = agentName ? HORUS_NODE_BY_AGENT[agentName] : nodeFromEventType(event);
-  const summary = summaryForEvent(event);
-  const loop = loopMetadataForEvent(event);
-  return {
-    id: `${event.threadId}:${sequence}:${event.type}`,
-    threadId: event.threadId,
-    sequence,
-    type: event.type,
-    phase: loop.phase,
-    eventType: loop.eventType,
-    actorKind: loop.actorKind,
-    actorName: loop.actorName,
-    ...(nodeId ? { nodeId } : {}),
-    ...(agentName ? { agentName } : {}),
-    ...("userStoryId" in event ? { userStoryId: event.userStoryId } : {}),
-    ...("retryCount" in event ? { attempt: event.retryCount } : {}),
-    title: titleForEvent(event),
-    ...(summary ? { summary } : {}),
-    ...(event.type === "validation_evidence" ? { evidence: event.evidence } : {}),
-    ...("changeSetId" in event ? { metadata: { changeSetId: event.changeSetId } } : {}),
-    ...("filePaths" in event ? { filePaths: event.filePaths } : {}),
-    ...(event.type === "validation_evidence"
-      ? {
-          commandIds: event.evidence.commands.map((command) => command.commandId),
-          validationGateId: event.evidence.id,
-        }
-      : {}),
-    ...(event.type === "error" ? { errorMessage: event.message } : {}),
-    timestamp: event.timestamp,
-  };
-}
-
-function nodeFromEventType(event: WorkflowEvent): HorusWorkflowNodeId | undefined {
-  if (event.type === "awaiting_approval") return "hitlCheckpoint";
-  if (event.type === "validation_evidence") return "qaAgent";
-  if (event.type === "patch_proposed") return "frontAgent";
-  if (event.type === "patch_applied") return "curatorAgent";
-  if (event.type === "awaiting_retry_approval") return "retryCheckpoint";
-  if (event.type === "retry_started") return "odinAgent";
-  if (event.type === "error") return "fail";
-  if (event.type === "status_changed") {
-    if (event.status === "completed") return "finalize";
-    if (event.status === "cancelled" || event.status === "error") return "fail";
-  }
-  return undefined;
-}
-
-function titleForEvent(event: WorkflowEvent): string {
-  switch (event.type) {
-    case "node_started":
-      return `${agentLabel(event.agentName)} iniciou`;
-    case "node_completed":
-      return `${agentLabel(event.agentName)} concluiu`;
-    case "patch_proposed":
-      return "Patch proposto";
-    case "patch_applied":
-      return "Patch aplicado";
-    case "validation_evidence":
-      return "Evidência de validação registrada";
-    case "awaiting_approval":
-      return "Aguardando aprovação da spec";
-    case "retry_started":
-      return `Retry ${event.retryCount} iniciado`;
-    case "awaiting_retry_approval":
-      return "Aguardando aprovação de retry";
-    case "status_changed":
-      return `Status alterado para ${event.status}`;
-    case "error":
-      return "Erro na execução";
-  }
-}
-
-function summaryForEvent(event: WorkflowEvent): string | undefined {
-  if (event.type === "error") return event.message;
-  if (event.type === "patch_proposed") {
-    return `${event.filePaths.length} arquivo(s) no CodeChangeSet ${event.changeSetId.slice(0, 8)}.`;
-  }
-  if (event.type === "patch_applied") {
-    return `${event.filePaths.length} arquivo(s) aplicado(s) do CodeChangeSet ${event.changeSetId.slice(0, 8)}.`;
-  }
-  if (event.type === "retry_started") return event.notes;
-  if (event.type === "awaiting_retry_approval") return event.notes;
-  if (event.type === "validation_evidence") {
-    const failedCommands = event.evidence.commands.filter(
-      (command) => command.exitCode !== 0
-    ).length;
-    return `Status: ${event.evidence.status}; comandos: ${event.evidence.commands.length}; falhas: ${failedCommands}; preview: ${event.evidence.preview.status}`;
-  }
-  if (event.type === "node_completed") return `Status: ${event.status}`;
-  return undefined;
-}
-
-function loopMetadataForEvent(event: WorkflowEvent): {
-  phase: AgentRunPhase;
-  eventType: AgentRunLoopEventType;
-  actorKind: AgentRunActorKind;
-  actorName: string;
-} {
-  switch (event.type) {
-    case "status_changed":
-      return statusLoopMetadata(event.status);
-    case "node_started":
-      return {
-        phase: phaseForAgent(event.agentName, "started"),
-        eventType: event.agentName === "qa" ? "validation_started" : event.agentName === "curator" ? "review_started" : event.agentName === "front" ? "context_read" : "planning",
-        actorKind: "agent",
-        actorName: agentLabel(event.agentName),
-      };
-    case "node_completed":
-      return {
-        phase: phaseForAgent(event.agentName, "completed"),
-        eventType: event.status === "error" ? "failed" : completedEventTypeForAgent(event.agentName),
-        actorKind: "agent",
-        actorName: agentLabel(event.agentName),
-      };
-    case "patch_proposed":
-      return {
-        phase: "patching",
-        eventType: "patch_proposed",
-        actorKind: "agent",
-        actorName: "Front Agent",
-      };
-    case "patch_applied":
-      return {
-        phase: "applying",
-        eventType: "patch_applied",
-        actorKind: "tool",
-        actorName: "CodeChangeSetApplier",
-      };
-    case "validation_evidence": {
-      const hasFailure =
-        event.evidence.status === "failed" ||
-        event.evidence.commands.some((command) => command.exitCode !== 0) ||
-        event.evidence.preview.status === "failed";
-      return {
-        phase: "validating",
-        eventType: hasFailure ? "validation_failed" : "validation_passed",
-        actorKind: "tool",
-        actorName: "Runtime validation",
-      };
-    }
-    case "awaiting_approval":
-      return {
-        phase: "planning",
-        eventType: "awaiting_approval",
-        actorKind: "human",
-        actorName: "Human review",
-      };
-    case "retry_started":
-      return {
-        phase: "retrying",
-        eventType: "retry_started",
-        actorKind: "agent",
-        actorName: "Odin",
-      };
-    case "awaiting_retry_approval":
-      return {
-        phase: "retrying",
-        eventType: "awaiting_approval",
-        actorKind: "human",
-        actorName: "Retry approval",
-      };
-    case "error":
-      return {
-        phase: "failed",
-        eventType: "failed",
-        actorKind: "system",
-        actorName: "Horus",
-      };
-  }
-}
-
-function statusLoopMetadata(status: WorkflowStatus): {
-  phase: AgentRunPhase;
-  eventType: AgentRunLoopEventType;
-  actorKind: AgentRunActorKind;
-  actorName: string;
-} {
-  if (status === "running") return { phase: "received", eventType: "received", actorKind: "system", actorName: "Horus" };
-  if (status === "completed") return { phase: "completed", eventType: "completed", actorKind: "system", actorName: "Horus" };
-  if (status === "cancelled") return { phase: "cancelled", eventType: "cancelled", actorKind: "system", actorName: "Horus" };
-  return { phase: "failed", eventType: "failed", actorKind: "system", actorName: "Horus" };
-}
-
 function phaseFromStatus(status: WorkflowStatus): AgentRunPhase {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "cancelled";
   if (status === "error") return "failed";
   return status === "running" ? "received" : "planning";
-}
-
-function phaseForAgent(agentName: AgentName, moment: "started" | "completed"): AgentRunPhase {
-  if (agentName === "spec" || agentName === "odin") return "planning";
-  if (agentName === "front") return moment === "started" ? "context_reading" : "patching";
-  if (agentName === "qa") return "validating";
-  if (agentName === "curator") return "reviewing";
-  return "understanding";
-}
-
-function completedEventTypeForAgent(agentName: AgentName): AgentRunLoopEventType {
-  if (agentName === "front") return "patch_proposed";
-  if (agentName === "qa") return "validation_passed";
-  if (agentName === "curator") return "review_passed";
-  if (agentName === "spec" || agentName === "odin") return "planning";
-  return "completed";
 }
 
 function deriveAgentExecutions(state: WorkflowState): HorusAgentExecutionSnapshot[] {

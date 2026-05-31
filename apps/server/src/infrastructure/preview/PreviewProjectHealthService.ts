@@ -156,12 +156,18 @@ export class PreviewProjectHealthService {
           TERMINAL_HIDDEN_STATUSES.has(project.lifecycleStatus)
       );
     }
-    return audited.filter(
+    const visible = audited.filter(
       (project) =>
         project.visibility === "visible" &&
         !TERMINAL_HIDDEN_STATUSES.has(project.lifecycleStatus) &&
         project.healthStatus !== "blocked"
     );
+    const hasVisibleGeneratedProject = visible.some(
+      (project) => project.projectKind !== "seed"
+    );
+    return hasVisibleGeneratedProject
+      ? visible.filter((project) => project.projectKind !== "seed")
+      : visible;
   }
 
   async auditProject(

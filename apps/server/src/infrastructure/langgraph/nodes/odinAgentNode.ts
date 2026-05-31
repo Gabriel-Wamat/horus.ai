@@ -1,6 +1,8 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
 import type { LangGraphDependencies } from "../dependencies.js";
 import { defaultLangGraphDependencies } from "../dependencies.js";
+import { summarizePromptContextForResult } from "../../prompt/PromptContextAssembler.js";
+import { attachAgentContextProfile } from "../../../application/services/AgentContextProfileService.js";
 
 export function createOdinAgentNode(deps: LangGraphDependencies) {
   return async function odinAgentNode(
@@ -23,10 +25,54 @@ export function createOdinAgentNode(deps: LangGraphDependencies) {
     }
 
     const start = Date.now();
+    const basePromptContext = deps.buildPromptContext
+      ? await deps.buildPromptContext({
+          agentProfileId: "odin_agent",
+          workflowThreadId: state.threadId,
+          ...(state.workspaceFolderId
+            ? { workspaceFolderId: state.workspaceFolderId }
+            : {}),
+          userStoryId: userStory.id,
+          ...(state.frontendProjectId ? { projectId: state.frontendProjectId } : {}),
+          ...(state.sourceChatSessionId
+            ? { chatSessionId: state.sourceChatSessionId }
+            : {}),
+          triggerReason: "odin_agent_prompt",
+        })
+      : undefined;
 
     // Reflection pattern: pass curator feedback so Odin can narrow routing on retry
     const curatorFeedback = state.curatorFeedback[userStory.id];
-    const agents = deps.decideRouting(spec, curatorFeedback);
+    const agents =
+      state.workflowMode === "chat_code_change" && !curatorFeedback
+        ? ["frontAgent"]
+      : deps.decideRouting(spec, curatorFeedback);
+    const operationalMemory = deps.buildOperationalMemory
+      ? await deps.buildOperationalMemory({
+          workflowThreadId: state.threadId,
+          userStoryId: userStory.id,
+          agentResults: state.agentResults[userStory.id] ?? [],
+          curatorFeedback: curatorFeedback ?? null,
+          retryCount: state.retryCount,
+        })
+      : undefined;
+    const contextProfile = deps.buildAgentContextProfile
+      ? await deps.buildAgentContextProfile({
+          agentName: "odin",
+          agentProfileId: "odin_agent",
+          userStory,
+          spec,
+          operationalMemory,
+          curatorFeedback: curatorFeedback ?? null,
+          routingDecision: agents,
+          workflowStatus: state.status,
+          retryCount: state.retryCount,
+        })
+      : undefined;
+    const promptContext = attachAgentContextProfile(
+      basePromptContext,
+      contextProfile
+    );
 
     console.log(
       `[odinAgentNode] Routing for ${userStory.id} (retry=${state.retryCount}): [${agents.join(", ")}]`
@@ -45,6 +91,9 @@ export function createOdinAgentNode(deps: LangGraphDependencies) {
               retryCount: state.retryCount,
               workflowMode: state.workflowMode,
               executionBrief: state.executionBrief ?? null,
+              ...(promptContext
+                ? { promptContext: summarizePromptContextForResult(promptContext) }
+                : {}),
             },
             executionTimeMs: Date.now() - start,
             completedAt: new Date().toISOString(),

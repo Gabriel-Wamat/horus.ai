@@ -1,18 +1,15 @@
 'use client'
 
 import { useDocsSearch } from 'fumadocs-core/search/client'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useMounted } from '@/lib/use-mounted'
 
 export function SearchTrigger() {
   const [open, setOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useMounted()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -87,12 +84,11 @@ function SearchDialog({ onClose }: SearchDialogProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const resultsRef = useRef<HTMLUListElement>(null)
 
-  const results = query.data && query.data !== 'empty' ? query.data : []
-
-  // Reset selection when results change
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [results])
+  const results = useMemo(
+    () => (query.data && query.data !== 'empty' ? query.data : []),
+    [query.data]
+  )
+  const activeIndex = Math.min(selectedIndex, Math.max(results.length - 1, 0))
 
   const handleSelect = useCallback(
     (url: string) => {
@@ -120,25 +116,25 @@ function SearchDialog({ onClose }: SearchDialogProps) {
         setSelectedIndex((prev) => (prev - 1 + results.length) % results.length)
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        if (results[selectedIndex]) {
-          handleSelect(results[selectedIndex].url)
+        if (results[activeIndex]) {
+          handleSelect(results[activeIndex].url)
         }
       }
     }
 
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
-  }, [onClose, results, selectedIndex, handleSelect])
+  }, [onClose, results, activeIndex, handleSelect])
 
   // Scroll selected item into view
   useEffect(() => {
     if (resultsRef.current) {
-      const selectedItem = resultsRef.current.children[selectedIndex] as HTMLElement
+      const selectedItem = resultsRef.current.children[activeIndex] as HTMLElement
       if (selectedItem) {
         selectedItem.scrollIntoView({ block: 'nearest' })
       }
     }
-  }, [selectedIndex])
+  }, [activeIndex])
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -213,11 +209,11 @@ function SearchDialog({ onClose }: SearchDialogProps) {
                         onClick={() => handleSelect(result.url)}
                         onMouseEnter={() => setSelectedIndex(index)}
                         role="option"
-                        aria-selected={selectedIndex === index}
+                        aria-selected={activeIndex === index}
                         className={cn(
                           'w-full px-4 py-3 text-left transition-colors',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]',
-                          selectedIndex === index
+                          activeIndex === index
                             ? 'bg-[rgba(20,199,123,0.11)]'
                             : 'hover:bg-[rgba(255,255,255,0.055)]'
                         )}

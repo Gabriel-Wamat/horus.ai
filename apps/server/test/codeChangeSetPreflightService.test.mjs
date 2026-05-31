@@ -7,6 +7,7 @@ import { CodeChangeSetPreflightService } from "../dist/infrastructure/code/CodeC
 
 const workflowThreadId = "11111111-1111-4111-8111-111111111111";
 const userStoryId = "22222222-2222-4222-8222-222222222222";
+const projectId = "55555555-5555-4555-8555-555555555555";
 const constructionRunId = "44444444-4444-4444-8444-444444444444";
 
 function changeSet(afterContent) {
@@ -50,19 +51,30 @@ test("CodeChangeSetPreflightService runs terminal validation, captures stderr an
   );
 
   const service = new CodeChangeSetPreflightService();
+  const outputEvents = [];
+  const candidate = changeSet("export function App() { return <main>After</main>; }\n");
   const result = await service.validate({
-    changeSet: changeSet("export function App() { return <main>After</main>; }\n"),
+    changeSet: candidate,
     projectRootPath: projectRoot,
     workflowThreadId,
     userStoryId,
+    projectId,
+    onCommandOutput: (event) => {
+      outputEvents.push(event);
+    },
   });
 
   assert.equal(result.passed, false);
   assert.equal(result.runtimeEvidence.status, "failed");
-  assert.equal(result.runtimeEvidence.commands.length, 2);
-  assert.equal(result.runtimeEvidence.commands[0].commandId, "install-root-dependencies");
-  assert.equal(result.runtimeEvidence.commands[1].commandId, "test-root-test");
-  assert.match(result.runtimeEvidence.commands[1].stderrTail, /preflight terminal failure/);
+  assert.equal(result.runtimeEvidence.commands.length, 1);
+  assert.equal(result.runtimeEvidence.commands[0].commandId, "test-root-test");
+  assert.ok(outputEvents.length > 0);
+  assert.equal(outputEvents[0].traceId, workflowThreadId);
+  assert.equal(outputEvents[0].agentId, "curator_agent");
+  assert.equal(outputEvents[0].projectId, projectId);
+  assert.equal(outputEvents[0].filePath, "src/App.tsx");
+  assert.equal(outputEvents[0].diffId, candidate.id);
+  assert.match(result.runtimeEvidence.commands[0].stderrTail, /preflight terminal failure/);
   assert.match(result.issues[0], /test-root-test failed/);
   assert.equal(
     await readFile(join(projectRoot, "src", "App.tsx"), "utf8"),
@@ -114,11 +126,6 @@ test("CodeChangeSetPreflightService blocks static frontend gate failures before 
   const projectRoot = await mkdtemp(join(tmpdir(), "horus-preflight-static-"));
   await mkdir(join(projectRoot, "src"), { recursive: true });
   await writeFile(
-    join(projectRoot, "package.json"),
-    JSON.stringify({ dependencies: { react: "latest", vite: "latest" } }),
-    "utf8"
-  );
-  await writeFile(
     join(projectRoot, "src", "main.tsx"),
     "import './App';\n",
     "utf8"
@@ -149,5 +156,41 @@ test("CodeChangeSetPreflightService blocks static frontend gate failures before 
   await assert.rejects(
     () => access(join(projectRoot, "src", "Disconnected.tsx")),
     { code: "ENOENT" }
+  );
+});
+
+test("CodeChangeSetPreflightService validates delete operations in an isolated workspace", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-preflight-delete-"));
+  await mkdir(join(projectRoot, "src"), { recursive: true });
+  await writeFile(
+    join(projectRoot, "src", "obsolete.ts"),
+    "export const obsolete = true;\n",
+    "utf8"
+  );
+
+  const service = new CodeChangeSetPreflightService();
+  const result = await service.validate({
+    changeSet: {
+      ...changeSet(""),
+      operations: [
+        {
+          targetPath: "src/obsolete.ts",
+          changeType: "delete",
+          beforeContent: null,
+          afterContent: null,
+          diff: "diff --git a/src/obsolete.ts b/src/obsolete.ts\n--- a/src/obsolete.ts\n+++ /dev/null",
+        },
+      ],
+    },
+    projectRootPath: projectRoot,
+    workflowThreadId,
+    userStoryId,
+  });
+
+  assert.equal(result.passed, true);
+  assert.equal(result.validation[0].status, "not_run");
+  assert.equal(
+    await readFile(join(projectRoot, "src", "obsolete.ts"), "utf8"),
+    "export const obsolete = true;\n"
   );
 });

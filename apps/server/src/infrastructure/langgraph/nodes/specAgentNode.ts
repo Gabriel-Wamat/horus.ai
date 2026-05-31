@@ -5,6 +5,7 @@ import {
   agentArtifactFields,
   mergeSpecRevisionContext,
 } from "../artifactContext.js";
+import { summarizePromptContextForResult } from "../../prompt/PromptContextAssembler.js";
 
 const SPEC_AGENT_SKILL_ID = "spec-frontend-sdd";
 
@@ -47,6 +48,21 @@ export function createSpecAgentNode(deps: LangGraphDependencies) {
     const start = Date.now();
     const specSkill = deps.loadAgentSkill(SPEC_AGENT_SKILL_ID);
     const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
+    const promptContext = deps.buildPromptContext
+      ? await deps.buildPromptContext({
+          agentProfileId: "spec_agent",
+          workflowThreadId: state.threadId,
+          ...(state.workspaceFolderId
+            ? { workspaceFolderId: state.workspaceFolderId }
+            : {}),
+          userStoryId: userStory.id,
+          ...(state.frontendProjectId ? { projectId: state.frontendProjectId } : {}),
+          ...(state.sourceChatSessionId
+            ? { chatSessionId: state.sourceChatSessionId }
+            : {}),
+          triggerReason: "spec_agent_prompt",
+        })
+      : undefined;
     const designContext = state.frontendProjectRootPath && deps.buildDesignContext
       ? await deps.buildDesignContext({
           ...(state.frontendProjectId
@@ -59,6 +75,7 @@ export function createSpecAgentNode(deps: LangGraphDependencies) {
       skill: specSkill,
       llmSettings,
       ...(designContext ? { designContext } : {}),
+      ...(promptContext ? { promptContext } : {}),
     });
     const artifactContext = mergeSpecRevisionContext(state, userStory.id, spec);
 
@@ -80,7 +97,13 @@ export function createSpecAgentNode(deps: LangGraphDependencies) {
             status: "success",
             agentName: "spec",
             userStoryId: userStory.id,
-            output: { specId: spec.id, specVersion: spec.version },
+            output: {
+              specId: spec.id,
+              specVersion: spec.version,
+              ...(promptContext
+                ? { promptContext: summarizePromptContextForResult(promptContext) }
+                : {}),
+            },
             executionTimeMs: Date.now() - start,
             completedAt: new Date().toISOString(),
             ...agentArtifactFields(artifactContext),

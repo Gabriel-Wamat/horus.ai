@@ -177,7 +177,15 @@ function ProjectFilesPageContent(): JSX.Element {
   useEffect(() => {
     const handleProjectFilesChanged = (event: Event): void => {
       if (!isProjectFilesChangedEvent(event)) return;
-      if (event.detail.projectId !== state.selectedProjectId) return;
+      void queryClient.invalidateQueries({
+        queryKey: ["project-files", "projects"],
+      });
+      if (event.detail.projectId !== state.selectedProjectId) {
+        if (event.detail.selectProject && dirtyPaths.size === 0) {
+          state.setSelectedProjectId(event.detail.projectId);
+        }
+        return;
+      }
       void refreshChangedFiles(event.detail.paths);
     };
 
@@ -185,7 +193,13 @@ function ProjectFilesPageContent(): JSX.Element {
     return () => {
       window.removeEventListener(PROJECT_FILES_CHANGED_EVENT, handleProjectFilesChanged);
     };
-  }, [refreshChangedFiles, state.selectedProjectId]);
+  }, [
+    dirtyPaths.size,
+    queryClient,
+    refreshChangedFiles,
+    state,
+    state.selectedProjectId,
+  ]);
 
   const confirmDirtyNavigation = useCallback((path: string | null): boolean => {
     if (!path || !dirtyPaths.has(path)) return true;

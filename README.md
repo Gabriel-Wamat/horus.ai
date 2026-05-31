@@ -250,3 +250,11 @@ More operational detail is in [docs/runbook.md](docs/runbook.md).
 - [Contributing](docs/contributing.md)
 - [Project-local agent skills](skills/README.md)
 - [Tools workspace](tools/README.md)
+
+## License
+
+This project is **not** licensed for commercial use.
+
+Horus.AI is distributed under the [Horus.AI Restricted Non-Commercial License](LICENSE). The license permits only limited personal, non-commercial learning, private study, academic review, and technical evaluation.
+
+Companies, startups, agencies, consultancies, contractors, employees acting for a company, and any commercial organization may not use, host, resell, integrate, monetize, benchmark commercially, train models with, or build products or services from this project without a separate written commercial license signed by the licensor.

@@ -15,6 +15,7 @@ import type {
   VisualGateViewport,
 } from "@u-build/shared";
 import {
+  isCodeChangeDeleteOperation,
   RuntimeValidationEvidenceSchema,
   VisualGateResultSchema,
 } from "@u-build/shared";
@@ -309,6 +310,7 @@ function collectInspectableArtifacts(input: VisualGateInput): VisualInspectableA
   }
 
   for (const operation of input.codeChangeSet?.operations ?? []) {
+    if (isCodeChangeDeleteOperation(operation)) continue;
     if (isFrontendVisualPath(operation.targetPath)) {
       artifacts.push({
         id: operation.targetPath,

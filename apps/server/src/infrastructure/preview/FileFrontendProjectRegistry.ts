@@ -157,7 +157,12 @@ export class FileFrontendProjectRegistry {
     const projects = await this.readProjects();
     const rootPath = await this.canonicalizeProjectRoot(input.rootPath);
     const slug = slugify(input.name);
-    const existing = projects.find((item) => item.slug === slug);
+    const existing =
+      input.projectWorkspaceId === undefined || input.projectWorkspaceId === null
+        ? projects.find((item) => item.slug === slug)
+        : projects.find(
+            (item) => item.projectWorkspaceId === input.projectWorkspaceId
+          ) ?? projects.find((item) => item.slug === slug);
     const project = FrontendProjectSchema.parse({
       id: existing?.id ?? uuidv4(),
       name: input.name.trim(),

@@ -130,6 +130,77 @@ async function clickStart(page) {
   await startButton.click({ timeout: SCREENSHOT_TIMEOUT_MS });
 }
 
+async function readChatSurfaceState(page) {
+  return page.evaluate(() => {
+    const panel = document.querySelector(".preview-conversation-panel");
+    const composer = document.querySelector(".visual-composer");
+    const textarea = document.querySelector(".visual-composer-input");
+    const status = document.querySelector(".composer-status-row span");
+    const history = document.querySelector(".preview-chat-message-list");
+    const empty = document.querySelector(".preview-chat-empty");
+    const scopeBar = document.querySelector(".preview-chat-scope-bar");
+    const panelBox = panel?.getBoundingClientRect();
+
+    return {
+      hasPanel: Boolean(panel),
+      hasComposer: Boolean(composer),
+      hasScopeBar: Boolean(scopeBar),
+      statusText: status?.textContent?.trim() ?? "",
+      textareaDisabled: textarea instanceof HTMLTextAreaElement
+        ? textarea.disabled
+        : null,
+      textareaPlaceholder: textarea instanceof HTMLTextAreaElement
+        ? textarea.placeholder
+        : "",
+      messageCount: history?.querySelectorAll(".preview-chat-message").length ?? 0,
+      emptyText: empty?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+      horizontalOverflow:
+        document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,
+      panelBox: panelBox
+        ? {
+            width: Math.round(panelBox.width),
+            height: Math.round(panelBox.height),
+          }
+        : null,
+    };
+  });
+}
+
+async function ensureChatSurfaceSettled(page, artifactDir, screenshotName) {
+  await page.locator(".visual-composer").waitFor({
+    state: "visible",
+    timeout: SCREENSHOT_TIMEOUT_MS,
+  });
+  await page.waitForFunction(
+    () => {
+      const status = document
+        .querySelector(".composer-status-row span")
+        ?.textContent?.trim() ?? "";
+      return (
+        status.length > 0 &&
+        !/Preparando a memória isolada|Carregando o contexto/i.test(status)
+      );
+    },
+    null,
+    { timeout: SCREENSHOT_TIMEOUT_MS }
+  );
+  const state = await readChatSurfaceState(page);
+  check(state.hasPanel, "Painel de chat do Preview não foi renderizado.");
+  check(state.hasComposer, "Composer do chat não foi renderizado.");
+  check(state.hasScopeBar, "Barra de escopo do chat não foi renderizada.");
+  check(
+    state.statusText.length > 0,
+    "Composer do chat não expõe status ou motivo de bloqueio."
+  );
+  check(
+    !/Preparando a memória isolada|Carregando o contexto/i.test(state.statusText),
+    `Chat permaneceu em estado transitório: ${state.statusText}`
+  );
+  check(!state.horizontalOverflow, "Chat gerou overflow horizontal no viewport.");
+  const screenshotPath = await screenshot(page.locator(".preview-conversation-panel"), artifactDir, screenshotName);
+  return { ...state, screenshotPath };
+}
+
 async function stopIfRunning(page) {
   const stopButton = page.getByRole("button", { name: /parar/i });
   if ((await stopButton.count()) === 0) return;
@@ -243,6 +314,12 @@ async function run() {
     report.screenshots.defaultPreview = await screenshot(page, artifactDir, "01-default-preview");
 
     await page.selectOption("#preview-project", canonicalProject.id);
+    report.checks.chatSurface = await ensureChatSurfaceSettled(
+      page,
+      artifactDir,
+      "02-chat-surface"
+    );
+    report.screenshots.chatSurface = report.checks.chatSurface.screenshotPath;
     await stopIfRunning(page);
     await clickStart(page);
     await page.locator("iframe.preview-frame").waitFor({
@@ -258,13 +335,24 @@ async function run() {
     report.screenshots.runningPreview = await screenshot(
       page.locator(".preview-canvas"),
       artifactDir,
-      "02-running-preview"
+      "03-running-preview"
     );
     report.checks.runningPreview = {
       projectId: canonicalProject.id,
       frameBox,
       iframeSrc: await page.locator("iframe.preview-frame").first().getAttribute("src"),
     };
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    report.checks.mobileChatSurface = await ensureChatSurfaceSettled(
+      page,
+      artifactDir,
+      "04-mobile-chat-surface"
+    );
+    report.screenshots.mobileChatSurface =
+      report.checks.mobileChatSurface.screenshotPath;
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     if (invalidProject) {
       await page.getByRole("button", { name: /ver inválidos/i }).click({
@@ -278,7 +366,7 @@ async function run() {
         invalidProject.id,
         { timeout: SCREENSHOT_TIMEOUT_MS }
       );
-      report.screenshots.allProjects = await screenshot(page, artifactDir, "03-all-projects");
+      report.screenshots.allProjects = await screenshot(page, artifactDir, "05-all-projects");
 
       await page.selectOption("#preview-project", invalidProject.id);
       await clickStart(page);
@@ -293,7 +381,7 @@ async function run() {
       report.screenshots.blockedProject = await screenshot(
         page,
         artifactDir,
-        "04-blocked-project"
+        "06-blocked-project"
       );
       report.checks.blockedProject = {
         projectId: invalidProject.id,

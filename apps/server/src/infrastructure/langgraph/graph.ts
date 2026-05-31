@@ -13,6 +13,8 @@ import {
   defaultLangGraphDependencies,
   type LangGraphDependencies,
 } from "./dependencies.js";
+import { AgentNodeIsolationController } from "./AgentNodeIsolation.js";
+import type { AgentCircuitBreakerStore } from "../../application/services/AgentCircuitBreakerStore.js";
 
 const SPEC_AGENT = "specAgent" as const;
 const HITL_CHECKPOINT = "hitlCheckpoint" as const;
@@ -32,6 +34,9 @@ function routeToParallelAgents(
   if (
     state.status === "completed" ||
     state.status === "cancelled" ||
+    state.status === "blocked" ||
+    state.status === "failed_validation" ||
+    state.status === "error" ||
     !state.userStories[state.currentUSIndex]
   ) {
     return END;
@@ -53,6 +58,13 @@ function routeAfterHitlCheckpoint(
   state: typeof UBuildStateAnnotation.State
 ): typeof ODIN_AGENT | typeof END {
   if (state.status === "cancelled") return END;
+  if (
+    state.status === "blocked" ||
+    state.status === "failed_validation" ||
+    state.status === "error"
+  ) {
+    return END;
+  }
   return ODIN_AGENT;
 }
 
@@ -60,7 +72,14 @@ function routeAfterSpecAgent(
   state: typeof UBuildStateAnnotation.State
 ): typeof SPEC_AGENT | typeof HITL_CHECKPOINT | typeof END {
   if (state.workflowMode !== "spec_generation") return HITL_CHECKPOINT;
-  if (state.status === "completed") return END;
+  if (
+    state.status === "completed" ||
+    state.status === "blocked" ||
+    state.status === "failed_validation" ||
+    state.status === "error"
+  ) {
+    return END;
+  }
   return SPEC_AGENT;
 }
 
@@ -86,7 +105,14 @@ function routeAfterCurator(
   state: typeof UBuildStateAnnotation.State
 ): typeof SPEC_AGENT | typeof ODIN_AGENT | typeof RETRY_CHECKPOINT | typeof END {
   if (state.status === "completed") return ODIN_AGENT;
-  if (state.status === "cancelled") return END;
+  if (
+    state.status === "cancelled" ||
+    state.status === "blocked" ||
+    state.status === "failed_validation" ||
+    state.status === "error"
+  ) {
+    return END;
+  }
 
   const curStory = state.userStories[state.currentUSIndex];
   if (!curStory) return END;
@@ -111,21 +137,49 @@ function routeAfterCurator(
 function routeAfterRetryCheckpoint(
   state: typeof UBuildStateAnnotation.State
 ): typeof ODIN_AGENT | typeof END {
-  if (state.status === "completed") return END;
+  if (
+    state.status === "completed" ||
+    state.status === "blocked" ||
+    state.status === "failed_validation" ||
+    state.status === "error"
+  ) {
+    return END;
+  }
   return ODIN_AGENT;
 }
 
 export function createWorkflowGraph(
   dependencies: LangGraphDependencies = defaultLangGraphDependencies,
-  workflowCheckpointer: BaseCheckpointSaver = checkpointer
+  workflowCheckpointer: BaseCheckpointSaver = checkpointer,
+  options: { circuitBreakerStore?: AgentCircuitBreakerStore } = {}
 ) {
+  const nodeIsolation = new AgentNodeIsolationController(
+    options.circuitBreakerStore
+      ? { circuitBreakerStore: options.circuitBreakerStore }
+      : {}
+  );
   const workflow = new StateGraph(UBuildStateAnnotation)
-    .addNode(SPEC_AGENT, createSpecAgentNode(dependencies))
+    .addNode(
+      SPEC_AGENT,
+      nodeIsolation.wrap("spec_agent", createSpecAgentNode(dependencies))
+    )
     .addNode(HITL_CHECKPOINT, hitlCheckpointNode)
-    .addNode(ODIN_AGENT, createOdinAgentNode(dependencies))
-    .addNode(FRONT_AGENT, createFrontAgentNode(dependencies))
-    .addNode(QA_AGENT, createQaAgentNode(dependencies))
-    .addNode(CURATOR_AGENT, createCuratorAgentNode(dependencies))
+    .addNode(
+      ODIN_AGENT,
+      nodeIsolation.wrap("odin_agent", createOdinAgentNode(dependencies))
+    )
+    .addNode(
+      FRONT_AGENT,
+      nodeIsolation.wrap("front_agent", createFrontAgentNode(dependencies))
+    )
+    .addNode(
+      QA_AGENT,
+      nodeIsolation.wrap("qa_agent", createQaAgentNode(dependencies))
+    )
+    .addNode(
+      CURATOR_AGENT,
+      nodeIsolation.wrap("curator_agent", createCuratorAgentNode(dependencies))
+    )
     .addNode(RETRY_CHECKPOINT, retryCheckpointNode)
 
     // Main pipeline

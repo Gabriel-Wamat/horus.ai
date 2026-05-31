@@ -56,8 +56,9 @@ export class AgentSkillStaleRevisionError extends AgentSkillRegistryError {
 
 export interface ResolveRuntimeSkillOptions {
   workflowThreadId?: string | null;
+  runId?: string | null;
+  attemptId?: string | null;
   triggerReason?: string | null;
-  auditUsage?: boolean;
 }
 
 export class AgentSkillRegistryService {
@@ -432,18 +433,6 @@ export class AgentSkillRegistryService {
           skillMd: revision.skillMd,
           files,
         });
-        if (options.auditUsage && options.workflowThreadId) {
-          await this.repository.appendUsageEvent({
-            id: newId(),
-            skillId: skill.id,
-            revisionId: revision.id,
-            workflowThreadId: options.workflowThreadId,
-            agentProfileId,
-            triggerMode: binding.triggerMode,
-            triggerReason: options.triggerReason ?? null,
-            createdAt: new Date().toISOString(),
-          });
-        }
       }
     }
     return runtimeSkills.sort((left, right) =>

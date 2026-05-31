@@ -1,11 +1,11 @@
 import type { SetPreviewDeviceInput } from "@u-build/shared";
 import type {
   PreviewActionResult,
-  PreviewRuntimeManager,
-} from "../../infrastructure/preview/PreviewRuntimeManager.js";
+  PreviewRuntimePort,
+} from "../ports/PreviewRuntimePort.js";
 
 export class SetPreviewDeviceUseCase {
-  constructor(private readonly previewRuntime: PreviewRuntimeManager) {}
+  constructor(private readonly previewRuntime: PreviewRuntimePort) {}
 
   async execute(
     sessionId: string,

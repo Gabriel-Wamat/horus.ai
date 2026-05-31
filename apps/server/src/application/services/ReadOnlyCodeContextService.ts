@@ -1,14 +1,29 @@
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type {
   ChatAgentContextBundle,
   CodeContextBundle,
-  CodeContextExcerpt,
   CodeContextLimits,
+  CodeContextStructuralContext,
   FrontendProject,
+  HorusProjectManifest,
+  RepositoryRetrievalResult,
+  RepositoryScanSnapshot,
 } from "@u-build/shared";
-import { CodeContextBundleSchema } from "@u-build/shared";
-import { ProjectManifestService } from "../../infrastructure/project/ProjectManifestService.js";
+import { CodeContextBundleSchema, HorusProjectManifestSchema } from "@u-build/shared";
+import type { ProjectManifestReader } from "../ports/ProjectServicesPort.js";
+import type {
+  RepositoryScannerPort,
+  TextRetrievalPort,
+} from "../ports/RepositoryRetrievalPort.js";
+import type {
+  AstAnalyzerPort,
+  KeyValueCachePort,
+  SemanticRepositoryRetrievalPort,
+} from "../ports/index.js";
+import { RepositoryScanner } from "../coding/RepositoryScanner.js";
+import { TextRepositoryRetriever } from "../coding/TextRepositoryRetriever.js";
 
 export class CodeContextAccessError extends Error {
   constructor(message: string) {
@@ -36,38 +51,28 @@ const DEFAULT_LIMITS: CodeContextLimits = {
   maxBytesPerFile: 8_000,
   maxTotalBytes: 32_000,
 };
-const EXCERPT_RADIUS = 6;
-const MIN_MATCH_SCORE = 20;
-
-const IGNORED_DIRS = new Set([
-  ".git",
-  ".turbo",
-  ".vite",
-  "build",
-  "coverage",
-  "dist",
-  "node_modules",
-]);
-
-const DEFAULT_PRIORITY_FILES = [
-  "horus.project.json",
-  "package.json",
-  "src/main.tsx",
-  "src/main.ts",
-  "src/App.tsx",
-  "src/App.ts",
-  "src/styles/tokens.css",
-  "src/styles/app.css",
-  "src/index.css",
-  "src/features/welcome/components/WelcomeScreen.tsx",
-  "vite.config.ts",
-  "tsconfig.json",
-];
+const DEFAULT_RETRIEVAL_OPTIONS = {
+  maxContentScanFiles: 80,
+  concurrency: 4,
+};
+const DEFAULT_STRUCTURAL_CONTEXT_CACHE_TTL_MS = 120_000;
 
 export class ReadOnlyCodeContextService {
   constructor(
     private readonly limits: CodeContextLimits = DEFAULT_LIMITS,
-    private readonly manifestService = new ProjectManifestService()
+    private readonly manifestService: ProjectManifestReader =
+      new JsonProjectManifestReader(),
+    private readonly retrievalOptions: {
+      readonly maxContentScanFiles?: number | undefined;
+      readonly concurrency?: number | undefined;
+    } = DEFAULT_RETRIEVAL_OPTIONS,
+    private readonly scanner: RepositoryScannerPort = new RepositoryScanner(),
+    private readonly retriever: TextRetrievalPort = new TextRepositoryRetriever(),
+    private readonly astAnalyzer?: AstAnalyzerPort | undefined,
+    private readonly semanticRetrieval?: SemanticRepositoryRetrievalPort | undefined,
+    private readonly cache?: KeyValueCachePort | undefined,
+    private readonly structuralContextCacheTtlMs: number =
+      DEFAULT_STRUCTURAL_CONTEXT_CACHE_TTL_MS
   ) {}
 
   async buildContext(input: BuildCodeContextInput): Promise<CodeContextBundle> {
@@ -84,82 +89,198 @@ export class ReadOnlyCodeContextService {
   ): Promise<CodeContextBundle> {
     const root = await fs.realpath(input.projectRootPath);
     const manifest = await this.manifestService.read(root);
-    const allFiles = await this.listFiles(root);
-    const candidates =
-      input.requestedPaths && input.requestedPaths.length > 0
-        ? input.requestedPaths
-        : await this.selectCandidatePaths(root, input.query, allFiles);
-    const terms = extractSearchTerms(input.query);
-
-    const files = [];
-    const excerpts: CodeContextExcerpt[] = [];
-    let totalBytes = 0;
-    let omittedFilesCount = 0;
-
-    for (const candidate of candidates) {
-      if (files.length >= this.limits.maxFiles) {
-        omittedFilesCount += 1;
-        continue;
-      }
-
-      const absolutePath = await this.resolveInsideRoot(root, candidate);
-      const stat = await fs.stat(absolutePath).catch(() => null);
-      if (!stat?.isFile()) continue;
-
-      const bytesToRead = Math.min(stat.size, this.limits.maxBytesPerFile);
-      if (totalBytes + bytesToRead > this.limits.maxTotalBytes) {
-        omittedFilesCount += 1;
-        continue;
-      }
-
-      const raw = await fs.readFile(absolutePath, "utf-8");
-      const content = raw.slice(0, this.limits.maxBytesPerFile);
-      const normalizedPath = normalizeRelativePath(relative(root, absolutePath));
-      const matchedTerms = terms.filter((term) =>
-        `${normalizedPath}\n${content}`.toLowerCase().includes(term)
-      );
-      const lineCount = Math.max(1, content.split("\n").length);
-      files.push({
-        path: normalizedPath,
-        bytes: Buffer.byteLength(content, "utf-8"),
-        content,
-        startLine: 1,
-        endLine: lineCount,
-        matchedTerms,
-      });
-      if (normalizedPath !== "horus.project.json") {
-        const excerpt = buildBestExcerpt(normalizedPath, content, terms);
-        if (excerpt) excerpts.push(excerpt);
-      }
-      totalBytes += Buffer.byteLength(content, "utf-8");
-    }
-    excerpts.sort((a, b) => b.score - a.score || a.filePath.localeCompare(b.filePath));
-    const bestScore = excerpts[0]?.score ?? 0;
-    const retrievalStatus =
-      excerpts.length === 0
-        ? "no_match"
-        : bestScore >= MIN_MATCH_SCORE
-          ? "matched"
-          : "partial";
+    const scan = await this.scanner.scan({
+      projectId: input.projectId,
+      projectRootPath: root,
+      ...(input.requestedPaths ? { selectedPaths: input.requestedPaths } : {}),
+      budget: {
+        maxBytesPerFile: Math.max(this.limits.maxBytesPerFile, 64_000),
+      },
+    });
+    const retrieval = await this.retriever.retrieve({
+      scan,
+      query: input.query,
+      ...(input.requestedPaths ? { requestedPaths: input.requestedPaths } : {}),
+      budget: {
+        maxFiles: this.limits.maxFiles,
+        maxBytesPerFile: this.limits.maxBytesPerFile,
+        maxTotalBytes: this.limits.maxTotalBytes,
+        maxContentScanFiles:
+          this.retrievalOptions.maxContentScanFiles ??
+          DEFAULT_RETRIEVAL_OPTIONS.maxContentScanFiles,
+        maxExcerpts: Math.max(1, Math.min(5, this.limits.maxFiles)),
+        concurrency:
+          this.retrievalOptions.concurrency ??
+          DEFAULT_RETRIEVAL_OPTIONS.concurrency,
+      },
+    });
+    const files = retrieval.candidates.map((candidate) => ({
+      path: candidate.path,
+      bytes: candidate.bytes,
+      content: candidate.content,
+      startLine: candidate.startLine,
+      ...(candidate.endLine ? { endLine: candidate.endLine } : {}),
+      matchedTerms: candidate.matchedTerms,
+    }));
+    const structuralContext = await this.buildStructuralContext({
+      scan,
+      retrieval,
+      query: input.query,
+      requestedPaths: input.requestedPaths,
+    });
 
     return CodeContextBundleSchema.parse({
       projectId: input.projectId,
       query: input.query,
       inspectedFiles: files.map((file) => file.path),
       files,
-      excerpts: excerpts.slice(0, Math.min(5, this.limits.maxFiles)),
-      omittedFilesCount,
-      totalBytes,
+      excerpts: retrieval.excerpts,
+      omittedFilesCount: retrieval.omittedFilesCount,
+      totalBytes: retrieval.totalBytes,
       limits: this.limits,
       manifest,
-      retrievalStatus,
-      retrievalNotes:
-        retrievalStatus === "no_match"
-          ? ["Nenhum trecho de código compatível com a pergunta foi encontrado."]
-          : retrievalStatus === "partial"
-            ? ["A busca encontrou apenas evidências fracas ou arquivos de fallback."]
-            : [],
+      retrievalStatus: retrieval.status,
+      retrievalNotes: retrieval.notes,
+      retrievalStats: {
+        totalFiles: retrieval.stats.totalFiles,
+        indexedFiles: retrieval.stats.indexedFiles,
+        contentScannedFiles: retrieval.stats.contentScannedFiles,
+        explicitPathCount: retrieval.stats.explicitPathCount,
+      },
+      structuralContext,
     });
+  }
+
+  private async buildStructuralContext(input: {
+    scan: RepositoryScanSnapshot;
+    retrieval: RepositoryRetrievalResult;
+    query: string;
+    requestedPaths?: readonly string[] | undefined;
+  }): Promise<CodeContextStructuralContext | null> {
+    if (!this.astAnalyzer) return null;
+    const notes: string[] = [];
+    const cacheKey = this.cache
+      ? buildStructuralContextCacheKey(input)
+      : undefined;
+    if (cacheKey && this.cache) {
+      const cached = await this.cache
+        .getJson<CodeContextStructuralContext>(cacheKey)
+        .catch(() => null);
+      if (cached) {
+        return {
+          ...cached,
+          notes: [...cached.notes, "cache_hit: structural_context"],
+        };
+      }
+    }
+    try {
+      const ast = await this.astAnalyzer.analyze({
+        candidates: input.retrieval.candidates,
+      });
+      const semantic = this.semanticRetrieval
+        ? await this.semanticRetrieval
+            .retrieve({
+              scan: input.scan,
+              lexicalRetrieval: input.retrieval,
+              query: input.query,
+              requestedPaths: input.requestedPaths ?? [],
+              ast,
+              budget: {
+                maxSourceFiles: 24,
+                maxBytesPerFile: 16_000,
+                maxChunks: 80,
+                topK: 8,
+              },
+            })
+            .catch((err: unknown) => {
+              notes.push(
+                err instanceof Error
+                  ? `semantic_retrieval_unavailable: ${err.message}`
+                  : "semantic_retrieval_unavailable"
+              );
+              return undefined;
+            })
+        : undefined;
+
+      const structuralContext: CodeContextStructuralContext = {
+        status: ast.status,
+        parsedDocumentCount: ast.summary.parsedDocumentCount,
+        symbolCount: ast.summary.symbolCount,
+        diagnosticCount: ast.summary.diagnosticCount,
+        symbols: ast.documents
+          .flatMap((document) => document.symbols)
+          .slice(0, 40)
+          .map((symbol) => ({
+            path: symbol.path,
+            name: symbol.name,
+            kind: symbol.kind,
+            startLine: symbol.range.startPosition.row + 1,
+            endLine: Math.max(
+              symbol.range.startPosition.row + 1,
+              symbol.range.endPosition.row + 1
+            ),
+            ...(symbol.detail ? { detail: symbol.detail } : {}),
+          })),
+        diagnostics: ast.diagnostics.slice(0, 16).map((diagnostic) => ({
+          path: diagnostic.path,
+          code: diagnostic.code,
+          message: diagnostic.message,
+          severity: diagnostic.severity,
+          ...(diagnostic.range
+            ? {
+                startLine: diagnostic.range.startPosition.row + 1,
+                endLine: Math.max(
+                  diagnostic.range.startPosition.row + 1,
+                  diagnostic.range.endPosition.row + 1
+                ),
+              }
+            : {}),
+        })),
+        semanticMatches:
+          semantic?.matches.slice(0, 8).map((match) => ({
+            path: match.chunk.path,
+            kind: match.chunk.kind,
+            startLine: match.chunk.startLine,
+            endLine: match.chunk.endLine,
+            score: match.scoreBreakdown.finalScore,
+            symbolNames: match.chunk.symbolNames.slice(0, 8),
+            reasons: match.scoreBreakdown.reasons.slice(0, 4),
+          })) ?? [],
+        notes: [
+          ...notes,
+          ...(semantic?.notes.slice(0, 6) ?? []),
+        ],
+      };
+      if (cacheKey && this.cache && structuralContext.status !== "failed") {
+        await this.cache
+          .setJson(cacheKey, structuralContext, {
+            ttlMs: this.structuralContextCacheTtlMs,
+          })
+          .catch(() => undefined);
+      }
+      return structuralContext;
+    } catch (err) {
+      return {
+        status: "failed",
+        parsedDocumentCount: 0,
+        symbolCount: 0,
+        diagnosticCount: 1,
+        symbols: [],
+        diagnostics: [
+          {
+            path: "<context>",
+            code: "ast_context_unavailable",
+            message:
+              err instanceof Error
+                ? err.message
+                : "AST context unavailable for this retrieval.",
+            severity: "warning",
+          },
+        ],
+        semanticMatches: [],
+        notes,
+      };
+    }
   }
 
   async readProjectFile(
@@ -181,67 +302,6 @@ export class ReadOnlyCodeContextService {
       content,
       bytes: Buffer.byteLength(content, "utf-8"),
     };
-  }
-
-  private async selectCandidatePaths(
-    root: string,
-    query: string,
-    allFiles: string[]
-  ): Promise<string[]> {
-    const terms = extractSearchTerms(query);
-    const explicitPaths = extractExplicitPaths(query).filter((path) =>
-      allFiles.includes(path)
-    );
-    const contentScores = await Promise.all(
-      allFiles.map(async (path) => {
-        const absolutePath = await this.resolveInsideRoot(root, path);
-        const content = await fs.readFile(absolutePath, "utf-8").catch(() => "");
-        return {
-          path,
-          score: scorePath(path, terms) + scoreContent(content, terms),
-        };
-      })
-    );
-    const scored = allFiles
-      .map((path) => ({
-        path,
-        score: contentScores.find((item) => item.path === path)?.score ?? scorePath(path, terms),
-      }))
-      .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
-
-    return [
-      ...explicitPaths,
-      ...scored.filter((item) => item.score > 0).map((item) => item.path),
-      ...DEFAULT_PRIORITY_FILES.filter((path) => allFiles.includes(path)),
-      ...scored.slice(0, this.limits.maxFiles).map((item) => item.path),
-    ].filter(dedupe);
-  }
-
-  private async listFiles(root: string): Promise<string[]> {
-    const output: string[] = [];
-    const visit = async (directory: string): Promise<void> => {
-      const entries = await fs.readdir(directory, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.name.startsWith(".") && entry.name !== ".env.example") {
-          continue;
-        }
-        if (entry.isDirectory() && IGNORED_DIRS.has(entry.name)) {
-          continue;
-        }
-
-        const absolutePath = join(directory, entry.name);
-        const relativePath = normalizeRelativePath(relative(root, absolutePath));
-
-        if (entry.isDirectory()) {
-          await visit(absolutePath);
-        } else if (entry.isFile() && isTextSourceFile(relativePath)) {
-          output.push(relativePath);
-        }
-      }
-    };
-
-    await visit(root);
-    return output.sort();
   }
 
   private async resolveInsideRoot(
@@ -286,92 +346,41 @@ export class ReadOnlyCodeContextService {
   }
 }
 
+class JsonProjectManifestReader implements ProjectManifestReader {
+  async read(projectRoot: string): Promise<HorusProjectManifest | null> {
+    const manifestPath = join(projectRoot, "horus.project.json");
+    const raw = await fs.readFile(manifestPath, "utf-8").catch((err: unknown) => {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw err;
+    });
+    if (raw === null) return null;
+    return HorusProjectManifestSchema.parse(JSON.parse(raw));
+  }
+}
+
 function normalizeRelativePath(path: string): string {
   return path.split(sep).join("/");
 }
 
-function isTextSourceFile(path: string): boolean {
-  return /\.(css|html|js|jsx|json|md|mjs|ts|tsx|yaml|yml)$/.test(path);
-}
-
-function extractSearchTerms(query: string): string[] {
-  return query
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .split(/[^a-z0-9]+/)
-    .filter((term) => term.length >= 3);
-}
-
-function scorePath(path: string, terms: string[]): number {
-  const normalized = path.toLowerCase();
-  return terms.reduce(
-    (score, term) => score + (normalized.includes(term) ? 1 : 0),
-    0
-  );
-}
-
-function scoreContent(content: string, terms: string[]): number {
-  const normalized = content.toLowerCase();
-  return terms.reduce((score, term) => {
-    const exact = normalized.includes(term) ? 8 : 0;
-    const symbol = new RegExp(`\\b${escapeRegExp(term)}\\b`, "i").test(content) ? 12 : 0;
-    return score + exact + symbol;
-  }, 0);
-}
-
-function extractExplicitPaths(query: string): string[] {
-  return [...query.matchAll(/[A-Za-z0-9_./-]+\.(?:tsx?|jsx?|css|html|json|md|ya?ml)/g)]
-    .map((match) => match[0].replace(/^['"`]+|['"`.,;:]+$/g, ""))
-    .map((path) => normalizeRelativePath(path.replace(/^\.?\//, "")))
-    .filter(dedupe);
-}
-
-function buildBestExcerpt(
-  filePath: string,
-  content: string,
-  terms: string[]
-): CodeContextExcerpt | null {
-  const lines = content.split("\n");
-  if (lines.length === 0) return null;
-  let bestLine = -1;
-  let bestScore = 0;
-  const normalizedTerms = terms.length > 0 ? terms : [filePath.split("/").pop() ?? filePath];
-
-  lines.forEach((line, index) => {
-    const normalized = line.toLowerCase();
-    const lineScore = normalizedTerms.reduce(
-      (score, term) => score + (normalized.includes(term.toLowerCase()) ? 10 : 0),
-      0
-    );
-    if (lineScore > bestScore) {
-      bestScore = lineScore;
-      bestLine = index;
-    }
+function buildStructuralContextCacheKey(input: {
+  scan: RepositoryScanSnapshot;
+  retrieval: RepositoryRetrievalResult;
+  query: string;
+  requestedPaths?: readonly string[] | undefined;
+}): string {
+  const payload = JSON.stringify({
+    projectRootPath: input.scan.projectRootPath,
+    query: input.query,
+    requestedPaths: [...(input.requestedPaths ?? [])].sort(),
+    candidates: input.retrieval.candidates.map((candidate) => ({
+      path: candidate.path,
+      bytes: candidate.bytes,
+      hash: sha256(candidate.content),
+    })),
   });
-
-  if (bestLine < 0) {
-    if (terms.length > 0) return null;
-    bestLine = 0;
-    bestScore = 1;
-  }
-
-  const start = Math.max(0, bestLine - EXCERPT_RADIUS);
-  const end = Math.min(lines.length - 1, bestLine + EXCERPT_RADIUS);
-  return {
-    filePath,
-    startLine: start + 1,
-    endLine: end + 1,
-    content: lines.slice(start, end + 1).join("\n"),
-    reason: bestScore >= MIN_MATCH_SCORE ? "Correspondência forte com a pergunta." : "Correspondência parcial com a pergunta.",
-    score: bestScore,
-  };
+  return `code-context:structural:v1:${sha256(payload)}`;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function dedupe(value: string, index: number, values: string[]): boolean {
-  return values.indexOf(value) === index;
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }

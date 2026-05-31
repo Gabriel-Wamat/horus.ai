@@ -1,0 +1,850 @@
+.preview-console {
+  display: grid;
+  height: calc(100vh - 108px);
+  min-height: 0;
+  grid-template-columns: minmax(340px, 390px) minmax(0, 1fr) minmax(300px, 360px);
+  gap: 14px;
+  overflow: hidden;
+}
+
+.preview-conversation-panel,
+.preview-side,
+.preview-main-panel,
+.execution-console-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: var(--s1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.preview-conversation-panel {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.preview-conversation-panel > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.preview-conversation-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--bd);
+  background: rgba(255, 255, 255, 0.015);
+  padding: 16px;
+}
+
+.preview-project-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-project-identity > div {
+  min-width: 0;
+}
+
+.preview-project-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--bd-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--t2);
+}
+
+.preview-project-identity h2 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--t);
+  font-size: 16px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-project-identity p {
+  margin: 1px 0 0;
+  color: var(--t3);
+  font-size: 12px;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-conversation-config {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(72px, 92px);
+  min-width: 0;
+  align-items: end;
+  gap: 8px;
+  border-bottom: 1px solid var(--bd);
+  padding: 10px 14px 12px;
+}
+
+.preview-config-field {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.preview-conversation-config .field-label {
+  margin-bottom: 0;
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.preview-conversation-config .input,
+.preview-conversation-config .select {
+  min-width: 0;
+  height: 34px;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.preview-conversation-config .form-error {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.preview-chat-thread-section {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--bd-soft);
+  padding: 12px;
+}
+
+.preview-chat-history {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.preview-chat-thread-section .visual-composer {
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.preview-chat-message-list {
+  display: flex;
+  min-height: 0;
+  max-height: 100%;
+  flex-direction: column;
+  gap: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px 4px 12px;
+  scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
+}
+
+.preview-chat-empty {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--t3);
+  padding: 18px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.preview-chat-empty span {
+  color: var(--t2);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.preview-chat-empty small {
+  max-width: 260px;
+  color: var(--t3);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.execution-console-panel {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.execution-console-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--bd);
+  background: rgba(255, 255, 255, 0.015);
+  padding: 14px;
+}
+
+.execution-console-head div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.execution-console-head span,
+.execution-console-section-head span {
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.execution-console-head strong {
+  overflow: hidden;
+  color: var(--t);
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-head code {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--t2);
+  padding: 6px 9px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.execution-console-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--bd);
+}
+
+.execution-console-metrics span {
+  display: grid;
+  gap: 3px;
+  border-right: 1px solid var(--bd-soft);
+  color: var(--t3);
+  padding: 11px 12px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.execution-console-metrics span:last-child {
+  border-right: 0;
+}
+
+.execution-console-metrics strong {
+  color: var(--t);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.execution-console-body {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  overflow: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
+}
+
+.execution-console-section {
+  display: grid;
+  min-height: auto;
+  grid-template-rows: auto auto;
+  border-bottom: 1px solid var(--bd);
+  padding: 11px 12px 12px;
+}
+
+.execution-console-section:last-child {
+  border-bottom: 0;
+}
+
+.execution-console-section-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.execution-console-section-head strong {
+  color: var(--t2);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.execution-console-timeline,
+.execution-console-file-list,
+.execution-console-terminal,
+.execution-console-validation-list,
+.execution-console-diff-list {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 7px;
+  overflow: auto;
+  padding-right: 3px;
+  scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
+}
+
+.execution-console-timeline {
+  max-height: 300px;
+}
+
+.execution-console-file-list {
+  max-height: 220px;
+}
+
+.execution-console-terminal {
+  max-height: 360px;
+}
+
+.execution-console-validation-list,
+.execution-console-diff-list {
+  max-height: 280px;
+}
+
+.execution-console-event {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.016);
+  padding: 8px;
+}
+
+.execution-console-event time {
+  color: var(--t3);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.execution-console-event div,
+.execution-console-file-row div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.execution-console-event strong,
+.execution-console-file-row strong {
+  overflow: hidden;
+  color: var(--t);
+  font-size: 11px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-event span,
+.execution-console-file-row span {
+  overflow: hidden;
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-trace-row {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(3, 8, 12, 0.34);
+  padding: 8px;
+}
+
+.execution-console-trace-row header {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.execution-console-trace-row header div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.execution-console-trace-row strong {
+  overflow: hidden;
+  color: var(--t);
+  font-size: 11px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-trace-row header span {
+  overflow: hidden;
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-trace-row ol {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trace-step {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+  padding: 6px;
+}
+
+.trace-step span {
+  color: var(--t3);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.trace-step code {
+  overflow: hidden;
+  color: var(--t2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-step em {
+  color: var(--t3);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.trace-step-running span,
+.trace-step-running em {
+  color: var(--info);
+}
+
+.trace-step-success span,
+.trace-step-success em {
+  color: var(--p);
+}
+
+.trace-step-failed span,
+.trace-step-failed em {
+  color: var(--danger);
+}
+
+.execution-console-file-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.016);
+  padding: 8px;
+}
+
+.execution-console-file-row em {
+  border: 1px solid rgba(80, 160, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(80, 160, 255, 0.08);
+  color: var(--info);
+  padding: 4px 7px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.execution-console-file-row em.status-running,
+.execution-console-file-row em.status-proposed {
+  border-color: rgba(35, 235, 152, 0.19);
+  background: rgba(35, 235, 152, 0.08);
+  color: var(--p);
+}
+
+.execution-console-file-row em.status-failed,
+.execution-console-file-row em.status-blocked {
+  border-color: rgba(240, 85, 108, 0.28);
+  background: rgba(240, 85, 108, 0.1);
+  color: var(--danger);
+}
+
+.execution-console-terminal article {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(3, 8, 12, 0.34);
+  padding: 8px;
+}
+
+.execution-console-terminal-meta {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.execution-console-terminal-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.execution-console-terminal code,
+.execution-console-terminal-meta code {
+  overflow: hidden;
+  color: var(--t2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-terminal span,
+.execution-console-terminal-meta span {
+  overflow: hidden;
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-trace {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: rgba(142, 159, 176, 0.86);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-status {
+  align-self: start;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--t3);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.terminal-status.terminal-running {
+  border-color: rgba(35, 235, 152, 0.2);
+  background: rgba(35, 235, 152, 0.08);
+  color: var(--p);
+}
+
+.terminal-status.terminal-success {
+  border-color: rgba(80, 160, 255, 0.22);
+  background: rgba(80, 160, 255, 0.08);
+  color: var(--info);
+}
+
+.terminal-status.terminal-failed {
+  border-color: rgba(240, 85, 108, 0.3);
+  background: rgba(240, 85, 108, 0.1);
+  color: var(--danger);
+}
+
+.execution-console-stop-task,
+.execution-console-retry-task,
+.execution-console-approve-task {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  border: 1px solid rgba(240, 85, 108, 0.32);
+  border-radius: 7px;
+  background: rgba(240, 85, 108, 0.1);
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.execution-console-retry-task {
+  border-color: rgba(80, 160, 255, 0.28);
+  background: rgba(80, 160, 255, 0.09);
+  color: var(--info);
+  font-size: 13px;
+}
+
+.execution-console-approve-task {
+  width: auto;
+  min-width: 32px;
+  padding: 0 7px;
+  border-color: rgba(31, 203, 134, 0.3);
+  background: rgba(31, 203, 134, 0.1);
+  color: var(--success);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.execution-console-stop-task:disabled,
+.execution-console-retry-task:disabled,
+.execution-console-approve-task:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.terminal-output {
+  grid-column: 1 / -1;
+  max-height: 110px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 7px;
+  white-space: pre-wrap;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.terminal-output code {
+  display: block;
+  overflow: visible;
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-overflow: clip;
+  white-space: pre-wrap;
+}
+
+.terminal-output.output-stderr code {
+  color: #ff8da0;
+}
+
+.execution-console-validation-chain {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(3, 8, 12, 0.3);
+  padding: 8px;
+}
+
+.execution-console-validation-chain header {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.execution-console-validation-chain header div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.execution-console-validation-chain strong {
+  overflow: hidden;
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-validation-chain header span {
+  overflow: hidden;
+  color: var(--t3);
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-validation-chain ol {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.validation-step {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+  padding: 6px;
+}
+
+.validation-step span {
+  color: var(--t3);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.validation-step code {
+  overflow: hidden;
+  color: var(--t2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.validation-step em {
+  color: var(--t3);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.validation-step small {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  color: rgba(142, 159, 176, 0.78);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.validation-step-success span,
+.validation-step-success em {
+  color: var(--p);
+}
+
+.validation-step-failed span,
+.validation-step-failed em {
+  color: var(--danger);
+}
+
+.validation-step-running span,
+.validation-step-running em {
+  color: var(--info);
+}
+
+.execution-console-diff-row {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(3, 8, 12, 0.3);
+}
+
+.execution-console-diff-row summary {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.execution-console-diff-row summary::-webkit-details-marker {
+  display: none;
+}
+
+.execution-console-diff-row summary span {
+  overflow: hidden;
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-diff-row summary em {
+  color: var(--p);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.execution-console-diff-row pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--t2);
+  padding: 8px;
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.execution-console-empty {
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.075);
+  border-radius: 8px;
+  color: var(--t3);
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}

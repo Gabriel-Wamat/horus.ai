@@ -25,22 +25,6 @@ export function useDisplayedWorkflowState({
         ...workflowState,
         specs: { ...persistedSpecsByStoryId, ...workflowState.specs },
       }
-    : Object.keys(persistedSpecsByStoryId).length > 0
-      ? {
-          threadId: "00000000-0000-4000-8000-000000000000",
-          ...(selectedWorkspaceFolderId ? { workspaceFolderId: selectedWorkspaceFolderId } : {}),
-          userStories: submittedStories,
-          currentUSIndex: 0,
-          workflowMode: "standard" as const,
-          specs: persistedSpecsByStoryId,
-          workspaceArtifactContext: {},
-          humanFeedback: {},
-          agentResults: {},
-          pendingCheckpoints: [],
-          validationGates: [],
-          status: "idle" as const,
-          startedAt: new Date(0).toISOString(),
-        }
       : null;
 
   const agentFlowState: WorkflowState | null =

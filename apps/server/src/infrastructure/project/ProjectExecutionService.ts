@@ -5,6 +5,7 @@ import type {
   HorusProjectConfig,
   ProjectCommandRun,
   ProjectExecutionPlan,
+  ShellCommandOutputEvent,
 } from "@u-build/shared";
 import {
   ProjectCommandRunSchema,
@@ -12,12 +13,17 @@ import {
 } from "@u-build/shared";
 import { v4 as uuidv4 } from "uuid";
 import { CliCommandPolicy } from "../tools/CliCommandPolicy.js";
-import { SafeCliRunner } from "../tools/SafeCliRunner.js";
+import { ExecutionTaskRuntime } from "../tools/ExecutionTaskRuntime.js";
+import { looksLikeDependencyFailure } from "./ProjectFailureAnalysisService.js";
 import {
   isGitMetadataPath,
   isWritablePath,
   resolveInsideRoot,
 } from "./ProjectPathSafety.js";
+import {
+  assertCodeChangeSetPathHasNoSymlink,
+  resolveCodeChangeSetPath,
+} from "../code/CodeChangeSetFileOperations.js";
 
 export class ProjectExecutionError extends Error {
   constructor(message: string) {
@@ -113,7 +119,7 @@ export class ProjectExecutionService {
     }
 
     for (const operation of plan.fileOperations) {
-      const targetPath = resolveInsideRoot(input.projectRoot, operation.path);
+      const targetPath = resolveCodeChangeSetPath(input.projectRoot, operation.path);
       if (isGitMetadataPath(input.projectRoot, targetPath)) {
         throw new ProjectExecutionError(`Refusing to edit git metadata: ${operation.path}`);
       }
@@ -177,7 +183,11 @@ export class ProjectExecutionService {
   }): Promise<string[]> {
     const changedFiles: string[] = [];
     for (const operation of input.plan.fileOperations) {
-      const targetPath = resolveInsideRoot(input.projectRoot, operation.path);
+      const targetPath = resolveCodeChangeSetPath(input.projectRoot, operation.path);
+      await assertCodeChangeSetPathHasNoSymlink({
+        projectRoot: input.projectRoot,
+        targetPath,
+      });
       if (isGitMetadataPath(input.projectRoot, targetPath)) {
         throw new ProjectExecutionError(`Refusing to edit git metadata: ${operation.path}`);
       }
@@ -210,48 +220,147 @@ export class ProjectExecutionService {
     plan: ProjectExecutionPlan;
     config: HorusProjectConfig;
     projectRoot: string;
+    signal?: AbortSignal;
+    trace?: {
+      traceId?: string | null;
+      spanId?: string | null;
+      parentSpanId?: string | null;
+      toolCallId?: string | null;
+      runId?: string | null;
+      projectId?: string | null;
+      agentId?: string | null;
+      filePath?: string | null;
+      diffId?: string | null;
+    };
+    onCommandOutput?: ((event: ShellCommandOutputEvent) => void) | undefined;
   }): Promise<ProjectCommandRun[]> {
     const commandIds = [
       ...input.plan.commandRequests.map((request) => request.commandId),
       ...input.plan.validationCommandIds,
     ];
     const uniqueCommandIds = [...new Set(commandIds)];
-    const runner = new SafeCliRunner({
-      policy: new CliCommandPolicy({ allowedRoot: input.projectRoot }),
+    const runner = new ExecutionTaskRuntime({
+      policy: new CliCommandPolicy({
+        allowedRoot: input.projectRoot,
+        allowedExecutables: allowedExecutablesForConfig(input.config),
+      }),
+      outputBaseDir: join(input.projectRoot, ".horus", "execution-tasks"),
     });
     const runs: ProjectCommandRun[] = [];
+    const repairedValidationCommands = new Set<string>();
 
-    for (const commandId of uniqueCommandIds) {
+    const runCommandById = async (commandId: string): Promise<ProjectCommandRun> => {
       this.ensureCommandAllowed(input.roleName, commandId, input.config);
       const command = input.config.commandCatalog.find((item) => item.id === commandId);
       if (!command) throw new ProjectExecutionError(`Unknown command id: ${commandId}`);
       const startedAt = new Date().toISOString();
+      let outputSequence = 0;
       const commandSpec = {
         id: command.id,
+        ...input.trace,
         executable: command.executable,
         args: command.args,
         cwd: resolveInsideRoot(input.projectRoot, command.cwd),
         env: command.env,
         ...(command.timeoutMs !== undefined ? { timeoutMs: command.timeoutMs } : {}),
+        approved: true,
+        approvedBy: "system:project-command-catalog",
+        approvalReason: `Command ${command.id} is registered in the project command catalog and allowed for ${input.roleName}.`,
       };
-      const result = await runner.execute(commandSpec);
-      runs.push(
-        ProjectCommandRunSchema.parse({
-          id: uuidv4(),
-          assignmentId: input.assignmentId ?? null,
-          constructionRunId: input.constructionRunId,
-          commandId: command.id,
-          command: [command.executable, ...command.args].join(" "),
-          cwd: result.cwd,
-          exitCode: result.exitCode,
-          stdoutTail: result.stdout,
-          stderrTail: result.stderr,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          durationMs: result.durationMs,
-          sandboxProfile: "safe-cli-runner",
+      const result = await runner.run(commandSpec, {
+        ...(input.signal ? { signal: input.signal } : {}),
+        ...(input.onCommandOutput
+          ? {
+              onOutput: (event) => {
+                input.onCommandOutput?.({
+                  commandId: command.id,
+                  taskId: event.taskId,
+                  ...(event.traceId ? { traceId: event.traceId } : {}),
+                  ...(event.spanId ? { spanId: event.spanId } : {}),
+                  ...(event.parentSpanId ? { parentSpanId: event.parentSpanId } : {}),
+                  ...(event.toolCallId ? { toolCallId: event.toolCallId } : {}),
+                  ...(event.runId ? { runId: event.runId } : {}),
+                  ...(event.projectId ? { projectId: event.projectId } : {}),
+                  ...(event.agentId ? { agentId: event.agentId } : {}),
+                  ...(event.filePath ? { filePath: event.filePath } : {}),
+                  ...(event.diffId ? { diffId: event.diffId } : {}),
+                  stream: event.stream,
+                  chunk: event.chunk,
+                  sequence: outputSequence,
+                  timestamp: new Date().toISOString(),
+                });
+                outputSequence += 1;
+              },
+            }
+          : {}),
+      });
+      return ProjectCommandRunSchema.parse({
+        id: uuidv4(),
+        assignmentId: input.assignmentId ?? null,
+        constructionRunId: input.constructionRunId,
+        commandId: command.id,
+        taskId: result.task.taskId,
+        command: [command.executable, ...command.args].join(" "),
+        cwd: result.task.cwd,
+        approvalRequired: result.task.approvalRequired,
+        risk: result.task.risk,
+        policyReason: result.task.policyReason,
+        approved: result.task.approved,
+        approvedBy: result.task.approvedBy,
+        approvalReason: result.task.approvalReason,
+        exitCode: result.task.exitCode,
+        stdoutTail: result.stdout,
+        stderrTail: result.stderr,
+        stdoutPath: result.task.stdoutPath,
+        stderrPath: result.task.stderrPath,
+        stdoutBytes: result.task.stdoutBytes,
+        stderrBytes: result.task.stderrBytes,
+        lastOutputAt: result.task.lastOutputAt,
+        interactivePromptDetected: result.task.interactivePromptDetected,
+        interactivePromptText: result.task.interactivePromptText,
+        startedAt,
+        finishedAt: result.task.finishedAt ?? new Date().toISOString(),
+        durationMs: result.task.durationMs,
+        sandboxProfile: "execution-task-runtime",
+      });
+    };
+
+    for (const commandId of uniqueCommandIds) {
+      const run = await runCommandById(commandId);
+      runs.push(run);
+      if (
+        !this.shouldAttemptDependencyRepair({
+          roleName: input.roleName,
+          commandId,
+          run,
+          config: input.config,
+          alreadyRepaired: repairedValidationCommands.has(commandId),
         })
-      );
+      ) {
+        continue;
+      }
+
+      const repairCommandIds = this.resolveDependencyRepairCommandIds({
+        roleName: input.roleName,
+        failedCommandId: commandId,
+        config: input.config,
+      });
+      if (repairCommandIds.length === 0) continue;
+
+      let repairSucceeded = true;
+      for (const repairCommandId of repairCommandIds) {
+        const repairRun = await runCommandById(repairCommandId);
+        runs.push(repairRun);
+        if (repairRun.exitCode !== 0) {
+          repairSucceeded = false;
+          break;
+        }
+      }
+
+      if (repairSucceeded) {
+        runs.push(await runCommandById(commandId));
+        repairedValidationCommands.add(commandId);
+      }
     }
 
     return runs;
@@ -270,6 +379,78 @@ export class ProjectExecutionService {
     if (!config.commandCatalog.some((command) => command.id === commandId)) {
       throw new ProjectExecutionError(`Unknown command id: ${commandId}`);
     }
+  }
+
+  private shouldAttemptDependencyRepair(input: {
+    roleName: string;
+    commandId: string;
+    run: ProjectCommandRun;
+    config: HorusProjectConfig;
+    alreadyRepaired: boolean;
+  }): boolean {
+    if (input.run.exitCode === 0) return false;
+    if (input.alreadyRepaired) return false;
+    if (!isDependencyRepairEligibleCommand(input.commandId, input.config)) return false;
+    if (
+      this.resolveDependencyRepairCommandIds({
+        roleName: input.roleName,
+        failedCommandId: input.commandId,
+        config: input.config,
+      }).length === 0
+    ) {
+      return false;
+    }
+    return looksLikeDependencyFailure(
+      `${input.run.stdoutTail}\n${input.run.stderrTail}`.toLocaleLowerCase()
+    );
+  }
+
+  private resolveDependencyRepairCommandIds(input: {
+    roleName: string;
+    failedCommandId: string;
+    config: HorusProjectConfig;
+  }): string[] {
+    const roleProfile = input.config.roleProfiles[input.roleName];
+    if (!roleProfile) return [];
+    const allowed = new Set(roleProfile.allowedCommandIds);
+    const catalogIds = new Set(input.config.commandCatalog.map((command) => command.id));
+    const candidates: string[] = [];
+    let stem = input.failedCommandId;
+    for (const prefix of ["test-", "run-", "build-", "check-", "lint-", "smoke-"]) {
+      if (stem.startsWith(prefix)) {
+        stem = stem.slice(prefix.length);
+        break;
+      }
+    }
+    const parts = stem.split("-").filter(Boolean);
+    for (let end = parts.length; end > 0; end -= 1) {
+      const candidateStem = parts.slice(0, end).join("-");
+      for (const commandId of [
+        `install-${candidateStem}-dependencies`,
+        `setup-${candidateStem}`,
+      ]) {
+        if (allowed.has(commandId) && catalogIds.has(commandId)) {
+          candidates.push(commandId);
+        }
+      }
+    }
+
+    for (const commandId of [...allowed].sort()) {
+      if (!catalogIds.has(commandId)) continue;
+      const terms = splitCommandTerms(commandId);
+      if (
+        terms.some((term) => term === "install" || term === "setup") &&
+        terms.some((term) =>
+          ["dep", "deps", "dependencies", "package", "packages", "requirements"].includes(
+            term
+          )
+        )
+      ) {
+        candidates.push(commandId);
+      }
+    }
+
+    return [...new Set(candidates)];
   }
 
   private async collectWorkspaceFiles(input: {
@@ -317,4 +498,82 @@ export class ProjectExecutionService {
       input.files.push({ path: relativePath, content, sizeBytes });
     }
   }
+}
+
+function allowedExecutablesForConfig(config: HorusProjectConfig): string[] {
+  return [
+    "node",
+    process.execPath,
+    "pnpm",
+    "npm",
+    "yarn",
+    "bun",
+    ...config.commandCatalog.map((command) => command.executable),
+  ].filter((value, index, values) => values.indexOf(value) === index);
+}
+
+function isTestCommand(commandId: string, config: HorusProjectConfig): boolean {
+  if (config.testRunnerIds.includes(commandId)) return true;
+  const command = config.commandCatalog.find((item) => item.id === commandId);
+  const normalized = [
+    commandId,
+    command?.executable ?? "",
+    ...(command?.args ?? []),
+  ].flatMap(splitCommandTerms);
+  return normalized.some((term) =>
+    ["test", "pytest", "vitest", "jest"].includes(term)
+  );
+}
+
+function isDependencyRepairEligibleCommand(
+  commandId: string,
+  config: HorusProjectConfig
+): boolean {
+  if (isTestCommand(commandId, config)) return true;
+  const command = config.commandCatalog.find((item) => item.id === commandId);
+  const normalized = [
+    commandId,
+    command?.executable ?? "",
+    ...(command?.args ?? []),
+  ].flatMap(splitCommandTerms);
+  return normalized.some((term) =>
+    [
+      "build",
+      "check",
+      "compile",
+      "dev",
+      "lint",
+      "preview",
+      "run",
+      "serve",
+      "start",
+      "tsc",
+      "typecheck",
+      "vite",
+    ].includes(term)
+  );
+}
+
+function splitCommandTerms(value: string): string[] {
+  const terms: string[] = [];
+  let current = "";
+
+  for (const char of value.toLowerCase()) {
+    if (isAsciiLetterOrDigit(char)) {
+      current += char;
+      continue;
+    }
+
+    if (current.length > 0) {
+      terms.push(current);
+      current = "";
+    }
+  }
+
+  if (current.length > 0) terms.push(current);
+  return terms;
+}
+
+function isAsciiLetterOrDigit(char: string): boolean {
+  return (char >= "a" && char <= "z") || (char >= "0" && char <= "9");
 }

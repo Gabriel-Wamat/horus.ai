@@ -93,6 +93,7 @@ export class ProjectFileBrowserService {
   async getTree(input: {
     projectId: string;
     runId?: string;
+    projectRootOverride?: string;
     limit?: number;
     depth?: number;
   }): Promise<ProjectFileTreeResponse> {
@@ -155,6 +156,7 @@ export class ProjectFileBrowserService {
   async getFileContent(input: {
     projectId: string;
     runId?: string;
+    projectRootOverride?: string;
     path: string;
     maxBytes?: number;
   }): Promise<ProjectFileContentResponse> {
@@ -449,6 +451,7 @@ export class ProjectFileBrowserService {
   private async resolveReadableRoot(input: {
     projectId: string;
     runId?: string;
+    projectRootOverride?: string;
   }): Promise<{
     project: ProjectWorkspace;
     run: ProjectConstructionRun | null;
@@ -472,7 +475,9 @@ export class ProjectFileBrowserService {
       return {
         project,
         run: null,
-        rootPath: await this.resolveProjectRoot(project),
+        rootPath: input.projectRootOverride
+          ? await this.resolveProjectRootOverride(input.projectRootOverride)
+          : await this.resolveProjectRoot(project),
       };
     }
 
@@ -505,6 +510,31 @@ export class ProjectFileBrowserService {
         throw new ProjectFileBrowserError(
           "project_not_found",
           "Project root not found.",
+          404
+        );
+      }
+      throw err;
+    }
+  }
+
+  private async resolveProjectRootOverride(rootPath: string): Promise<string> {
+    try {
+      const resolved = await fs.realpath(rootPath);
+      const stat = await fs.stat(resolved);
+      if (!stat.isDirectory()) {
+        throw new ProjectFileBrowserError(
+          "project_not_found",
+          "Project root override is not a directory.",
+          404
+        );
+      }
+      return resolved;
+    } catch (err) {
+      if (err instanceof ProjectFileBrowserError) throw err;
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new ProjectFileBrowserError(
+          "project_not_found",
+          "Project root override not found.",
           404
         );
       }

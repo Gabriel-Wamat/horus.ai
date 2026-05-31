@@ -58,6 +58,18 @@ test("ProjectWorkspaceService creates a physical git-backed project with a Horus
   assert.ok(config.writeRoots.includes("."));
   assert.ok(config.commandCatalog.some((command) => command.id === "run-root-dev"));
   assert.ok(config.roleProfiles.frontend_specialist.allowedCommandIds.includes("run-root-dev"));
+  assert.ok(config.bootstrapCommandIds.includes("install-root-dependencies"));
+  assert.equal(
+    config.roleProfiles.curator.allowedCommandIds.includes("install-root-dependencies"),
+    false
+  );
+  assert.equal(
+    config.roleProfiles.curator.allowedCommandIds.includes("run-root-dev"),
+    false
+  );
+  assert.ok(
+    config.roleProfiles.curator.allowedCommandIds.includes("type-check-root-type-check")
+  );
 
   const packageJson = JSON.parse(
     await readFile(join(project.rootPath, "package.json"), "utf8")
@@ -146,7 +158,7 @@ test("ProjectExecutionService applies only write-root bounded operations and com
           risks: [],
         },
       }),
-    /Path escapes project boundary/
+    /escapes.*project/i
   );
 
   const result = await execution.executePlan({
@@ -312,6 +324,125 @@ test("StartProjectConstructionUseCase delegates selected specs to project constr
   assert.equal(workflowInput.frontendProjectId, result.frontendProject.id);
   assert.equal(result.constructionRun.workflowRunId, "66666666-6666-4666-8666-666666666666");
   assert.equal(savedRuns.at(-1).workflowRunId, "66666666-6666-4666-8666-666666666666");
+});
+
+test("StartProjectConstructionUseCase reuses the workspace folder environment even when the requested project name changes", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-reused-project-"));
+  const now = "2026-05-26T10:00:00.000Z";
+  const later = "2026-05-26T11:00:00.000Z";
+  const projectWorkspace = {
+    id: "77777777-7777-4777-8777-777777777777",
+    workspaceFolderId,
+    name: "Ambiente Canonico",
+    slug: "ambiente-canonico",
+    targetMode: "new_project",
+    rootPath: projectRoot,
+    configPath: join(projectRoot, ".horus-project.yaml"),
+    gitRepositoryPath: projectRoot,
+    currentBranch: "main",
+    baseRef: "main",
+    projectStack: "typescript-react",
+    createdAt: now,
+    updatedAt: later,
+  };
+  let createNewProjectCalled = false;
+  let preparedProject;
+  let workflowInput;
+
+  const projectConstruction = {
+    listProjectWorkspaces: async () => [
+      {
+        ...projectWorkspace,
+        id: "88888888-8888-4888-8888-888888888888",
+        workspaceFolderId: "99999999-9999-4999-8999-999999999999",
+        name: "Outro Ambiente",
+        slug: "outro-ambiente",
+      },
+      projectWorkspace,
+    ],
+    getProjectWorkspace: async () => null,
+    saveProjectWorkspace: async (project) => project,
+    saveConstructionRun: async (run) => run,
+    updateConstructionRun: async (run) => run,
+  };
+  const workspaceStore = {
+    getActiveStoryContext: async () => ({
+      story: constructionStory,
+      spec: constructionSpec,
+      artifactContext: {
+        workspaceFolderId,
+        userStoryRevisionId: "story-r1",
+        specRevisionId: "spec-r1",
+      },
+    }),
+  };
+  const frontendProjects = {
+    registerProject: async (input) => ({
+      id: "44444444-4444-4444-8444-444444444444",
+      slug: "ambiente-canonico",
+      createdAt: now,
+      ...input,
+    }),
+  };
+  const projectWorkspaceService = {
+    createNewProject: async () => {
+      createNewProjectCalled = true;
+      throw new Error("should reuse the existing project workspace");
+    },
+    prepareWorkspace: async ({ project }) => {
+      preparedProject = project;
+      return {
+        workspacePath: projectRoot,
+        branchName: "main",
+        created: false,
+      };
+    },
+  };
+  const projectConfigService = {
+    load: async () => ({
+      version: 1,
+      projectName: "Ambiente Canonico",
+      projectStack: "typescript-react",
+      baseRef: "main",
+      writeRoots: ["."],
+      commandCatalog: [],
+      roleProfiles: {},
+      testRunnerIds: [],
+      bootstrapCommandIds: [],
+    }),
+  };
+  const projectExecutionService = {
+    executePlan: async () => ({ changedFiles: [], commandRuns: [] }),
+  };
+  const workflowStarter = {
+    start: async (input) => {
+      workflowInput = input;
+      return { threadId: "66666666-6666-4666-8666-666666666666" };
+    },
+  };
+
+  const useCase = new StartProjectConstructionUseCase(
+    projectConstruction,
+    workspaceStore,
+    frontendProjects,
+    projectWorkspaceService,
+    projectConfigService,
+    projectExecutionService,
+    {},
+    workflowStarter
+  );
+
+  const result = await useCase.execute({
+    workspaceFolderId,
+    projectName: "Nome Novo Da Mesma Pasta",
+    userStoryIds: [constructionStory.id],
+  });
+
+  assert.equal(createNewProjectCalled, false);
+  assert.equal(result.reusedProjectWorkspace, true);
+  assert.equal(result.projectWorkspace.id, projectWorkspace.id);
+  assert.equal(preparedProject.id, projectWorkspace.id);
+  assert.equal(workflowInput.frontendProjectRootPath, projectRoot);
 });
 
 test("StartProjectConstructionUseCase assigns a project-scoped preview port by default", async () => {

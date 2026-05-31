@@ -113,3 +113,35 @@ test("PreviewProjectHealthService keeps only canonical project visible per famil
   assert.equal(superseded.canonicalProjectId, newProject.id);
   assert.ok(superseded.healthReasons.includes("superseded_by_canonical"));
 });
+
+test("PreviewProjectHealthService excludes the internal seed project from visible project lists", async () => {
+  const rootPath = await mkdtemp(join(tmpdir(), "horus-health-seed-"));
+  await writeGeneratedApp(
+    rootPath,
+    "export function App(){ return <main><h1>Horus</h1></main>; }\n"
+  );
+  const service = new PreviewProjectHealthService({
+    now: () => "2026-05-27T10:00:00.000Z",
+  });
+  const seedProject = projectFixture({
+    name: "user_stories",
+    slug: "user-stories",
+    rootPath,
+    projectKind: "seed",
+  });
+  const generatedProject = projectFixture({
+    id: "33333333-3333-4333-8333-333333333333",
+    name: "project-manager-ui-generation",
+    slug: "project-manager-ui-generation",
+    rootPath,
+  });
+
+  const visible = await service.listProjects(
+    [seedProject, generatedProject],
+    "visible"
+  );
+  const all = await service.listProjects([seedProject, generatedProject], "all");
+
+  assert.deepEqual(visible.map((project) => project.id), [generatedProject.id]);
+  assert.ok(all.some((project) => project.id === seedProject.id));
+});

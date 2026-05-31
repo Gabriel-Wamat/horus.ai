@@ -5,7 +5,8 @@ export interface ProjectFilesChangedDetail {
   readonly paths?: readonly string[];
   readonly runId?: string | null;
   readonly workflowThreadId?: string;
-  readonly source: "preview-workflow" | "manual-save";
+  readonly source: "project-construction" | "preview-workflow" | "manual-save";
+  readonly selectProject?: boolean;
   readonly timestamp: string;
 }
 

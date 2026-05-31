@@ -47,6 +47,13 @@ export function SkillCatalog({
 
   return (
     <section className="agent-skills-catalog" aria-label="Catálogo de skills">
+      <div className="agent-skills-catalog-head">
+        <div>
+          <p className="panel-kicker">Catálogo</p>
+          <h2>Skills disponíveis</h2>
+        </div>
+        <span>{skills.length} itens</span>
+      </div>
       <div className="agent-skills-toolbar">
         <label className="agent-skills-search">
           <Search size={15} aria-hidden="true" />
@@ -158,6 +165,7 @@ function SkillCatalogRow({
     .filter((binding) => binding.enabled)
     .map((binding) => profileLabels.get(binding.agentProfileId) ?? binding.agentProfileId);
   const validationStatus = skill.latestValidationReport?.status;
+  const activeRevision = skill.activeRevision?.revisionNumber ?? 0;
 
   return (
     <button
@@ -166,7 +174,10 @@ function SkillCatalogRow({
       onClick={onSelect}
     >
       <span className="agent-skill-row-main">
-        <span className="agent-skill-row-title">{skill.displayName}</span>
+        <span className="agent-skill-row-title-line">
+          <span className={`agent-skill-row-dot status-${skill.status}`} />
+          <span className="agent-skill-row-title">{skill.displayName}</span>
+        </span>
         <span className="agent-skill-row-description">{skill.description}</span>
         <span className="agent-skill-row-agents">
           {agentLabels.length > 0 ? agentLabels.join(", ") : "Sem agentes vinculados"}
@@ -184,9 +195,7 @@ function SkillCatalogRow({
         <span className="agent-skill-badge">
           {SOURCE_LABELS[skill.sourceType]}
         </span>
-        <span className="agent-skill-revision">
-          r{skill.activeRevision?.revisionNumber ?? "0"}
-        </span>
+        <span className="agent-skill-revision">r{activeRevision}</span>
       </span>
     </button>
   );

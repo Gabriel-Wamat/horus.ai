@@ -7,6 +7,8 @@ import {
   CodeContextAccessError,
   ReadOnlyCodeContextService,
 } from "../dist/application/services/ReadOnlyCodeContextService.js";
+import { InMemoryKeyValueCache } from "../dist/infrastructure/cache/InMemoryKeyValueCache.js";
+import { TreeSitterAstAnalyzer } from "../dist/infrastructure/ast/TreeSitterAstAnalyzer.js";
 
 const projectId = "11111111-1111-4111-8111-111111111116";
 
@@ -164,6 +166,73 @@ test("ReadOnlyCodeContextService builds bounded context inside the selected proj
   assert.ok(context.totalBytes > 0);
 });
 
+test("ReadOnlyCodeContextService can attach compact AST context to search results", async () => {
+  const { project } = await setupProject();
+  const service = new ReadOnlyCodeContextService(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    new TreeSitterAstAnalyzer()
+  );
+
+  const context = await service.buildContext({
+    project,
+    chatContext,
+    query: "PreviewChat component App",
+  });
+
+  assert.ok(["complete", "partial"].includes(context.structuralContext.status));
+  assert.ok(context.structuralContext.parsedDocumentCount >= 1);
+  assert.ok(
+    context.structuralContext.symbols.some(
+      (symbol) => symbol.name === "PreviewChat" && symbol.path === "src/components/PreviewChat.tsx"
+    )
+  );
+});
+
+test("ReadOnlyCodeContextService reuses cached structural context for the same file hashes", async () => {
+  const { project } = await setupProject();
+  let analyzeCalls = 0;
+  const treeSitter = new TreeSitterAstAnalyzer();
+  const analyzer = {
+    async analyze(input) {
+      analyzeCalls += 1;
+      return treeSitter.analyze(input);
+    },
+  };
+  const service = new ReadOnlyCodeContextService(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    analyzer,
+    undefined,
+    new InMemoryKeyValueCache(),
+    60_000
+  );
+
+  const first = await service.buildContext({
+    project,
+    chatContext,
+    query: "PreviewChat component App",
+  });
+  const second = await service.buildContext({
+    project,
+    chatContext,
+    query: "PreviewChat component App",
+  });
+
+  assert.ok(first.structuralContext);
+  assert.ok(second.structuralContext);
+  assert.equal(analyzeCalls, 1);
+  assert.ok(
+    second.structuralContext.notes.includes("cache_hit: structural_context")
+  );
+});
+
 test("ReadOnlyCodeContextService prioritizes explicit code paths and returns line-scoped excerpts", async () => {
   const { project } = await setupProject();
   const service = new ReadOnlyCodeContextService();
@@ -180,6 +249,44 @@ test("ReadOnlyCodeContextService prioritizes explicit code paths and returns lin
   assert.equal(context.excerpts[0].endLine, 1);
   assert.match(context.excerpts[0].content, /Preview chat/);
   assert.deepEqual(context.files[0].matchedTerms.includes("preview"), true);
+});
+
+test("ReadOnlyCodeContextService caps content scans while preserving explicit path grounding", async () => {
+  const { project } = await setupProject();
+  for (let index = 0; index < 24; index += 1) {
+    await writeFile(
+      join(project.rootPath, "src", "components", `Noise${index}.tsx`),
+      `export const Noise${index} = () => 'irrelevant ${index}';`,
+      "utf-8"
+    );
+  }
+  await writeFile(
+    join(project.rootPath, "src", "components", "TargetPanel.tsx"),
+    "export function CriticalTargetPanel() { return <section>Budgeted context</section>; }",
+    "utf-8"
+  );
+  const service = new ReadOnlyCodeContextService(undefined, undefined, {
+    maxContentScanFiles: 6,
+    concurrency: 2,
+  });
+
+  const context = await service.buildContext({
+    project,
+    chatContext,
+    query:
+      "Me mostre src/components/TargetPanel.tsx e o símbolo CriticalTargetPanel.",
+  });
+
+  assert.equal(context.retrievalStatus, "matched");
+  assert.equal(context.excerpts[0].filePath, "src/components/TargetPanel.tsx");
+  assert.ok(context.retrievalStats);
+  assert.equal(context.retrievalStats.explicitPathCount, 1);
+  assert.ok(
+    context.retrievalStats.contentScannedFiles < context.retrievalStats.totalFiles
+  );
+  assert.ok(
+    context.retrievalNotes.some((note) => note.includes("limitada"))
+  );
 });
 
 test("ReadOnlyCodeContextService rejects paths outside the project root", async () => {

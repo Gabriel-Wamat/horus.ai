@@ -22,6 +22,13 @@ function AgentSkillsPageContent(): JSX.Element {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const state = useAgentSkills();
   const profiles = state.profilesQuery.data ?? [];
+  const skillStats = useMemo(() => {
+    const active = state.skills.filter((skill) => skill.status === "active").length;
+    const validated = state.skills.filter(
+      (skill) => skill.latestValidationReport?.status === "passed"
+    ).length;
+    return { active, total: state.skills.length, validated };
+  }, [state.skills]);
   const pageError = useMemo(
     () =>
       firstErrorMessage([
@@ -40,13 +47,18 @@ function AgentSkillsPageContent(): JSX.Element {
   return (
     <div className="agent-skills-page">
       <header className="agent-skills-page-head">
-        <div>
-          <p className="panel-kicker">Project capabilities</p>
-          <h1>Skills</h1>
-          <p>
-            Playbooks versionados que Horus pode validar, publicar e carregar por
-            agente.
-          </p>
+        <div className="agent-skills-title-block">
+          <p className="panel-kicker">Capacidades dos agentes</p>
+          <div className="agent-skills-title-row">
+            <h1>Skills</h1>
+            <span className="agent-skills-head-chip">
+              {skillStats.active}/{skillStats.total} ativas
+            </span>
+            <span className="agent-skills-head-chip success">
+              {skillStats.validated} validadas
+            </span>
+          </div>
+          <p>Playbooks versionados para orientar execução, validação e publicação.</p>
         </div>
         <div className="agent-skills-page-actions">
           <button

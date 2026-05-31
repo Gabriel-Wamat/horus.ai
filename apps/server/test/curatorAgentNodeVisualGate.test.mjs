@@ -119,6 +119,32 @@ test("curatorAgentNode blocks delivery when visual gate fails and routes feedbac
         fixTarget: "front",
       };
     },
+    preflightCodeChangeSet: async () => ({
+      passed: true,
+      issues: [],
+      validation: [],
+      runtimeEvidence: {
+        id: "88888888-8888-4888-8888-888888888888",
+        workflowThreadId: codeChangeSet.workflowThreadId,
+        constructionRunId: null,
+        userStoryId: userStory.id,
+        projectId: "66666666-6666-4666-8666-666666666666",
+        status: "passed",
+        skippedReason: null,
+        commands: [],
+        preview: {
+          status: "skipped",
+          url: null,
+          message: "Terminal preflight passed.",
+          evidence: {
+            title: null,
+            bodySnippet: null,
+            screenshotPath: null,
+          },
+        },
+        createdAt: "2026-05-27T00:02:30.000Z",
+      },
+    }),
     validateVisualGate: async () => ({
       id: "77777777-7777-4777-8777-777777777777",
       status: "failed",

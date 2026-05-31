@@ -2,17 +2,24 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import {
   RuntimeValidationEvidenceSchema,
+  type RuntimeValidationCommandEvidence,
   type DesignContextBundle,
   type LlmSettings,
+  type PromptContextBundle,
   type RuntimeValidationEvidence,
   type Spec,
   type UserStory,
 } from "@u-build/shared";
 import type { CuratorFeedback } from "../langgraph/state.js";
-import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import {
+  appendRuntimeAgentSkills,
+  loadAgentSkill,
+} from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
+import { invokeChatModel } from "../llm/invokeChatModel.js";
 import { QaPreviewSmokeResultSchema } from "../preview/QaPreviewSmokeValidationService.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 
 const TestCaseSchema = z.object({
   id: z.string(),
@@ -60,36 +67,103 @@ export function buildRuntimeValidationEvidenceFromPreviewSmoke(input: {
   userStoryId?: string;
   projectId?: string;
   previewSmoke?: z.infer<typeof QaPreviewSmokeResultSchema>;
+  commands?: readonly RuntimeValidationCommandEvidence[];
 }): RuntimeValidationEvidence | undefined {
-  if (!input.previewSmoke) return undefined;
-  const previewStatus =
-    input.previewSmoke.status === "passed"
-      ? "passed"
-      : input.previewSmoke.status === "failed"
-        ? "failed"
+  if (!input.previewSmoke && (!input.commands || input.commands.length === 0)) {
+    return undefined;
+  }
+  const latestCommands = latestCommandEvidenceById(input.commands ?? []);
+  const previewStatus = runtimePreviewStatus(input.previewSmoke?.status);
+  const blockedCommand = latestCommands.find(commandRuntimeBlocked);
+  const failedCommand = latestCommands.find(commandRuntimeFailed);
+  const commandStatus =
+    input.commands && input.commands.length > 0
+      ? blockedCommand
+        ? "blocked"
+        : failedCommand
+          ? "failed"
+          : "passed"
+      : "skipped";
+  const status =
+    commandStatus === "blocked"
+      ? "blocked"
+      : commandStatus === "failed" || previewStatus === "failed"
+      ? "failed"
+      : commandStatus === "passed" || previewStatus === "passed"
+        ? "passed"
         : "skipped";
+  const skippedReason =
+    status === "skipped"
+      ? input.previewSmoke?.reason ?? "runtime_validation_not_available"
+      : null;
+  const failureReason =
+    status === "failed"
+      ? failedCommand
+        ? commandFailureReason(failedCommand)
+        : input.previewSmoke?.reason ?? "runtime_validation_failed"
+      : status === "blocked" && blockedCommand
+        ? commandFailureReason(blockedCommand)
+      : null;
   return RuntimeValidationEvidenceSchema.parse({
     id: randomUUID(),
     workflowThreadId: input.workflowThreadId ?? null,
     constructionRunId: null,
     userStoryId: input.userStoryId ?? null,
     projectId: input.projectId ?? null,
-    status: previewStatus,
-    skippedReason:
-      previewStatus === "skipped" ? input.previewSmoke.reason : null,
-    commands: [],
+    status,
+    skippedReason: skippedReason ?? failureReason,
+    commands: input.commands ?? [],
     preview: {
       status: previewStatus,
-      url: input.previewSmoke.previewUrl ?? null,
-      message: input.previewSmoke.reason,
+      url: input.previewSmoke?.previewUrl ?? null,
+      message: input.previewSmoke?.reason ?? "Preview smoke was not executed.",
       evidence: {
         title: null,
         bodySnippet: null,
         screenshotPath: null,
       },
     },
-    createdAt: input.previewSmoke.checkedAt,
+    createdAt: input.previewSmoke?.checkedAt ?? new Date().toISOString(),
   });
+}
+
+function runtimePreviewStatus(
+  status: z.infer<typeof QaPreviewSmokeResultSchema>["status"] | undefined
+): "passed" | "failed" | "skipped" {
+  if (status === "passed") return "passed";
+  if (status === "failed" || status === "blocked") return "failed";
+  return "skipped";
+}
+
+function commandRuntimeFailed(command: RuntimeValidationCommandEvidence): boolean {
+  if (commandRuntimeBlocked(command)) return false;
+  return command.exitCode !== 0;
+}
+
+function commandRuntimeBlocked(command: RuntimeValidationCommandEvidence): boolean {
+  if (command.interactivePromptDetected) return true;
+  if (command.approvalRequired && !command.approved) return true;
+  return false;
+}
+
+function latestCommandEvidenceById(
+  commands: readonly RuntimeValidationCommandEvidence[]
+): RuntimeValidationCommandEvidence[] {
+  const latest = new Map<string, RuntimeValidationCommandEvidence>();
+  for (const command of commands) {
+    latest.set(command.commandId, command);
+  }
+  return [...latest.values()];
+}
+
+function commandFailureReason(command: RuntimeValidationCommandEvidence): string {
+  if (command.interactivePromptDetected) {
+    return `interactive_prompt:${command.interactivePromptText ?? command.commandId}`;
+  }
+  if (command.approvalRequired && !command.approved) {
+    return `approval_required:${command.policyReason ?? command.commandId}`;
+  }
+  return command.stderrTail || `command_failed:${command.commandId}`;
 }
 
 export async function generateQaTests(
@@ -98,7 +172,8 @@ export async function generateQaTests(
   curatorFeedback?: CuratorFeedback,
   llmSettings?: LlmSettings,
   executionBrief?: string,
-  designContext?: DesignContextBundle
+  designContext?: DesignContextBundle,
+  promptContext?: PromptContextBundle
 ): Promise<QaOutput> {
   const criteria = spec.acceptanceCriteria
     .map((c, i) => `${i + 1}. ${c}`)
@@ -146,7 +221,10 @@ Valide especificamente essa alteração, além dos critérios de aceite da user 
     ? `# VisualContract da SPEC\n${JSON.stringify(spec.visualContract, null, 2)}`
     : "# VisualContract da SPEC\nNao informado; valide preservacao da identidade local pelo contexto visual quando disponivel.";
 
-  const skill = loadAgentSkill("qa-frontend-testing");
+  const skill = appendRuntimeAgentSkills(
+    loadAgentSkill("qa-frontend-testing"),
+    promptContext?.runtimeSkills ?? []
+  );
   const prompt = `Você é um QA engineer especializado em testes de interface web. Gere casos de teste detalhados para validação manual.
 
 # Skill obrigatória do agente
@@ -154,6 +232,8 @@ ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
 ${visualContractBlock}
+
+${formatPromptContextForPrompt(promptContext)}
 
 ${formatDesignContextForPrompt(designContext)}
 
@@ -186,7 +266,7 @@ IDs devem ser TC-01, TC-02, etc.`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return QaOutputSchema.parse(await model.invoke(prompt));
+      return QaOutputSchema.parse(await invokeChatModel(model, prompt));
     } catch (err) {
       console.warn(`[QaAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {

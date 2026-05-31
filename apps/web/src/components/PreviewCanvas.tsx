@@ -4,12 +4,16 @@ import { PreviewIcon } from "./PreviewIcons.js";
 
 export function PreviewCanvas({
   session,
+  refreshToken,
 }: {
   readonly session: PreviewSession | null;
+  readonly refreshToken?: string | null;
 }): JSX.Element {
   const status = session?.status ?? "waiting";
   const previewUrl =
     session?.status === "running" ? session.previewUrl ?? undefined : undefined;
+  const frameUrl =
+    previewUrl && refreshToken ? withRefreshToken(previewUrl, refreshToken) : previewUrl;
   const frameSession = previewUrl && session ? session : null;
 
   return (
@@ -24,9 +28,10 @@ export function PreviewCanvas({
             }}
           >
             <iframe
+              key={`${frameSession.id}:${refreshToken ?? frameSession.updatedAt}`}
               className="preview-frame"
               title="Preview visual"
-              src={previewUrl}
+              src={frameUrl}
               sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             />
           </div>
@@ -45,4 +50,14 @@ export function PreviewCanvas({
       )}
     </section>
   );
+}
+
+function withRefreshToken(previewUrl: string, refreshToken: string): string {
+  try {
+    const url = new URL(previewUrl);
+    url.searchParams.set("horus_refresh", refreshToken);
+    return url.toString();
+  } catch {
+    return previewUrl;
+  }
 }

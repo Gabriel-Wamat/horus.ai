@@ -78,3 +78,45 @@ test("buildFrontendCodeChangeSet marks new files as create operations", () => {
   assert.equal(changeSet.operations[0].beforeContent, null);
   assert.match(changeSet.operations[0].diff, /--- \/dev\/null/);
 });
+
+test("buildFrontendCodeChangeSet maps delete plans to auditable delete operations", () => {
+  const changeSet = buildFrontendCodeChangeSet({
+    workflowThreadId: "22222222-2222-4222-8222-222222222222",
+    userStory,
+    codeContext: {
+      projectId: "44444444-4444-4444-8444-444444444444",
+      query: "Remover arquivo obsoleto",
+      inspectedFiles: ["src/OldPanel.tsx"],
+      files: [
+        {
+          path: "src/OldPanel.tsx",
+          bytes: 41,
+          content: "export function OldPanel(){return null}\n",
+        },
+      ],
+      omittedFilesCount: 0,
+      totalBytes: 41,
+      limits: {
+        maxFiles: 12,
+        maxBytesPerFile: 8000,
+        maxTotalBytes: 32000,
+      },
+    },
+    operations: [
+      {
+        operation: "delete",
+        targetPath: "src/OldPanel.tsx",
+        rationale: "Remove componente obsoleto.",
+      },
+    ],
+  });
+
+  assert.equal(changeSet.operations[0].changeType, "delete");
+  assert.equal(
+    changeSet.operations[0].beforeContent,
+    "export function OldPanel(){return null}\n"
+  );
+  assert.equal(changeSet.operations[0].afterContent, null);
+  assert.match(changeSet.operations[0].diff, /deleted file mode/);
+  assert.match(changeSet.operations[0].diff, /\+\+\+ \/dev\/null/);
+});

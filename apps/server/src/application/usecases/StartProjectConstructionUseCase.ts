@@ -17,10 +17,12 @@ import type {
   FrontendProjectRepository,
   ProjectConstructionRepository,
   WorkspaceRepository,
-} from "../../infrastructure/repositories/contracts.js";
-import { ProjectConfigService } from "../../infrastructure/project/ProjectConfigService.js";
-import { ProjectExecutionService } from "../../infrastructure/project/ProjectExecutionService.js";
-import { ProjectWorkspaceService } from "../../infrastructure/project/ProjectWorkspaceService.js";
+} from "../ports/RepositoryPorts.js";
+import type {
+  ProjectConfigReader,
+  ProjectExecutionRunner,
+  ProjectWorkspaceProvider,
+} from "../ports/ProjectServicesPort.js";
 
 export class ProjectConstructionValidationError extends Error {
   constructor(message: string) {
@@ -43,6 +45,7 @@ export interface ProjectConstructionWorkflowStarter {
     workspaceArtifactContext?: Record<string, WorkspaceArtifactContext>;
     initialSpecs?: Record<string, Spec>;
     workflowMode?: "project_construction";
+    projectWorkspaceId?: string;
     frontendProjectId?: string;
     frontendProjectRootPath?: string;
     llmSettings?: LlmSettings;
@@ -85,14 +88,35 @@ function storyMarkdown(story: UserStory, spec: Spec): string {
   ].join("\n");
 }
 
+function compareIsoDesc(left: string, right: string): number {
+  return right.localeCompare(left);
+}
+
+function selectReusableProjectWorkspace(
+  projects: ProjectWorkspace[],
+  workspaceFolderId: string
+): ProjectWorkspace | undefined {
+  return projects
+    .filter(
+      (item) =>
+        item.workspaceFolderId === workspaceFolderId &&
+        item.targetMode === "new_project"
+    )
+    .sort(
+      (left, right) =>
+        compareIsoDesc(left.updatedAt, right.updatedAt) ||
+        compareIsoDesc(left.createdAt, right.createdAt)
+    )[0];
+}
+
 export class StartProjectConstructionUseCase {
   constructor(
     private readonly projectConstruction: ProjectConstructionRepository,
     private readonly workspaceStore: WorkspaceRepository,
     private readonly frontendProjects: FrontendProjectRepository,
-    private readonly projectWorkspaceService = new ProjectWorkspaceService(),
-    private readonly projectConfigService = new ProjectConfigService(),
-    private readonly projectExecutionService = new ProjectExecutionService(),
+    private readonly projectWorkspaceService: ProjectWorkspaceProvider,
+    private readonly projectConfigService: ProjectConfigReader,
+    private readonly projectExecutionService: ProjectExecutionRunner,
     private readonly env: Record<string, string | undefined> = process.env,
     private readonly workflowStarter?: ProjectConstructionWorkflowStarter,
     private readonly llmSettingsResolver?: ProjectConstructionLlmSettingsResolver
@@ -115,11 +139,9 @@ export class StartProjectConstructionUseCase {
     const requestedProjectName = input.projectName ?? "horus-generated-project";
     const existingProject =
       input.projectWorkspaceId === undefined
-        ? (await this.projectConstruction.listProjectWorkspaces()).find(
-            (item) =>
-              item.workspaceFolderId === input.workspaceFolderId &&
-              item.name === requestedProjectName &&
-              item.targetMode === "new_project"
+        ? selectReusableProjectWorkspace(
+            await this.projectConstruction.listProjectWorkspaces(),
+            input.workspaceFolderId
           )
         : undefined;
     const reusedProjectWorkspace = Boolean(existingProject);
@@ -234,6 +256,7 @@ export class StartProjectConstructionUseCase {
         workspaceArtifactContext: workflowArtifactContext,
         initialSpecs,
         workflowMode: "project_construction",
+        projectWorkspaceId: project.id,
         ...(frontendProject ? { frontendProjectId: frontendProject.id } : {}),
         frontendProjectRootPath: prepared.workspacePath,
         ...(llmSettings ? { llmSettings } : {}),
