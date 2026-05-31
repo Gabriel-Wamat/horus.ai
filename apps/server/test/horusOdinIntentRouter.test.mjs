@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HorusOdinIntentRouter } from "../dist/application/services/HorusOdinIntentRouter.js";
+import {
+  buildContextualClarificationMessage,
+  HorusOdinIntentRouter,
+  resolveContextualFollowUpMessage,
+} from "../dist/application/services/HorusOdinIntentRouter.js";
 
 const context = {
   session: {
@@ -69,6 +73,182 @@ test("HorusOdinIntentRouter preserves structured preview action decisions", asyn
   assert.equal(result.previewAction, "reload");
 });
 
+test("HorusOdinIntentRouter resolves short open follow-ups from recent assistant offers", async () => {
+  const router = new HorusOdinIntentRouter({
+    classify: async () => {
+      throw new Error("Classifier should not be needed for contextual open follow-up.");
+    },
+  });
+  const contextWithOffer = {
+    ...context,
+    messages: [
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        sessionId: context.session.id,
+        sequence: 1,
+        role: "agent",
+        eventType: "message",
+        visibility: "user",
+        deliveryStatus: "persisted",
+        body: "Se quiser, eu posso abrir o arquivo App.tsx e mostrar o trecho final atual. Arquivos alterados: src/App.tsx.",
+        contextSnapshot: {
+          workspaceFolderId: context.session.workspaceFolderId,
+          userStoryId: context.session.userStoryId,
+        },
+        metadata: {},
+        createdAt: "2026-05-26T10:01:00.000Z",
+      },
+    ],
+  };
+
+  const result = await router.classify({
+    message: "abra",
+    context: contextWithOffer,
+  });
+  const resolved = resolveContextualFollowUpMessage({
+    message: "abra",
+    context: contextWithOffer,
+  });
+
+  assert.equal(result.kind, "answer_question");
+  assert.equal(result.mode, "chat");
+  assert.ok(result.rationale.includes("src/App.tsx"));
+  assert.equal(
+    resolved,
+    "Abra o arquivo src/App.tsx e mostre o trecho relevante atual para revisão."
+  );
+});
+
+test("HorusOdinIntentRouter prefers structured suggested actions over text scraping", async () => {
+  const router = new HorusOdinIntentRouter({
+    classify: async () => {
+      throw new Error("Classifier should not be needed for structured suggested actions.");
+    },
+  });
+  const contextWithStructuredAction = {
+    ...context,
+    messages: [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        sessionId: context.session.id,
+        sequence: 1,
+        role: "agent",
+        eventType: "message",
+        visibility: "user",
+        deliveryStatus: "persisted",
+        body: "Concluído. Posso mostrar o resultado.",
+        contextSnapshot: {
+          workspaceFolderId: context.session.workspaceFolderId,
+          userStoryId: context.session.userStoryId,
+        },
+        metadata: {
+          horusChat: {
+            suggestedActions: [
+              {
+                type: "open_file",
+                label: "abrir src/App.tsx",
+                filePath: "src/App.tsx",
+              },
+            ],
+          },
+        },
+        createdAt: "2026-05-26T10:01:30.000Z",
+      },
+    ],
+  };
+
+  const result = await router.classify({
+    message: "abra",
+    context: contextWithStructuredAction,
+  });
+  const resolved = resolveContextualFollowUpMessage({
+    message: "abra",
+    context: contextWithStructuredAction,
+  });
+
+  assert.equal(result.kind, "answer_question");
+  assert.ok(result.rationale.includes("src/App.tsx"));
+  assert.equal(
+    resolved,
+    "Abra o arquivo src/App.tsx e mostre o trecho relevante atual para revisão."
+  );
+});
+
+test("HorusOdinIntentRouter asks a contextual question when short follow-up has multiple options", async () => {
+  const router = new HorusOdinIntentRouter({
+    classify: async () => {
+      throw new Error("Classifier should not be needed for contextual ambiguous follow-up.");
+    },
+  });
+  const contextWithOffer = {
+    ...context,
+    messages: [
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        sessionId: context.session.id,
+        sequence: 1,
+        role: "agent",
+        eventType: "message",
+        visibility: "user",
+        deliveryStatus: "persisted",
+        body: "Se quiser, eu posso abrir o arquivo src/App.tsx para revisão ou rodar o servidor de desenvolvimento para testar manualmente.",
+        contextSnapshot: {
+          workspaceFolderId: context.session.workspaceFolderId,
+          userStoryId: context.session.userStoryId,
+        },
+        metadata: {},
+        createdAt: "2026-05-26T10:02:00.000Z",
+      },
+    ],
+  };
+
+  const result = await router.classify({
+    message: "sim",
+    context: contextWithOffer,
+  });
+  const clarification = buildContextualClarificationMessage({
+    message: "sim",
+    context: contextWithOffer,
+  });
+
+  assert.equal(result.kind, "clarify");
+  assert.equal(result.mode, "chat");
+  assert.ok((clarification ?? "").includes("abrir src/App.tsx"));
+  assert.ok((clarification ?? "").includes("iniciar o preview registrado"));
+});
+
+test("HorusOdinIntentRouter recognizes 10 everyday code-edit requests without waiting for LLM classification", async () => {
+  const router = new HorusOdinIntentRouter({
+    classify: async () => {
+      throw new Error("Classifier should not be needed for explicit code edits.");
+    },
+  });
+
+  const cases = [
+    "Troque o texto do botão Home para Início.",
+    "Mude a cor do header para verde.",
+    "Aumente o espaçamento entre os cards.",
+    "Remova o card de estatísticas da tela inicial.",
+    "Adicione um campo de busca na lista.",
+    "Renomeie o label Nome para Cliente.",
+    "Corrija o import quebrado do componente UserMenu.",
+    "Inclua estado de loading no botão salvar.",
+    "Deixe o layout responsivo no mobile.",
+    "Conecte o botão de enviar à função handleSubmit.",
+  ];
+
+  for (const message of cases) {
+    const result = await router.classify({
+      message,
+      context,
+    });
+
+    assert.equal(result.kind, "code_change", message);
+    assert.equal(result.mode, "executor", message);
+    assert.equal(result.previewAction, undefined, message);
+  }
+});
+
 test("HorusOdinIntentRouter rejects malformed classifier output through the shared schema", async () => {
   const router = routerReturning({
     kind: "run_project",
@@ -78,12 +258,13 @@ test("HorusOdinIntentRouter rejects malformed classifier output through the shar
     previewAction: "start",
   });
 
-  await assert.rejects(
-    () =>
-      router.classify({
-        message: "Rode o projeto.",
-        context,
-      }),
-    /Number must be less than or equal to 1/
-  );
+  try {
+    await router.classify({
+      message: "Status do projeto.",
+      context,
+    });
+    assert.fail("Expected classifier output validation to fail.");
+  } catch (error) {
+    assert.ok(String(error).includes("Number must be less than or equal to 1"));
+  }
 });

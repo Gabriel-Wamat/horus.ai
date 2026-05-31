@@ -1,0 +1,245 @@
+.visual-contract-summary {
+  display: grid;
+  gap: 12px;
+  max-width: 980px;
+  margin: 16px 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.028);
+  padding: 14px;
+}
+
+.visual-contract-summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.visual-contract-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.visual-contract-token-row span {
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--document-muted, var(--t3));
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 850;
+  padding: 5px 8px;
+}
+
+.visual-contract-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 10px;
+}
+
+.story-detail-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.story-edit-section-head,
+.story-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.story-edit-actions {
+  justify-content: flex-end;
+}
+
+.story-detail-block,
+.spec-waiting,
+.spec-empty-panel .panel-body {
+  border: 1px solid var(--bd-soft);
+  border-radius: 8px;
+  background: var(--s2);
+  padding: 12px;
+}
+
+.story-detail-meta-row,
+.spec-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spec-list {
+  display: grid;
+  gap: 10px;
+}
+
+.spec-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.spec-component-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.spec-component {
+  min-width: 0;
+  border: 1px solid var(--bd-soft);
+  border-radius: 8px;
+  background: var(--s4);
+  padding: 11px;
+}
+
+.spec-component .workflow-title {
+  margin-top: 6px;
+}
+
+.spec-waiting {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.workflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.workflow-step {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--t3);
+  padding: 8px 10px;
+}
+
+.workflow-step.active,
+.workflow-step.completed {
+  border-color: rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.workflow-step.failed {
+  border-color: rgba(240, 85, 108, 0.18);
+  background: rgba(240, 85, 108, 0.06);
+}
+
+.workflow-title {
+  overflow: hidden;
+  color: var(--t);
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-meta {
+  color: var(--t3);
+  font-size: 11px;
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  max-width: 78%;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 12px 13px;
+}
+
+.message.user {
+  align-self: flex-end;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.message-time {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+}
+
+.message-body {
+  color: var(--t);
+  font-size: 14px;
+}
+
+.inspector {
+  margin-top: 14px;
+}
+
+.inspector-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.inspector-tab {
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--t3);
+  padding: 5px 9px 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inspector-tab.active {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--t);
+}
+
+.json-view {
+  max-height: 330px;
+  overflow: auto;
+  background: #080b0a;
+  color: #c6f6dc;
+  font: 12px/1.55 "JetBrains Mono", ui-monospace, monospace;
+  padding: 18px;
+}
+
+.artifact-frame {
+  width: 100%;
+  border: 0;
+  background: white;
+}

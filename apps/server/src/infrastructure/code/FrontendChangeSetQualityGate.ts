@@ -1,7 +1,11 @@
 import { promises as fs } from "node:fs";
 import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
 import ts from "typescript";
-import type { CodeChangeSet, CodeChangeOperation } from "@u-build/shared";
+import {
+  isCodeChangeDeleteOperation,
+  type CodeChangeSet,
+  type CodeChangeOperation,
+} from "@u-build/shared";
 
 export interface FrontendChangeSetQualityGateInput {
   projectRootPath: string;
@@ -51,12 +55,17 @@ export async function evaluateFrontendChangeSet(
 
   for (const operation of input.changeSet.operations) {
     const targetPath = normalizeRelativePath(operation.targetPath);
-    files.set(targetPath, operation.afterContent);
+    if (isCodeChangeDeleteOperation(operation)) {
+      files.delete(targetPath);
+    } else {
+      files.set(targetPath, operation.afterContent);
+    }
     issues.push(...evaluateOperationContent(operation, files));
   }
 
   const reachableFiles = buildReachableFileSet(files);
   for (const operation of input.changeSet.operations) {
+    if (isCodeChangeDeleteOperation(operation)) continue;
     const targetPath = normalizeRelativePath(operation.targetPath);
     if (!mustBeReachable(targetPath)) continue;
     if (!reachableFiles.has(targetPath)) {
@@ -79,6 +88,8 @@ function evaluateOperationContent(
   const targetPath = normalizeRelativePath(operation.targetPath);
   const issues: string[] = [];
   const reactProject = isReactViteProject(files);
+
+  if (isCodeChangeDeleteOperation(operation)) return issues;
 
   if (
     reactProject &&

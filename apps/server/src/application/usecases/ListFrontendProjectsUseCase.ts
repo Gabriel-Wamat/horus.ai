@@ -1,8 +1,10 @@
-import type { PreviewRuntimeManager } from "../../infrastructure/preview/PreviewRuntimeManager.js";
-import type { PreviewProjectListVisibility } from "../../infrastructure/preview/PreviewProjectHealthService.js";
+import type {
+  PreviewProjectListVisibility,
+  PreviewRuntimePort,
+} from "../ports/PreviewRuntimePort.js";
 
 export class ListFrontendProjectsUseCase {
-  constructor(private readonly previewRuntime: PreviewRuntimeManager) {}
+  constructor(private readonly previewRuntime: PreviewRuntimePort) {}
 
   async execute(input: { visibility?: PreviewProjectListVisibility } = {}) {
     return this.previewRuntime.listProjects(input.visibility ?? "visible");

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdtemp, realpath, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 import {
   BrowserPreviewStartError,
@@ -69,6 +70,20 @@ function closeServer(server) {
   });
 }
 
+async function readJsonFileEventually(path, timeoutMs = 2_000) {
+  const startedAt = Date.now();
+  let lastError;
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      return JSON.parse(await readFile(path, "utf8"));
+    } catch (err) {
+      lastError = err;
+      await delay(25);
+    }
+  }
+  throw lastError;
+}
+
 test("ProcessBrowserPreviewAdapter starts a real managed preview process and stops it", async () => {
   const rootPath = await mkdtemp(join(tmpdir(), "horus-preview-process-"));
   const canonicalRootPath = await realpath(rootPath);
@@ -109,6 +124,62 @@ test("ProcessBrowserPreviewAdapter starts a real managed preview process and sto
     },
     /kill ESRCH|no such process/i
   );
+});
+
+test("ProcessBrowserPreviewAdapter does not inherit arbitrary process env by default", async () => {
+  const rootPath = await mkdtemp(join(tmpdir(), "horus-preview-env-"));
+  const outputPath = join(rootPath, "env-output.json");
+  const previewUrl = "http://127.0.0.1:51750/";
+  const originalSecret = process.env.HORUS_SECRET_PROBE;
+  process.env.HORUS_SECRET_PROBE = "leak-me-not";
+
+  const script = [
+    "const fs=require('node:fs');",
+    `fs.writeFileSync(${JSON.stringify(outputPath)}, JSON.stringify({`,
+    "secret: process.env.HORUS_SECRET_PROBE ?? null,",
+    "explicit: process.env.HORUS_EXPLICIT_PROBE ?? null,",
+    "hasPath: Boolean(process.env.PATH)",
+    "}));",
+    "setTimeout(()=>{}, 30000);",
+  ].join("");
+  const project = {
+    ...projectFixture(rootPath, null, previewUrl),
+    previewCommandId: "dev",
+    commandCatalog: [
+      {
+        id: "dev",
+        label: "Dev",
+        executable: process.execPath,
+        args: ["-e", script],
+        cwd: ".",
+        env: { HORUS_EXPLICIT_PROBE: "allowed" },
+      },
+    ],
+  };
+  const session = sessionFixture(project, previewUrl);
+  const adapter = new ProcessBrowserPreviewAdapter({
+    startupTimeoutMs: 3_000,
+    readinessPollMs: 25,
+    killGraceMs: 100,
+    allowedExecutables: [process.execPath],
+    killProcessGroup: false,
+    readinessProbe: async () => true,
+  });
+
+  const started = await adapter.start(project, session);
+  try {
+    const envSnapshot = await readJsonFileEventually(outputPath);
+    assert.equal(envSnapshot.secret, null);
+    assert.equal(envSnapshot.explicit, "allowed");
+    assert.equal(envSnapshot.hasPath, true);
+  } finally {
+    await adapter.stop({ ...session, processId: started.processId });
+    if (originalSecret === undefined) {
+      delete process.env.HORUS_SECRET_PROBE;
+    } else {
+      process.env.HORUS_SECRET_PROBE = originalSecret;
+    }
+  }
 });
 
 test("ProcessBrowserPreviewAdapter rejects missing dev commands", async () => {

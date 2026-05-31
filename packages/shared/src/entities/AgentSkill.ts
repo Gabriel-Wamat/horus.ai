@@ -110,6 +110,8 @@ export const AgentSkillUsageEventSchema = z.object({
   skillId: z.string().uuid(),
   revisionId: z.string().uuid(),
   workflowThreadId: z.string().uuid().nullable().default(null),
+  runId: z.string().uuid().nullable().default(null),
+  attemptId: z.string().uuid().nullable().default(null),
   agentProfileId: z.string().trim().min(1),
   triggerMode: AgentSkillBindingTriggerModeSchema,
   triggerReason: z.string().trim().min(1).nullable().default(null),

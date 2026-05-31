@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import type { Spec } from "@u-build/shared";
 import { useAppNavigation } from "./app/useAppNavigation.js";
 import { useDisplayedWorkflowState } from "./app/useDisplayedWorkflowState.js";
-import { useProjectConstructionAction } from "./app/useProjectConstructionAction.js";
+import {
+  useProjectConstructionAction,
+  type ProjectConstructionNotification as ProjectConstructionNotificationPayload,
+} from "./app/useProjectConstructionAction.js";
 import { useWorkspaceFolders } from "./app/useWorkspaceFolders.js";
 import { useWorkflowRuntime } from "./app/useWorkflowRuntime.js";
 import { RetryApproval } from "./components/RetryApproval.js";
@@ -15,7 +18,9 @@ import { VisualPreviewConsole } from "./components/VisualPreviewConsole.js";
 import { WorkflowProgress } from "./components/WorkflowProgress.js";
 import { Button, Panel, PanelHeader } from "./components/ui/index.js";
 import { AgentFlowPage } from "./features/agent-flow-map/AgentFlowPage.js";
+import { AgentTelemetryPage } from "./features/agent-flow-map/AgentTelemetryPage.js";
 import { AgentSkillsPage } from "./features/agent-skills/AgentSkillsPage.js";
+import { DesignStudioPage } from "./features/design-studio/DesignStudioPage.js";
 import { ProjectFilesPage } from "./features/project-files/ProjectFilesPage.js";
 
 function CancelledPanel({ onRestart }: { onRestart: () => void }): JSX.Element {
@@ -36,6 +41,36 @@ function CancelledPanel({ onRestart }: { onRestart: () => void }): JSX.Element {
         </div>
       </div>
     </Panel>
+  );
+}
+
+function ProjectConstructionNotification({
+  notification,
+  onClose,
+}: {
+  notification: ProjectConstructionNotificationPayload;
+  onClose: () => void;
+}): JSX.Element {
+  return (
+    <div
+      className={`system-toast system-toast-${notification.kind}`}
+      role={notification.kind === "error" ? "alert" : "status"}
+      aria-live={notification.kind === "error" ? "assertive" : "polite"}
+    >
+      <div className="system-toast-indicator" aria-hidden="true" />
+      <div className="system-toast-copy">
+        <strong>{notification.title}</strong>
+        <span>{notification.body}</span>
+      </div>
+      <button
+        type="button"
+        className="system-toast-close"
+        aria-label="Fechar notificação"
+        onClick={onClose}
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -124,6 +159,7 @@ export function App(): JSX.Element {
       stories={submittedStories}
       workflowState={displayedWorkflowState}
       pendingSpec={workflow.pendingSpec}
+      persistedSpecsByStoryId={workspace.persistedSpecsByStoryId}
       workspaceFolders={workspace.workspaceFolders}
       workspaceFolderArtifactsById={workspace.workspaceFolderArtifactsById}
       loadingWorkspaceFolderIds={workspace.loadingWorkspaceFolderIds}
@@ -163,8 +199,6 @@ export function App(): JSX.Element {
       onRejectSpec={() => workflow.handleSpecApproval(false)}
       isGeneratingSpecs={workflow.isStartingWorkflow || isWorkflowRunning}
       isLoadingStories={workspace.isLoadingWorkspaceStories}
-      constructionNotice={projectConstruction.projectConstructionNotice}
-      constructionError={projectConstruction.projectConstructionError}
     />
   );
 
@@ -208,8 +242,12 @@ export function App(): JSX.Element {
       />
     ) : appMode === "files" ? (
       <ProjectFilesPage />
+    ) : appMode === "design" ? (
+      <DesignStudioPage />
     ) : appMode === "agents" ? (
       <AgentFlowPage workflowState={agentFlowState} events={workflow.events} />
+    ) : appMode === "telemetry" ? (
+      <AgentTelemetryPage workflowState={agentFlowState} events={workflow.events} />
     ) : appMode === "skills" ? (
       <AgentSkillsPage />
     ) : (
@@ -280,6 +318,14 @@ export function App(): JSX.Element {
         onSelectWorkspaceFolder={workspace.setSelectedWorkspaceFolderId}
         onCreateWorkspaceFolder={workspace.handleCreateWorkspaceFolder}
       />
+      {projectConstruction.projectConstructionNotification && (
+        <div className="system-toast-region">
+          <ProjectConstructionNotification
+            notification={projectConstruction.projectConstructionNotification}
+            onClose={projectConstruction.dismissProjectConstructionNotification}
+          />
+        </div>
+      )}
     </>
   );
 }

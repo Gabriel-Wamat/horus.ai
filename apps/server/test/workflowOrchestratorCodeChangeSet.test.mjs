@@ -44,9 +44,9 @@ const project = {
   createdAt: "2026-05-26T10:00:00.000Z",
 };
 
-function codeChangeSet(threadId) {
+function codeChangeSet(threadId, id = "44444444-4444-4444-8444-444444444444") {
   return {
-    id: "44444444-4444-4444-8444-444444444444",
+    id,
     workflowThreadId: threadId,
     workspaceFolderId,
     userStoryId: userStory.id,
@@ -57,8 +57,8 @@ function codeChangeSet(threadId) {
         targetPath: "generated/horus/story.html",
         changeType: "create",
         beforeContent: null,
-        afterContent: "<main>Workflow applied</main>",
-        diff: "--- /dev/null\n+++ generated/horus/story.html\n+<main>Workflow applied</main>",
+        afterContent: `<main>Workflow applied ${id.slice(0, 8)}</main>`,
+        diff: `--- /dev/null\n+++ generated/horus/story.html\n+<main>Workflow applied ${id.slice(0, 8)}</main>`,
       },
     ],
     validation: [],
@@ -66,7 +66,7 @@ function codeChangeSet(threadId) {
   };
 }
 
-function curatorResult(passed) {
+function curatorResult(passed, candidateId) {
   return {
     agentName: "curator",
     output: {
@@ -75,6 +75,7 @@ function curatorResult(passed) {
       notes: passed ? "Aprovado para aplicar." : "Contrato visual insuficiente.",
       missingItems: passed ? [] : ["Aplicacao nao deve tocar arquivos sem aprovacao."],
       fixTarget: passed ? "none" : "front",
+      ...(candidateId ? { candidateId } : {}),
     },
   };
 }
@@ -84,6 +85,7 @@ function createHarness({
   projectRoot,
   applier = new ProjectCodeChangeSetApplier(),
   projectConstructionRuns,
+  chatProgress,
 }) {
   let initialInput;
   let savedState;
@@ -147,7 +149,7 @@ function createHarness({
     events,
     graph,
     undefined,
-    undefined,
+    chatProgress,
     sink,
     applier,
     projectConstructionRuns
@@ -246,12 +248,187 @@ test("WorkflowOrchestrator applies latest proposed CodeChangeSet only after cura
   assert.equal(applied.status, "applied");
   assert.equal(
     await readFile(join(projectRoot, "generated", "horus", "story.html"), "utf8"),
-    "<main>Workflow applied</main>"
+    "<main>Workflow applied 44444444</main>"
   );
   assert.equal(harness.getSavedState().frontendProjectId, project.id);
   assert.equal(harness.getSavedState().frontendProjectRootPath, projectRoot);
   assert.equal(patchApplied.changeSetId, codeChangeSet("").id);
   assert.deepEqual(patchApplied.filePaths, ["generated/horus/story.html"]);
+});
+
+test("WorkflowOrchestrator does not apply a CodeChangeSet twice after governed tool edits", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-workflow-project-"));
+  let applierCalled = false;
+  const harness = createHarness({
+    projectRoot,
+    applier: {
+      apply: async () => {
+        applierCalled = true;
+        throw new Error("already applied by governed tool loop");
+      },
+    },
+    graphChunks: (input) => [
+      {
+        frontAgent: {
+          agentResults: {
+            [userStory.id]: [
+              {
+                output: {
+                  codeChangeSet: codeChangeSet(input.threadId),
+                  toolLoop: {
+                    status: "succeeded",
+                    changedFiles: ["generated/horus/story.html"],
+                    validationCommandIds: [],
+                    summary: "1 arquivo alterado por tools governadas.",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        curatorAgent: {
+          agentResults: {
+            [userStory.id]: [curatorResult(true)],
+          },
+          status: "completed",
+        },
+      },
+    ],
+  });
+
+  await startCodeChange(harness.orchestrator, harness.selectedProject);
+  const applied = await harness.waitForStatus("applied");
+  const patchApplied = await harness.waitForEvent("patch_applied");
+
+  assert.equal(applierCalled, false);
+  assert.deepEqual(
+    harness.savedChangeSets.map((item) => item.status),
+    ["applied"]
+  );
+  assert.equal(applied.status, "applied");
+  assert.equal(patchApplied.changeSetId, codeChangeSet("").id);
+});
+
+test("WorkflowOrchestrator applies the Curator-approved artifact candidate instead of the latest proposal", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-workflow-project-"));
+  const olderId = "44444444-4444-4444-8444-444444444444";
+  const newerId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const harness = createHarness({
+    projectRoot,
+    graphChunks: (input) => [
+      {
+        frontAgent: {
+          agentResults: {
+            [userStory.id]: [
+              { output: { codeChangeSet: codeChangeSet(input.threadId, olderId) } },
+            ],
+          },
+        },
+      },
+      {
+        frontAgent: {
+          agentResults: {
+            [userStory.id]: [
+              {
+                output: {
+                  codeChangeSet: {
+                    ...codeChangeSet(input.threadId, newerId),
+                    createdAt: "2026-05-26T10:03:00.000Z",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        curatorAgent: {
+          agentResults: {
+            [userStory.id]: [curatorResult(true, olderId)],
+          },
+          status: "completed",
+        },
+      },
+    ],
+  });
+
+  await startCodeChange(harness.orchestrator, harness.selectedProject);
+  const applied = await harness.waitForStatus("applied");
+
+  assert.equal(applied.id, olderId);
+  assert.equal(
+    await readFile(join(projectRoot, "generated", "horus", "story.html"), "utf8"),
+    "<main>Workflow applied 44444444</main>"
+  );
+});
+
+test("WorkflowOrchestrator persists compact workflow progress into chat memory", async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), "horus-workflow-project-"));
+  const chatMessages = [];
+  const chatWaiters = [];
+  const chatProgress = {
+    appendMessage: async (sessionId, input) => {
+      const message = {
+        id: `chat-${chatMessages.length + 1}`,
+        sessionId,
+        sequence: chatMessages.length + 1,
+        ...input,
+        contextSnapshot: {
+          workspaceFolderId,
+          userStoryId: userStory.id,
+          ...(input.workflowThreadId
+            ? { workflowThreadId: input.workflowThreadId }
+            : {}),
+        },
+        metadata: input.metadata ?? {},
+        createdAt: new Date().toISOString(),
+      };
+      chatMessages.push(message);
+      for (const waiter of chatWaiters.splice(0)) waiter();
+      return message;
+    },
+    listMessages: async () => chatMessages,
+  };
+  const harness = createHarness({
+    projectRoot,
+    chatProgress,
+    graphChunks: (input) => [
+      {
+        frontAgent: {
+          agentResults: {
+            [userStory.id]: [{ output: { codeChangeSet: codeChangeSet(input.threadId) } }],
+          },
+        },
+      },
+      {
+        curatorAgent: {
+          agentResults: {
+            [userStory.id]: [curatorResult(true)],
+          },
+          status: "completed",
+        },
+      },
+    ],
+  });
+
+  await startCodeChange(harness.orchestrator, harness.selectedProject);
+  await harness.waitForStatus("applied");
+  while (!chatMessages.some((message) => /Alteração aplicada/.test(message.body))) {
+    await new Promise((resolve) => chatWaiters.push(resolve));
+  }
+
+  const visibleBodies = chatMessages
+    .filter((message) => message.visibility === "user")
+    .map((message) => message.body);
+  assert.ok(visibleBodies.some((body) => /Alteração preparada/.test(body)));
+  assert.ok(visibleBodies.some((body) => /Alteração aplicada/.test(body)));
+  assert.equal(visibleBodies.some((body) => /Thread|modo executor/.test(body)), false);
+  assert.equal(
+    chatMessages.every((message) => message.metadata.workflowProgressKey),
+    true
+  );
 });
 
 test("WorkflowOrchestrator rejects latest proposed CodeChangeSet when curator fails", async () => {

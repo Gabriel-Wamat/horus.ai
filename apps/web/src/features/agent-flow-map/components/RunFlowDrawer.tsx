@@ -3,12 +3,14 @@ import { useMemo, useState, type JSX, type ReactNode } from "react";
 import type {
   HorusAgentExecutionSnapshot,
   HorusAgentEvidenceSummary,
+  AgentRunbookEntry,
   HorusRunEventSnapshot,
   HorusRunSnapshot,
 } from "../types/api.types.js";
 import type { AgentFlowNode } from "../types/flow.types.js";
+import { AgentDebugTracePanel } from "./AgentDebugTracePanel.js";
 
-type DrawerTab = "summary" | "events" | "actions" | "code" | "deps";
+type DrawerTab = "summary" | "events" | "actions" | "code" | "deps" | "debug";
 
 const TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: "summary", label: "Resumo" },
@@ -16,6 +18,7 @@ const TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: "actions", label: "Ações" },
   { id: "code", label: "Código" },
   { id: "deps", label: "Deps" },
+  { id: "debug", label: "Debug" },
 ];
 
 interface RunFlowDrawerProps {
@@ -41,6 +44,14 @@ export function RunFlowDrawer({ run, node, onClose }: RunFlowDrawerProps): JSX.E
     if (data.kind === "agentExecution") return execution.id === data.executionId;
     return execution.nodeId === data.nodeName;
   });
+  const relatedRunbookEntries = useMemo(
+    () =>
+      run.runbookEntries.filter((entry) => {
+        if (data.kind === "agentExecution") return entry.agentName === data.agentName;
+        return agentNodeName(entry.agentName) === data.nodeName;
+      }),
+    [data, run.runbookEntries]
+  );
   const evidenceSummary =
     run.evidenceSummaries.find((summary) => {
       if (data.kind === "agentExecution") {
@@ -100,7 +111,11 @@ export function RunFlowDrawer({ run, node, onClose }: RunFlowDrawerProps): JSX.E
       )}
       {activeTab === "events" && <EventsTab events={relatedEvents} />}
       {activeTab === "actions" && (
-        <ActionsTab events={relatedEvents} summary={evidenceSummary} />
+        <ActionsTab
+          events={relatedEvents}
+          runbookEntries={relatedRunbookEntries}
+          summary={evidenceSummary}
+        />
       )}
       {activeTab === "code" && <CodeTab events={relatedEvents} summary={evidenceSummary} />}
       {activeTab === "deps" && (
@@ -109,6 +124,22 @@ export function RunFlowDrawer({ run, node, onClose }: RunFlowDrawerProps): JSX.E
           executions={relatedExecutions}
           summary={evidenceSummary}
           run={run}
+        />
+      )}
+      {activeTab === "debug" && (
+        <AgentDebugTracePanel
+          workflowThreadId={run.threadId}
+          {...(data.kind === "agentExecution"
+            ? {
+                userStoryId: data.userStoryId,
+                agentName: data.agentName as
+                  | "front"
+                  | "qa"
+                  | "curator"
+                  | "spec"
+                  | "odin",
+              }
+            : {})}
         />
       )}
     </aside>
@@ -245,9 +276,11 @@ function EventsTab({ events }: { events: HorusRunEventSnapshot[] }): JSX.Element
 
 function ActionsTab({
   events,
+  runbookEntries,
   summary,
 }: {
   events: HorusRunEventSnapshot[];
+  runbookEntries: AgentRunbookEntry[];
   summary: HorusAgentEvidenceSummary | null;
 }): JSX.Element {
   const tools = dedupe([
@@ -262,6 +295,7 @@ function ActionsTab({
 
   return (
     <div className="agent-flow-drawer-tab-panel">
+      <RunbookCard entries={runbookEntries} />
       <ChipCard label="Ferramentas" empty="Nenhuma ferramenta registrada." items={tools} />
       <ChipCard label="Comandos" empty="Nenhum comando registrado." items={commands} />
       <InfoCard label="Validação">
@@ -282,6 +316,31 @@ function ActionsTab({
         <ChipCard label="Erros" empty="" items={summary.errorMessages} tone="danger" />
       ) : null}
     </div>
+  );
+}
+
+function RunbookCard({ entries }: { entries: AgentRunbookEntry[] }): JSX.Element {
+  return (
+    <InfoCard label="Runbook">
+      {entries.length === 0 ? (
+        <p className="agent-flow-muted">Nenhuma ação operacional registrada.</p>
+      ) : (
+        <div className="agent-flow-runbook-list">
+          {entries.slice(-8).reverse().map((entry) => (
+            <article
+              key={entry.id}
+              className={`agent-flow-runbook-row is-${entry.status}`}
+            >
+              <div>
+                <strong>{entry.title}</strong>
+                <span>{entry.summary ?? entry.target ?? entry.action}</span>
+              </div>
+              <em>{runbookStatusLabel(entry.status)}</em>
+            </article>
+          ))}
+        </div>
+      )}
+    </InfoCard>
   );
 }
 
@@ -347,6 +406,13 @@ function DepsTab({
         {profile ? (
           <>
             <p>{profile.purpose}</p>
+            {profile.capabilityScopes.length > 0 ? (
+              <>
+                <h4>Capacidades</h4>
+                <ChipList items={profile.capabilityScopes} />
+              </>
+            ) : null}
+            <h4>Tools permitidas</h4>
             <ChipList items={profile.allowedTools} />
           </>
         ) : (
@@ -463,6 +529,24 @@ function formatDateTime(value: string): string {
 function toolNameFromEvent(event: HorusRunEventSnapshot): string | null {
   const value = event.metadata?.["toolName"] ?? event.metadata?.["tool"];
   return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function agentNodeName(agentName: AgentRunbookEntry["agentName"]): string | null {
+  if (agentName === "spec") return "specAgent";
+  if (agentName === "odin") return "odinAgent";
+  if (agentName === "front") return "frontAgent";
+  if (agentName === "qa") return "qaAgent";
+  if (agentName === "curator") return "curatorAgent";
+  return null;
+}
+
+function runbookStatusLabel(status: AgentRunbookEntry["status"]): string {
+  if (status === "running") return "rodando";
+  if (status === "succeeded") return "ok";
+  if (status === "failed") return "falhou";
+  if (status === "blocked") return "bloqueado";
+  if (status === "waiting_for_decision") return "decisão";
+  return "pendente";
 }
 
 function dedupe(values: string[]): string[] {

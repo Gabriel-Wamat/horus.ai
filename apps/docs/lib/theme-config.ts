@@ -9,6 +9,12 @@ export const siteConfig = {
   name: 'Horus.AI Docs',
   description: 'Technical documentation for the Horus.AI autonomous multi-agent software generation system.',
   url: 'https://docs-three-coral.vercel.app',
+  logo: {
+    src: '/logo.svg',
+    alt: 'Horus.AI',
+    width: 32,
+    height: 32,
+  },
 
   // Navigation links
   links: {

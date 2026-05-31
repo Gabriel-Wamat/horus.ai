@@ -9,13 +9,16 @@ import {
   ProjectQualityGateSchema,
   RuntimeValidationEvidenceSchema,
 } from "@u-build/shared";
+import { classifyCommandKind } from "../../application/coding/ValidationCommandSelector.js";
 import { ProjectDiffAnalyzer } from "./ProjectDiffAnalyzer.js";
 import { ProjectExecutionService } from "./ProjectExecutionService.js";
+import { ProjectFailureAnalysisService } from "./ProjectFailureAnalysisService.js";
 
 export class ProjectQualityGateService {
   constructor(
     private readonly executionService = new ProjectExecutionService(),
-    private readonly diffAnalyzer = new ProjectDiffAnalyzer()
+    private readonly diffAnalyzer = new ProjectDiffAnalyzer(),
+    private readonly failureAnalysis = new ProjectFailureAnalysisService()
   ) {}
 
   async run(input: {
@@ -53,13 +56,12 @@ export class ProjectQualityGateService {
             projectRoot: input.projectRoot,
           })
         : [];
-    const failedChecks = commandRuns
+    const checks = commandRuns.map((run) =>
+      this.buildCheck({ run, config: input.config })
+    );
+    const failedChecks = latestRunsByCommand(commandRuns)
       .filter((run) => run.exitCode !== 0)
-      .map((run) => ({
-        commandId: run.commandId,
-        exitCode: run.exitCode,
-        stderrTail: run.stderrTail,
-      }));
+      .map((run) => this.buildCheck({ run, config: input.config }));
     const diffStats = await this.diffAnalyzer.readDiffStats(input.projectRoot);
     const qualityGate = ProjectQualityGateSchema.parse({
       id: uuidv4(),
@@ -71,10 +73,7 @@ export class ProjectQualityGateService {
           : failedChecks.length === 0
             ? "passed"
             : "failed",
-      checks: commandRuns.map((run) => ({
-        commandId: run.commandId,
-        exitCode: run.exitCode,
-      })),
+      checks,
       failedChecks,
       diffStats,
       commitSha: null,
@@ -98,11 +97,22 @@ export class ProjectQualityGateService {
           : null,
       commands: commandRuns.map((run) => ({
         commandId: run.commandId,
+        taskId: run.taskId,
         command: run.command,
         cwd: run.cwd,
+        approvalRequired: run.approvalRequired,
+        risk: run.risk,
+        policyReason: run.policyReason,
+        approved: run.approved,
+        approvedBy: run.approvedBy,
+        approvalReason: run.approvalReason,
         exitCode: run.exitCode,
         stdoutTail: run.stdoutTail,
         stderrTail: run.stderrTail,
+        stdoutPath: run.stdoutPath,
+        stderrPath: run.stderrPath,
+        interactivePromptDetected: run.interactivePromptDetected,
+        interactivePromptText: run.interactivePromptText,
         durationMs: run.durationMs,
       })),
       preview: {
@@ -119,4 +129,45 @@ export class ProjectQualityGateService {
     });
     return { qualityGate, commandRuns, runtimeEvidence };
   }
+
+  private buildCheck(input: {
+    run: ProjectCommandRun;
+    config: HorusProjectConfig;
+  }): Record<string, unknown> {
+    const command = input.config.commandCatalog.find(
+      (item) => item.id === input.run.commandId
+    );
+    const kind = command ? classifyCommandKind(command) : "unknown";
+    const passed = input.run.exitCode === 0;
+    const output = `${input.run.stderrTail}\n${input.run.stdoutTail}`;
+    return {
+      commandId: input.run.commandId,
+      kind,
+      command: input.run.command,
+      cwd: input.run.cwd,
+      exitCode: input.run.exitCode,
+      passed,
+      stdoutTail: input.run.stdoutTail,
+      stderrTail: input.run.stderrTail,
+      durationMs: input.run.durationMs,
+      ...(passed
+        ? {}
+        : {
+            failureAnalysis: this.failureAnalysis.classify({
+              commandId: input.run.commandId,
+              kind,
+              output,
+              exitCode: input.run.exitCode,
+            }),
+          }),
+    };
+  }
+}
+
+function latestRunsByCommand(commandRuns: readonly ProjectCommandRun[]): ProjectCommandRun[] {
+  const latest = new Map<string, ProjectCommandRun>();
+  for (const run of commandRuns) {
+    latest.set(run.commandId, run);
+  }
+  return [...latest.values()];
 }

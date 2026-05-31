@@ -45,6 +45,8 @@ const SESSIONS_FILE = "sessions.json";
 const MESSAGES_FILE = "messages.json";
 
 export class FileChatMemoryStore {
+  private readonly messageLocks = new Map<string, Promise<void>>();
+
   constructor(
     private readonly workspaceReader: ActiveStoryContextReader,
     private readonly workflowStorage: IStorageProvider,
@@ -186,50 +188,73 @@ export class FileChatMemoryStore {
     sessionId: string,
     input: AppendChatMessageInput
   ): Promise<ChatMessage> {
-    const validated = AppendChatMessageInputSchema.parse(input);
-    const session = await this.getSession(sessionId);
-    const { snapshot } = await this.buildSnapshot(
-      session,
-      validated.workflowThreadId,
-      {
-        ...(validated.projectId ? { projectId: validated.projectId } : {}),
-        ...(validated.previewSessionId
-          ? { previewSessionId: validated.previewSessionId }
-          : {}),
-      }
-    );
-    const now = new Date().toISOString();
-    const message: ChatMessage = {
-      id: uuidv4(),
-      sessionId,
-      role: validated.role,
-      body: validated.body,
-      contextSnapshot: snapshot,
-      createdAt: now,
-    };
+    return this.withMessageLock(sessionId, async () => {
+      const validated = AppendChatMessageInputSchema.parse(input);
+      const session = await this.getSession(sessionId);
+      const { snapshot } = await this.buildSnapshot(
+        session,
+        validated.workflowThreadId,
+        {
+          ...(validated.projectId ? { projectId: validated.projectId } : {}),
+          ...(validated.previewSessionId
+            ? { previewSessionId: validated.previewSessionId }
+            : {}),
+        }
+      );
+      const now = new Date().toISOString();
+      const messages = await this.readMessages(sessionId);
+      const sequence =
+        messages.reduce((max, message) => Math.max(max, message.sequence), 0) + 1;
+      const message: ChatMessage = {
+        id: uuidv4(),
+        sessionId,
+        sequence,
+        role: validated.role,
+        eventType: validated.eventType,
+        visibility: validated.visibility,
+        deliveryStatus: validated.deliveryStatus,
+        body: validated.body,
+        ...(validated.compactBody ? { compactBody: validated.compactBody } : {}),
+        ...(validated.turnId ? { turnId: validated.turnId } : {}),
+        ...(validated.runId ? { runId: validated.runId } : {}),
+        ...(validated.attemptId ? { attemptId: validated.attemptId } : {}),
+        contextSnapshot: snapshot,
+        metadata: validated.metadata,
+        createdAt: now,
+      };
 
-    await this.writeMessages(sessionId, [
-      ...(await this.readMessages(sessionId)),
-      message,
-    ]);
-    await this.writeSessions(
-      (await this.readSessions()).map((item) =>
-        item.id === sessionId
-          ? {
-              ...item,
-              activeUserStoryRevisionId: snapshot.userStoryRevisionId,
-              activeSpecRevisionId: snapshot.specRevisionId,
-              workflowThreadId: snapshot.workflowThreadId ?? item.workflowThreadId,
-              updatedAt: now,
-            }
-          : item
-      )
-    );
-    return message;
+      await this.writeMessages(sessionId, [...messages, message]);
+      await this.writeSessions(
+        (await this.readSessions()).map((item) =>
+          item.id === sessionId
+            ? {
+                ...item,
+                activeUserStoryRevisionId: snapshot.userStoryRevisionId,
+                activeSpecRevisionId: snapshot.specRevisionId,
+                workflowThreadId: snapshot.workflowThreadId ?? item.workflowThreadId,
+                updatedAt: now,
+              }
+            : item
+        )
+      );
+      return message;
+    });
   }
 
-  async listMessages(sessionId: string): Promise<ChatMessage[]> {
-    return this.readMessages(sessionId);
+  async listMessages(
+    sessionId: string,
+    filter?: { afterSequence?: number }
+  ): Promise<ChatMessage[]> {
+    return (await this.readMessages(sessionId))
+      .filter((message) =>
+        filter?.afterSequence === undefined
+          ? true
+          : message.sequence > filter.afterSequence
+      )
+      .sort((left, right) => {
+        if (left.sequence !== right.sequence) return left.sequence - right.sequence;
+        return left.createdAt.localeCompare(right.createdAt);
+      });
   }
 
   async buildAgentContext(sessionId: string): Promise<ChatAgentContextBundle> {
@@ -253,5 +278,28 @@ export class FileChatMemoryStore {
       artifactContext: active.artifactContext,
       previousAgentResults,
     });
+  }
+
+  private async withMessageLock<T>(
+    sessionId: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const previous = this.messageLocks.get(sessionId) ?? Promise.resolve();
+    let releaseCurrent!: () => void;
+    const current = new Promise<void>((resolve) => {
+      releaseCurrent = resolve;
+    });
+    const next = previous.catch(() => undefined).then(() => current);
+    this.messageLocks.set(sessionId, next);
+    await previous.catch(() => undefined);
+
+    try {
+      return await operation();
+    } finally {
+      releaseCurrent();
+      if (this.messageLocks.get(sessionId) === next) {
+        this.messageLocks.delete(sessionId);
+      }
+    }
   }
 }

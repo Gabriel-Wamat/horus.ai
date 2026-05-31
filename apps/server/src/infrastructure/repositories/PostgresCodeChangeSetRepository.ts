@@ -5,6 +5,9 @@ import type { CodeChangeSetRepository } from "./contracts.js";
 
 interface CodeChangeSetRow {
   id: string;
+  artifact_candidate_id: string | null;
+  run_id: string | null;
+  attempt_id: string | null;
   workflow_thread_id: string;
   workspace_folder_id: string | null;
   story_id: string;
@@ -29,6 +32,9 @@ export class PostgresCodeChangeSetRepository
       `
       INSERT INTO code_change_sets (
         id,
+        artifact_candidate_id,
+        run_id,
+        attempt_id,
         workflow_thread_id,
         workspace_folder_id,
         story_id,
@@ -41,8 +47,11 @@ export class PostgresCodeChangeSetRepository
         applied_at,
         failed_reason
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14, $15)
       ON CONFLICT (id) DO UPDATE SET
+        artifact_candidate_id = EXCLUDED.artifact_candidate_id,
+        run_id = EXCLUDED.run_id,
+        attempt_id = EXCLUDED.attempt_id,
         status = EXCLUDED.status,
         operations = EXCLUDED.operations,
         validation = EXCLUDED.validation,
@@ -51,6 +60,9 @@ export class PostgresCodeChangeSetRepository
       `,
       [
         validated.id,
+        validated.artifactCandidateId ?? null,
+        validated.runId ?? null,
+        validated.attemptId ?? null,
         validated.workflowThreadId,
         validated.workspaceFolderId ?? null,
         validated.userStoryId,
@@ -79,6 +91,9 @@ export class PostgresCodeChangeSetRepository
 function changeSetFromRow(row: CodeChangeSetRow): CodeChangeSet {
   return CodeChangeSetSchema.parse({
     id: row.id,
+    artifactCandidateId: row.artifact_candidate_id ?? undefined,
+    runId: row.run_id ?? undefined,
+    attemptId: row.attempt_id ?? undefined,
     workflowThreadId: row.workflow_thread_id,
     workspaceFolderId: row.workspace_folder_id ?? undefined,
     userStoryId: row.story_id,

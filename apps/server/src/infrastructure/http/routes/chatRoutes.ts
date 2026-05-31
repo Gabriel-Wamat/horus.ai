@@ -49,8 +49,12 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
 
   router.get("/sessions/:sessionId/messages", async (req: Request, res: Response) => {
     try {
+      const rawAfterSequence = Number(req.query["after_sequence"] ?? NaN);
       const messages = await deps.chatMemoryStore.listMessages(
-        req.params["sessionId"] ?? ""
+        req.params["sessionId"] ?? "",
+        Number.isFinite(rawAfterSequence) && rawAfterSequence >= 0
+          ? { afterSequence: rawAfterSequence }
+          : undefined
       );
       res.json({ messages });
     } catch (err) {

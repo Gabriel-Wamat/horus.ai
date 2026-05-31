@@ -3,12 +3,18 @@ import type {
   CodeChangeSet,
   DesignContextBundle,
   LlmSettings,
+  PromptContextBundle,
   Spec,
 } from "@u-build/shared";
 import type { QaOutput } from "./QaAgentImpl.js";
-import { loadAgentSkill } from "../agentSkills/loadAgentSkill.js";
+import {
+  appendRuntimeAgentSkills,
+  loadAgentSkill,
+} from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
+import { invokeChatModel } from "../llm/invokeChatModel.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 
 const CuratorOutputSchema = z.object({
   passed: z.boolean(),
@@ -28,7 +34,8 @@ export async function validateOutput(
   codeChangeSet: CodeChangeSet | undefined,
   llmSettings?: LlmSettings,
   executionBrief?: string,
-  designContext?: DesignContextBundle
+  designContext?: DesignContextBundle,
+  promptContext?: PromptContextBundle
 ): Promise<CuratorOutput> {
   if (!codeChangeSet) {
     return {
@@ -95,7 +102,10 @@ export async function validateOutput(
     };
   }
 
-  const skill = loadAgentSkill("curator-quality-gate");
+  const skill = appendRuntimeAgentSkills(
+    loadAgentSkill("curator-quality-gate"),
+    promptContext?.runtimeSkills ?? []
+  );
   const prompt = buildCuratorPrompt(
     spec,
     html,
@@ -103,7 +113,8 @@ export async function validateOutput(
     codeChangeSet,
     skill,
     executionBrief,
-    designContext
+    designContext,
+    promptContext
   );
 
   const model = createChatModel("curator", {
@@ -112,7 +123,7 @@ export async function validateOutput(
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return CuratorOutputSchema.parse(await model.invoke(prompt));
+      return CuratorOutputSchema.parse(await invokeChatModel(model, prompt));
     } catch (err) {
       console.warn(`[CuratorAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {
@@ -151,7 +162,8 @@ export function buildCuratorPrompt(
   codeChangeSet: CodeChangeSet | undefined,
   skill: string,
   executionBrief?: string,
-  designContext?: DesignContextBundle
+  designContext?: DesignContextBundle,
+  promptContext?: PromptContextBundle
 ): string {
   const components = spec.components
     .map((c) => `- ${c.name} (${c.type}): ${c.description}`)
@@ -235,6 +247,8 @@ Além da spec ativa, avalie se o HTML e os testes respondem especificamente a es
 # Skill obrigatória do agente
 ${skill}
 ${executionBriefBlock}
+
+${formatPromptContextForPrompt(promptContext)}
 
 ${formatDesignContextForPrompt(designContext)}
 

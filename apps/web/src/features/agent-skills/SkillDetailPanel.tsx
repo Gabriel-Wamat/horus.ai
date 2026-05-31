@@ -36,6 +36,17 @@ const TAB_LABELS: Record<DetailTab, string> = {
   validation: "Validação",
 };
 
+const STATUS_LABELS: Record<AgentSkillSummary["status"], string> = {
+  active: "ativa",
+  draft: "rascunho",
+  archived: "arquivada",
+};
+
+const VALIDATION_LABELS: Record<AgentSkillValidationReport["status"], string> = {
+  passed: "passou",
+  failed: "falhou",
+};
+
 export function SkillDetailPanel({
   skill,
   detail,
@@ -73,10 +84,20 @@ export function SkillDetailPanel({
   return (
     <aside className="agent-skill-detail" aria-label="Detalhe da skill">
       <header className="agent-skill-detail-head">
-        <div>
+        <div className="agent-skill-detail-title">
           <p className="panel-kicker">Skill</p>
           <h2>{skill.displayName}</h2>
-          <p>{skill.slug}</p>
+          <div className="agent-skill-detail-meta">
+            <code>{skill.slug}</code>
+            <span className={`agent-skill-badge status-${skill.status}`}>
+              {STATUS_LABELS[skill.status]}
+            </span>
+            {skill.activeRevision ? (
+              <span className="agent-skill-revision">
+                r{skill.activeRevision.revisionNumber}
+              </span>
+            ) : null}
+          </div>
         </div>
         <div className="agent-skill-detail-actions">
           {publishableRevision ? (
@@ -163,12 +184,33 @@ function OverviewTab({
   const profileById = new Map<string, AgentProfile>(
     profiles.map((profile) => [profile.id, profile])
   );
+  const bindings = detail?.bindings ?? skill.bindings;
+  const enabledBindings = bindings.filter((binding) => binding.enabled);
+  const latestValidationStatus = latestReport
+    ? VALIDATION_LABELS[latestReport.status]
+    : "sem validação";
   return (
     <div className="agent-skill-overview">
-      <p className="agent-skill-description">{skill.description}</p>
+      <section className="agent-skill-summary-card">
+        <p className="agent-skill-description">{skill.description}</p>
+        <div className="agent-skill-summary-metrics">
+          <span>
+            <strong>{enabledBindings.length}</strong>
+            agentes
+          </span>
+          <span>
+            <strong>{detail?.files.length ?? 0}</strong>
+            arquivos
+          </span>
+          <span>
+            <strong>{latestValidationStatus}</strong>
+            validação
+          </span>
+        </div>
+      </section>
       <div className="agent-skill-facts">
         <Fact label="Origem" value={skill.sourceType.replace("_", " ")} />
-        <Fact label="Status" value={skill.status} />
+        <Fact label="Status" value={STATUS_LABELS[skill.status]} />
         <Fact
           label="Revisão ativa"
           value={
@@ -185,10 +227,10 @@ function OverviewTab({
           Agentes vinculados
         </h3>
         <div className="agent-skill-binding-list">
-          {(detail?.bindings ?? skill.bindings).length === 0 ? (
+          {bindings.length === 0 ? (
             <span className="agent-skill-muted">Sem bindings ativos.</span>
           ) : (
-            (detail?.bindings ?? skill.bindings).map((binding) => (
+            bindings.map((binding) => (
               <span key={binding.id} className="agent-skill-binding-pill">
                 {profileById.get(binding.agentProfileId)?.label ??
                   binding.agentProfileId}

@@ -86,6 +86,65 @@ test("ValidationGateAggregator derives gates from runtime validation evidence", 
   assert.ok(gates.some((item) => item.commandId === "type-check"));
 });
 
+test("ValidationGateAggregator blocks commands waiting for approval or interactive input", () => {
+  const aggregator = new ValidationGateAggregator();
+  const gates = aggregator.gatesFromRuntimeEvidence({
+    workflowMode: "project_construction",
+    now,
+    runtimeEvidence: {
+      id: "11111111-1111-4111-8111-111111111111",
+      workflowThreadId: null,
+      constructionRunId: null,
+      userStoryId: null,
+      projectId: null,
+      status: "failed",
+      skippedReason: "interactive_prompt:Continue? [y/n]",
+      commands: [
+        {
+          commandId: "build-root-build",
+          command: "pnpm run build",
+          cwd: ".",
+          exitCode: null,
+          stdoutTail: "Continue? [y/n]",
+          stderrTail: "",
+          interactivePromptDetected: true,
+          interactivePromptText: "Continue? [y/n]",
+          durationMs: 20,
+        },
+        {
+          commandId: "install-root-dependencies",
+          command: "pnpm install",
+          cwd: ".",
+          approvalRequired: true,
+          approved: false,
+          policyReason: "package manager command requires approval: pnpm install",
+          exitCode: null,
+          stdoutTail: "",
+          stderrTail: "",
+          durationMs: 20,
+        },
+      ],
+      preview: {
+        status: "skipped",
+        url: null,
+        message: "Preview unavailable.",
+        evidence: { title: null, bodySnippet: null, screenshotPath: null },
+      },
+      createdAt: now,
+    },
+  });
+
+  assert.equal(aggregator.summarize(gates).finalStatus, "blocked");
+  assert.equal(
+    gates.find((item) => item.commandId === "build-root-build")?.status,
+    "blocked"
+  );
+  assert.equal(
+    gates.find((item) => item.commandId === "install-root-dependencies")?.status,
+    "blocked"
+  );
+});
+
 function gate(id, label, status) {
   return {
     id,

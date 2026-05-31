@@ -13,6 +13,7 @@ import {
 } from "../../llm/LlmCredentialStore.js";
 import { LlmSettingsResolver } from "../../llm/LlmSettingsResolver.js";
 import { createChatModel } from "../../llm/createChatModel.js";
+import { invokeChatModel } from "../../llm/invokeChatModel.js";
 
 interface LlmSettingsRouteDeps {
   credentials: LlmCredentialStore;
@@ -121,7 +122,7 @@ async function testDraftSettings(
       }
     );
     await withTimeout(
-      model.invoke([new HumanMessage("Reply with exactly: ok")]),
+      invokeChatModel(model, [new HumanMessage("Reply with exactly: ok")]),
       20_000
     );
     return {

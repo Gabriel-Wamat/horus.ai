@@ -1,6 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Spec, UserStory, WorkspaceFolder } from "@u-build/shared";
 import { workflowApi } from "../api/workflowApi.js";
+import { emitProjectFilesChanged } from "../features/project-files/utils/projectFilesEvents.js";
+
+export interface ProjectConstructionNotification {
+  kind: "progress" | "success" | "error";
+  title: string;
+  body: string;
+}
 
 export function useProjectConstructionAction({
   selectedWorkspaceFolderId,
@@ -15,12 +22,17 @@ export function useProjectConstructionAction({
   persistedSpecsByStoryId: Record<string, Spec>;
   setWorkspaceFolderError: (error: string | null) => void;
 }): {
-  projectConstructionNotice: string | null;
-  projectConstructionError: string | null;
+  projectConstructionNotification: ProjectConstructionNotification | null;
   startProjectConstruction: () => Promise<void>;
+  dismissProjectConstructionNotification: () => void;
 } {
-  const [projectConstructionNotice, setProjectConstructionNotice] = useState<string | null>(null);
-  const [projectConstructionError, setProjectConstructionError] = useState<string | null>(null);
+  const [projectConstructionNotification, setProjectConstructionNotification] =
+    useState<ProjectConstructionNotification | null>(null);
+  const statusPollRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => stopStatusPolling(statusPollRef.current);
+  }, []);
 
   const startProjectConstruction = async (): Promise<void> => {
     if (!selectedWorkspaceFolderId || submittedStories.length === 0) return;
@@ -29,12 +41,17 @@ export function useProjectConstructionAction({
       .filter((id): id is string => Boolean(id));
     if (specIds.length !== submittedStories.length) {
       setWorkspaceFolderError("Gere todas as specs da pasta antes de iniciar o projeto.");
-      setProjectConstructionError("Gere todas as specs da pasta antes de iniciar o projeto.");
+      setProjectConstructionNotification({
+        kind: "error",
+        title: "Specs pendentes",
+        body: "Gere todas as specs antes de construir.",
+      });
       return;
     }
 
-    setProjectConstructionError(null);
-    setProjectConstructionNotice(null);
+    stopStatusPolling(statusPollRef.current);
+    statusPollRef.current = null;
+    setProjectConstructionNotification(null);
     try {
       const result = await workflowApi.startProjectConstruction({
         workspaceFolderId: selectedWorkspaceFolderId,
@@ -44,26 +61,76 @@ export function useProjectConstructionAction({
         userStoryIds: submittedStories.map((story) => story.id),
         specIds,
       });
-      setProjectConstructionNotice(
-        result.reusedProjectWorkspace
-          ? `Projeto já havia sido iniciado. Reexecutei a construção em ${result.projectWorkspace.rootPath}. Status: ${result.constructionRun.status}.`
-          : `Projeto iniciado em ${result.projectWorkspace.rootPath}. Status: ${result.constructionRun.status}.`
-      );
+      emitProjectFilesChanged({
+        projectId: result.projectWorkspace.id,
+        runId: result.constructionRun.id,
+        ...(result.constructionRun.workflowRunId
+          ? { workflowThreadId: result.constructionRun.workflowRunId }
+          : {}),
+        source: "project-construction",
+        selectProject: true,
+        timestamp: new Date().toISOString(),
+      });
+      setProjectConstructionNotification({
+        kind: "progress",
+        title: result.reusedProjectWorkspace
+          ? "Construção retomada"
+          : "Construção iniciada",
+        body: "Os agentes estão preparando o software.",
+      });
+      if (result.constructionRun.workflowRunId) {
+        statusPollRef.current = window.setInterval(() => {
+          void workflowApi
+            .getStatus(result.constructionRun.workflowRunId!)
+            .then((state) => {
+              if (!state) return;
+              if (state.status === "completed") {
+                stopStatusPolling(statusPollRef.current);
+                statusPollRef.current = null;
+                setProjectConstructionNotification({
+                  kind: "success",
+                  title: "Software pronto",
+                  body: "A entrega foi validada e está pronta para preview.",
+                });
+              }
+              if (state.status === "error" || state.status === "cancelled") {
+                stopStatusPolling(statusPollRef.current);
+                statusPollRef.current = null;
+                setProjectConstructionNotification({
+                  kind: "error",
+                  title: "Construção interrompida",
+                  body: "A entrega não foi validada. Veja o fluxo dos agentes.",
+                });
+              }
+            })
+            .catch(() => {
+              // Keep the lightweight notification stable while the workflow endpoint catches up.
+            });
+        }, 2200);
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Falha ao iniciar construção do projeto.";
-      setProjectConstructionError(
-        message.includes("frontend_projects_slug_key") ||
+      setProjectConstructionNotification({
+        kind: "error",
+        title: "Construção não iniciada",
+        body:
+          message.includes("frontend_projects_slug_key") ||
           message.includes("duplicate key value")
-          ? "Este projeto já foi iniciado para esta pasta. Use o preview existente ou reexecute a construção após atualizar as specs."
-          : message
-      );
+            ? "Este projeto já existe. Use o preview atual ou reexecute após atualizar as specs."
+            : "Não foi possível iniciar os agentes agora.",
+      });
     }
   };
 
   return {
-    projectConstructionNotice,
-    projectConstructionError,
+    projectConstructionNotification,
     startProjectConstruction,
+    dismissProjectConstructionNotification: () =>
+      setProjectConstructionNotification(null),
   };
+}
+
+function stopStatusPolling(intervalId: number | null): void {
+  if (intervalId !== null) window.clearInterval(intervalId);
 }

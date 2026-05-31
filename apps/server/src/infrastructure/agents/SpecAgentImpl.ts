@@ -5,12 +5,19 @@ import {
   VisualContractSchema,
   type DesignContextBundle,
   type LlmSettings,
+  type PromptContextBundle,
   type Spec,
   type UserStory,
 } from "@u-build/shared";
 import { createChatModel } from "../llm/createChatModel.js";
+import {
+  createLinkedAbortController,
+  invokeChatModel,
+} from "../llm/invokeChatModel.js";
 import { resolveAgentModelConfig } from "../llm/providerConfig.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { appendRuntimeAgentSkills } from "../agentSkills/loadAgentSkill.js";
+import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 
 type Env = Record<string, string | undefined>;
 
@@ -228,13 +235,23 @@ export interface GenerateSpecOptions {
   llmSettings?: LlmSettings | undefined;
   env?: Env;
   designContext?: DesignContextBundle | undefined;
+  promptContext?: PromptContextBundle | undefined;
 }
 
 export async function generateSpec(
   userStory: UserStory,
   options: GenerateSpecOptions
 ): Promise<Spec> {
-  const prompt = buildSpecPrompt(userStory, options.skill, options.designContext);
+  const skill = appendRuntimeAgentSkills(
+    options.skill,
+    options.promptContext?.runtimeSkills ?? []
+  );
+  const prompt = buildSpecPrompt(
+    userStory,
+    skill,
+    options.designContext,
+    options.promptContext
+  );
   console.log(
     `[SpecAgent] calling LLM for userStory=${userStory.id} title="${userStory.title}"`
   );
@@ -274,7 +291,7 @@ async function invokeSpecModel(
   ).withStructuredOutput(LlmSpecSchema);
 
   return (await withTimeout(
-    model.invoke(prompt),
+    invokeChatModel(model, prompt),
     timeoutMs,
     `SpecAgent timed out after ${timeoutMs / 1000}s while generating a structured spec.`
   )) as z.infer<typeof LlmSpecSchema>;
@@ -286,7 +303,7 @@ async function invokeOpenAiResponses(
   env: Env,
   timeoutMs: number
 ): Promise<z.infer<typeof LlmSpecSchema>> {
-  const controller = new AbortController();
+  const { controller, cleanup } = createLinkedAbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startedAt = Date.now();
 
@@ -348,6 +365,7 @@ async function invokeOpenAiResponses(
     throw err;
   } finally {
     clearTimeout(timeoutId);
+    cleanup();
   }
 }
 
@@ -424,7 +442,8 @@ function extractErrorMessage(body: unknown): string {
 export function buildSpecPrompt(
   us: UserStory,
   skill: string,
-  designContext?: DesignContextBundle
+  designContext?: DesignContextBundle,
+  promptContext?: PromptContextBundle
 ): string {
   const requiredSkill = buildSkillDigest(skill);
   if (!requiredSkill) {
@@ -436,6 +455,8 @@ Gere uma spec técnica objetiva para downstream agents. Não responda como chat.
 
 # Skill obrigatória do agente
 ${requiredSkill}
+
+${formatPromptContextForPrompt(promptContext)}
 
 ${formatDesignContextForPrompt(designContext)}
 
@@ -485,6 +506,9 @@ function formatZodIssues(error: z.ZodError): string {
 function buildSkillDigest(skill: string): string {
   const normalized = skill.trim();
   if (!normalized) return "";
+  const runtimeSkillSection = normalized.includes("# Active Project Skills")
+    ? `\n\nSkills runtime ativas vinculadas ao projeto:\n${clipRuntimeSkillSection(normalized)}`
+    : "";
 
   return `Skill ativa: spec-frontend-sdd.
 Siga o protocolo operacional abaixo, derivado da skill versionada:
@@ -506,7 +530,18 @@ Siga o protocolo operacional abaixo, derivado da skill versionada:
 - torne cada critério testável por comportamento observável;
 - cubra loading, empty, error, success, acessibilidade, responsividade e texto sem overflow quando aplicável;
 - não invente fluxos, autenticação, dashboards, backend real ou integrações fora do pedido;
-- produza saída objetiva e parseável pelo schema compartilhado.`;
+- produza saída objetiva e parseável pelo schema compartilhado.${runtimeSkillSection}`;
+}
+
+function clipRuntimeSkillSection(skill: string): string {
+  const section = skill.split("# Active Project Skills").slice(1).join("# Active Project Skills");
+  const content = `# Active Project Skills${section}`.trim();
+  const maxBytes = 12_000;
+  if (Buffer.byteLength(content, "utf8") <= maxBytes) return content;
+  return `${Buffer.from(content, "utf8")
+    .subarray(0, maxBytes - 80)
+    .toString("utf8")
+    .replace(/\uFFFD$/u, "")}\n\n[Runtime skill section clipped by prompt budget]`;
 }
 
 async function withTimeout<T>(

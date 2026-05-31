@@ -167,8 +167,16 @@
   grid-template-columns: minmax(0, 1fr) minmax(350px, 390px);
 }
 
+.agent-flow-main-stack {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(320px, 1fr) minmax(250px, 0.58fr);
+  gap: 12px;
+}
+
 .agent-flow-canvas-shell,
 .agent-flow-rail,
+.agent-flow-telemetry-panel,
 .agent-flow-drawer,
 .agent-flow-empty {
   min-width: 0;
@@ -184,6 +192,766 @@
   display: flex;
   min-height: 0;
   flex-direction: column;
+}
+
+.agent-flow-telemetry-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: 13px;
+}
+
+.agent-flow-telemetry-head,
+.agent-flow-telemetry-stats,
+.agent-flow-telemetry-json-head,
+.agent-flow-live-files-head {
+  display: flex;
+  align-items: center;
+}
+
+.agent-flow-telemetry-head {
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--agent-flow-border);
+  padding-bottom: 11px;
+}
+
+.agent-flow-telemetry-head h2 {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.agent-flow-telemetry-stats {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.agent-flow-telemetry-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.025);
+  color: var(--agent-flow-muted);
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.agent-flow-telemetry-grid {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(170px, 0.7fr) minmax(0, 1.2fr) minmax(210px, 0.72fr);
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.agent-flow-telemetry-picker,
+.agent-flow-telemetry-json,
+.agent-flow-live-files-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid rgb(255 255 255 / 0.075);
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.18);
+}
+
+.agent-flow-telemetry-picker {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 8px;
+}
+
+.agent-flow-telemetry-picker button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  padding: 8px;
+  text-align: left;
+}
+
+.agent-flow-telemetry-picker button:hover,
+.agent-flow-telemetry-picker button.is-active {
+  border-color: var(--agent-flow-border-strong);
+  background: rgb(255 255 255 / 0.065);
+}
+
+.agent-flow-telemetry-picker span {
+  color: var(--agent-flow-teal);
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-flow-telemetry-picker strong,
+.agent-flow-live-files-list strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--agent-flow-text);
+  font-size: 11px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-flow-telemetry-picker em,
+.agent-flow-live-files-list span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--agent-flow-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 750;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.agent-flow-telemetry-json {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.agent-flow-telemetry-json-head {
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  padding-bottom: 9px;
+}
+
+.agent-flow-telemetry-json-head strong,
+.agent-flow-live-files-head strong {
+  display: block;
+  color: var(--agent-flow-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.agent-flow-telemetry-json-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--agent-flow-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.agent-flow-telemetry-files-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  padding: 8px 0;
+}
+
+.agent-flow-telemetry-files-inline code {
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.025);
+  color: var(--agent-flow-muted);
+  padding: 4px 7px;
+  font-size: 10px;
+}
+
+.agent-flow-telemetry-json pre {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 10px 0 0;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 9px;
+  background: #020403;
+  color: #dce8df;
+  padding: 12px;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.agent-flow-live-files-panel {
+  padding: 10px;
+}
+
+.agent-flow-live-files-head {
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  padding-bottom: 8px;
+}
+
+.agent-flow-live-files-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.agent-flow-live-files-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  border: 1px solid rgb(255 255 255 / 0.075);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.025);
+  padding: 8px;
+}
+
+.agent-flow-live-files-list em {
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.035);
+  color: var(--agent-flow-muted);
+  padding: 3px 6px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.agent-flow-live-files-list em.is-editando,
+.agent-flow-live-files-list em.is-proposto {
+  border-color: rgb(45 212 191 / 0.28);
+  background: rgb(45 212 191 / 0.08);
+  color: var(--agent-flow-teal);
+}
+
+.agent-flow-live-files-list em.is-aplicado,
+.agent-flow-live-files-list em.is-validado {
+  border-color: rgb(96 165 250 / 0.26);
+  background: rgb(96 165 250 / 0.08);
+  color: var(--agent-flow-blue);
+}
+
+.agent-flow-live-files-list em.is-falhou,
+.agent-flow-live-files-list em.is-bloqueado {
+  border-color: rgb(251 113 133 / 0.28);
+  background: rgb(251 113 133 / 0.08);
+  color: var(--agent-flow-danger);
+}
+
+.agent-telemetry-page {
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.agent-telemetry-hero,
+.agent-telemetry-stats,
+.agent-telemetry-workbench,
+.agent-telemetry-filterbar,
+.agent-telemetry-table-shell,
+.agent-telemetry-inspector {
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.006)),
+    var(--agent-flow-panel);
+}
+
+.agent-telemetry-hero,
+.agent-telemetry-title,
+.agent-telemetry-filterbar,
+.agent-telemetry-stats {
+  display: flex;
+  align-items: center;
+}
+
+.agent-telemetry-hero {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.agent-telemetry-title {
+  min-width: 0;
+  gap: 8px;
+}
+
+.agent-telemetry-title .agent-flow-toolbar-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.agent-telemetry-title .agent-flow-rail-kicker {
+  display: none;
+}
+
+.agent-telemetry-title > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.agent-telemetry-title h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.agent-telemetry-title span {
+  color: var(--agent-flow-muted);
+  font-size: 10px;
+}
+
+.agent-telemetry-run-select {
+  min-width: 260px;
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+.agent-telemetry-run-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-telemetry-history-trigger {
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+.agent-telemetry-history-panel {
+  display: grid;
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.022), rgb(255 255 255 / 0.006)),
+    var(--agent-flow-panel);
+  padding: 12px;
+}
+
+.agent-telemetry-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-telemetry-history-head div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.agent-telemetry-history-head strong {
+  font-size: 13px;
+}
+
+.agent-telemetry-history-head span {
+  color: var(--agent-flow-muted);
+  font-size: 11px;
+}
+
+.agent-telemetry-history-head button,
+.agent-telemetry-history-pages button {
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.035);
+  color: var(--agent-flow-text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.agent-telemetry-history-head button:disabled,
+.agent-telemetry-history-pages button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.agent-telemetry-history-panel > input {
+  height: 34px;
+  min-width: 0;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  background: rgb(5 7 8 / 0.7);
+  color: var(--agent-flow-text);
+  padding: 0 10px;
+}
+
+.agent-telemetry-history-list {
+  display: grid;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid rgb(255 255 255 / 0.075);
+  border-radius: 8px;
+}
+
+.agent-telemetry-history-group {
+  display: grid;
+  min-width: 0;
+  border-bottom: 1px solid var(--agent-flow-border);
+}
+
+.agent-telemetry-history-group:last-child {
+  border-bottom: 0;
+}
+
+.agent-telemetry-history-group header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgb(255 255 255 / 0.025);
+  padding: 8px 11px;
+}
+
+.agent-telemetry-history-group header strong {
+  overflow: hidden;
+  color: var(--agent-flow-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.agent-telemetry-history-group header span {
+  flex-shrink: 0;
+  color: var(--agent-flow-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.agent-telemetry-history-item {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  border: 0;
+  border-bottom: 1px solid var(--agent-flow-border);
+  background: transparent;
+  color: var(--agent-flow-text);
+  padding: 9px 11px;
+  text-align: left;
+}
+
+.agent-telemetry-history-item:last-child {
+  border-bottom: 0;
+}
+
+.agent-telemetry-history-item:hover,
+.agent-telemetry-history-item.is-active {
+  background: rgb(90 163 240 / 0.1);
+}
+
+.agent-telemetry-history-list strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-telemetry-history-list span,
+.agent-telemetry-history-pages span {
+  color: var(--agent-flow-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.agent-telemetry-history-pages {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.agent-telemetry-history-pages span {
+  margin-right: auto;
+}
+
+.agent-telemetry-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+}
+
+.agent-telemetry-stats article {
+  padding: 14px 16px;
+  background: rgb(255 255 255 / 0.018);
+}
+
+.agent-telemetry-stats span,
+.agent-telemetry-filterbar span,
+.agent-telemetry-detail-grid span {
+  display: block;
+  color: var(--agent-flow-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.agent-telemetry-stats strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 18px;
+}
+
+.agent-telemetry-workbench {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 14px;
+  overflow: hidden;
+  padding: 14px;
+}
+
+.agent-telemetry-main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.agent-telemetry-filterbar {
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+}
+
+.agent-telemetry-filterbar label {
+  min-width: 150px;
+  display: grid;
+  gap: 5px;
+}
+
+.agent-telemetry-filterbar select,
+.agent-telemetry-filterbar input {
+  height: 36px;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  background: rgb(5 7 8 / 0.7);
+  color: var(--agent-flow-text);
+  padding: 0 10px;
+}
+
+.agent-telemetry-search {
+  flex: 1;
+}
+
+.agent-telemetry-table-shell {
+  min-height: 0;
+  overflow: auto;
+}
+
+.agent-telemetry-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+  table-layout: auto;
+  font-size: 12px;
+}
+
+.agent-telemetry-table th,
+.agent-telemetry-table td {
+  border-bottom: 1px solid var(--agent-flow-border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.agent-telemetry-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--agent-flow-panel);
+  color: var(--agent-flow-muted);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.agent-telemetry-table th:nth-child(1),
+.agent-telemetry-table td:nth-child(1) {
+  width: 130px;
+}
+
+.agent-telemetry-table th:nth-child(2),
+.agent-telemetry-table td:nth-child(2) {
+  width: 116px;
+}
+
+.agent-telemetry-table th:nth-child(3),
+.agent-telemetry-table td:nth-child(3) {
+  min-width: 300px;
+  width: 38%;
+}
+
+.agent-telemetry-table th:nth-child(4),
+.agent-telemetry-table td:nth-child(4),
+.agent-telemetry-table th:nth-child(5),
+.agent-telemetry-table td:nth-child(5) {
+  width: 130px;
+}
+
+.agent-telemetry-table th:nth-child(6),
+.agent-telemetry-table td:nth-child(6) {
+  width: 112px;
+}
+
+.agent-telemetry-table tbody tr {
+  cursor: pointer;
+}
+
+.agent-telemetry-table tbody tr:hover,
+.agent-telemetry-table tbody tr.is-selected {
+  background: rgb(255 255 255 / 0.035);
+}
+
+.agent-telemetry-table code {
+  display: block;
+  max-width: 100%;
+  color: var(--agent-flow-blue);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.agent-telemetry-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--agent-flow-muted);
+  white-space: nowrap;
+}
+
+.agent-telemetry-status.is-running,
+.agent-telemetry-status.is-proposed {
+  border-color: rgb(20 199 123 / 0.25);
+  background: rgb(20 199 123 / 0.09);
+  color: var(--agent-flow-teal);
+}
+
+.agent-telemetry-status.is-read,
+.agent-telemetry-status.is-changed,
+.agent-telemetry-status.is-applied,
+.agent-telemetry-status.is-validated,
+.agent-telemetry-status.is-skipped {
+  border-color: rgb(90 163 240 / 0.25);
+  background: rgb(90 163 240 / 0.09);
+  color: var(--agent-flow-blue);
+}
+
+.agent-telemetry-status.is-failed,
+.agent-telemetry-status.is-blocked {
+  border-color: rgb(240 85 108 / 0.25);
+  background: rgb(240 85 108 / 0.09);
+  color: var(--agent-flow-danger);
+}
+
+.agent-telemetry-inspector {
+  display: flex;
+  min-width: 0;
+  max-height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  align-self: start;
+  position: sticky;
+  top: 12px;
+  padding: 14px;
+}
+
+.agent-telemetry-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.agent-telemetry-detail-grid div {
+  min-width: 0;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.agent-telemetry-detail-grid strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--agent-flow-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-telemetry-patch-card {
+  border: 1px solid rgb(43 212 142 / 0.22);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgb(43 212 142 / 0.08), rgb(12 17 16 / 0.72));
+  padding: 12px;
+  margin: 0 0 12px;
+}
+
+.agent-telemetry-patch-card .agent-telemetry-detail-grid {
+  margin: 10px 0 0;
+}
+
+.agent-telemetry-patch-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--agent-flow-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.agent-telemetry-patch-card-head strong {
+  overflow: hidden;
+  color: var(--agent-flow-accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-telemetry-error {
+  border: 1px solid rgb(240 85 108 / 0.24);
+  border-radius: 8px;
+  background: rgb(240 85 108 / 0.08);
+  color: var(--agent-flow-danger);
+  padding: 10px;
+}
+
+.agent-telemetry-diff {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--agent-flow-border);
+  border-radius: 8px;
+  background: rgb(5 7 8 / 0.7);
+  color: var(--agent-flow-text);
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
+.agent-telemetry-inspector .agent-flow-evidence-json pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .agent-flow-rail {
@@ -873,6 +1641,21 @@
   line-height: 1.55;
 }
 
+.agent-telemetry-json-details {
+  border-top: 1px solid rgb(255 255 255 / 0.07);
+  padding-top: 10px;
+}
+
+.agent-telemetry-json-details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-telemetry-json-details pre {
+  max-height: 220px;
+}
+
 .agent-flow-compact-list {
   display: grid;
   gap: 8px;
@@ -896,6 +1679,73 @@
   color: var(--agent-flow-muted);
   font-size: 11px;
   font-style: normal;
+}
+
+.agent-flow-runbook-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.agent-flow-runbook-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgb(255 255 255 / 0.075);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.025);
+  padding: 9px;
+}
+
+.agent-flow-runbook-row strong,
+.agent-flow-runbook-row span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.agent-flow-runbook-row strong {
+  color: var(--agent-flow-text);
+  font-size: 12px;
+}
+
+.agent-flow-runbook-row span {
+  margin-top: 3px;
+  color: var(--agent-flow-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.agent-flow-runbook-row em {
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--agent-flow-muted);
+  padding: 3px 6px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.agent-flow-runbook-row.is-succeeded em {
+  border-color: rgb(31 207 127 / 0.24);
+  background: rgb(31 207 127 / 0.08);
+  color: var(--agent-flow-accent);
+}
+
+.agent-flow-runbook-row.is-failed em,
+.agent-flow-runbook-row.is-blocked em {
+  border-color: rgb(251 113 133 / 0.24);
+  background: rgb(251 113 133 / 0.08);
+  color: #fda4af;
+}
+
+.agent-flow-runbook-row.is-running em,
+.agent-flow-runbook-row.is-waiting_for_decision em {
+  border-color: rgb(250 204 21 / 0.2);
+  background: rgb(250 204 21 / 0.07);
+  color: #fde68a;
 }
 
 .agent-flow-drawer-section {
@@ -1116,12 +1966,43 @@
     grid-template-columns: 1fr;
   }
 
+  .agent-flow-main-stack {
+    grid-template-rows: minmax(360px, 1fr) minmax(420px, auto);
+  }
+
+  .agent-flow-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+
   .agent-flow-rail {
     max-height: 320px;
   }
 
   .agent-flow-drawer {
     max-height: 360px;
+  }
+
+  .agent-telemetry-workbench {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    grid-template-columns: 1fr;
+    overflow: hidden;
+  }
+
+  .agent-telemetry-main {
+    flex: 0 0 auto;
+  }
+
+  .agent-telemetry-table-shell {
+    max-height: min(280px, 32vh);
+  }
+
+  .agent-telemetry-inspector {
+    align-self: stretch;
+    flex: 0 0 auto;
+    min-height: 0;
+    position: static;
   }
 }
 
@@ -1145,5 +2026,35 @@
   .agent-flow-tool-button {
     flex: 1;
     justify-content: center;
+  }
+
+  .agent-telemetry-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agent-telemetry-run-select {
+    min-width: 0;
+  }
+
+  .agent-telemetry-run-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agent-telemetry-history-trigger {
+    justify-content: center;
+  }
+
+  .agent-telemetry-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-telemetry-filterbar label {
+    min-width: 100%;
+  }
+
+  .agent-telemetry-table {
+    min-width: 860px;
   }
 }

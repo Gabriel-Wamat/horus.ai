@@ -21,16 +21,22 @@ export function createHorusChatRouter(deps: HorusChatRouteDeps): Router {
   const router = Router();
 
   router.post("/chat/turn", async (req: Request, res: Response) => {
+    const abortController = createRequestAbortController(req, res);
     try {
       const input = HorusChatTurnInputSchema.parse(req.body);
-      const result = await deps.submitChatTurnUseCase.execute(input);
+      const result = await deps.submitChatTurnUseCase.execute(input, {
+        signal: abortController.signal,
+      });
       res.status(201).json(result);
     } catch (err) {
       handleHorusChatRouteError(err, res);
+    } finally {
+      abortController.cleanup();
     }
   });
 
   router.post("/chat/turn/stream", async (req: Request, res: Response) => {
+    const abortController = createRequestAbortController(req, res);
     try {
       const input = HorusChatTurnInputSchema.parse(req.body);
       res.status(200);
@@ -38,10 +44,14 @@ export function createHorusChatRouter(deps: HorusChatRouteDeps): Router {
       res.setHeader("Cache-Control", "no-cache, no-transform");
       res.setHeader("Connection", "keep-alive");
       res.flushHeaders?.();
+      res.write(": Horus chat stream opened\n\n");
 
-      for await (const event of deps.submitChatTurnUseCase.stream(input)) {
+      for await (const event of deps.submitChatTurnUseCase.stream(input, {
+        signal: abortController.signal,
+      })) {
         if (res.writableEnded) break;
         const parsed = HorusChatStreamEventSchema.parse(event);
+        res.write(`id: ${parsed.sequence}\n`);
         res.write(`event: ${parsed.type}\n`);
         res.write(`data: ${JSON.stringify(parsed)}\n\n`);
       }
@@ -61,10 +71,33 @@ export function createHorusChatRouter(deps: HorusChatRouteDeps): Router {
         return;
       }
       handleHorusChatRouteError(err, res);
+    } finally {
+      abortController.cleanup();
     }
   });
 
   return router;
+}
+
+function createRequestAbortController(
+  req: Request,
+  res: Response
+): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController();
+  const abort = () => {
+    if (!res.writableEnded) {
+      controller.abort(new Error("client_disconnected"));
+    }
+  };
+  req.on("aborted", abort);
+  res.on("close", abort);
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      req.off("aborted", abort);
+      res.off("close", abort);
+    },
+  };
 }
 
 function handleHorusChatRouteError(err: unknown, res: Response): void {

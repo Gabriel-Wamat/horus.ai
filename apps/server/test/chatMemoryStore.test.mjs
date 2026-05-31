@@ -99,6 +99,39 @@ test("FileChatMemoryStore appends messages with active revision context", async 
   assert.equal(message.contextSnapshot.userStoryRevisionId, "user-story:2");
 });
 
+test("FileChatMemoryStore serializes concurrent appends per chat session", async () => {
+  const baseDir = await mkdtemp(join(tmpdir(), "horus-chat-"));
+  const workspace = new FileWorkspaceStore(join(baseDir, "workspace"));
+  const chat = new FileChatMemoryStore(
+    workspace,
+    workflowStorage(),
+    join(baseDir, "chat")
+  );
+  const folder = await workspace.createFolder("User Stories");
+  await workspace.saveUserStories(folder.id, [userStory]);
+  const session = await chat.createSession({
+    workspaceFolderId: folder.id,
+    userStoryId: userStory.id,
+  });
+
+  await Promise.all(
+    Array.from({ length: 12 }, (_, index) =>
+      chat.appendMessage(session.id, {
+        role: index % 2 === 0 ? "user" : "agent",
+        body: `Mensagem ${index + 1}`,
+      })
+    )
+  );
+
+  const messages = await chat.listMessages(session.id);
+  assert.equal(messages.length, 12);
+  assert.deepEqual(
+    messages.map((message) => message.sequence),
+    Array.from({ length: 12 }, (_, index) => index + 1)
+  );
+  assert.equal(new Set(messages.map((message) => message.sequence)).size, 12);
+});
+
 test("FileChatMemoryStore builds agent context with chat, artifacts, spec and previous outputs", async () => {
   const baseDir = await mkdtemp(join(tmpdir(), "horus-chat-"));
   const workspace = new FileWorkspaceStore(join(baseDir, "workspace"));

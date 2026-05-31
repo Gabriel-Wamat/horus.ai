@@ -1,4 +1,29 @@
 import { z } from "zod";
+import {
+  AgentProfileIdSchema,
+  AgentToolNameSchema,
+} from "./AgentToolProfile.js";
+import type { AgentName } from "./AgentToolProfile.js";
+export {
+  AgentNameSchema,
+  AgentProfileIdSchema,
+  AgentToolNameSchema,
+  AgentToolCapabilitySchema,
+  AgentToolCapabilityDefinitionSchema,
+  AgentRuntimeIsolationPolicySchema,
+  AgentToolProfileSchema,
+  AgentProfileSchema,
+  AgentToolProfileSummarySchema,
+  type AgentName,
+  type AgentProfileId,
+  type AgentToolName,
+  type AgentToolCapability,
+  type AgentToolCapabilityDefinition,
+  type AgentRuntimeIsolationPolicy,
+  type AgentToolProfile,
+  type AgentProfile,
+  type AgentToolProfileSummary,
+} from "./AgentToolProfile.js";
 
 const AgentResultArtifactContextSchema = z.object({
   workspaceFolderId: z.string().uuid().optional(),
@@ -44,62 +69,6 @@ export const AgentResultSchema = z.discriminatedUnion("status", [
 export type AgentResult = z.infer<typeof AgentResultSchema>;
 export type SuccessfulAgentResult = Extract<AgentResult, { status: "success" }>;
 
-export const AgentNameSchema = z.enum([
-  "spec",
-  "odin",
-  "front",
-  "qa",
-  "curator",
-]);
-
-export type AgentName = z.infer<typeof AgentNameSchema>;
-
-export const AgentProfileIdSchema = z.enum([
-  "chat_agent",
-  "spec_agent",
-  "odin_agent",
-  "front_agent",
-  "qa_agent",
-  "curator_agent",
-]);
-
-export const AgentToolNameSchema = z.enum([
-  "read_file",
-  "search_code",
-  "list_files",
-  "save_file",
-  "apply_code_change_set",
-  "get_git_diff",
-  "search_code_readonly",
-  "read_file_readonly",
-  "list_project_files",
-  "get_user_story",
-  "get_spec",
-  "read_user_story",
-  "read_project_manifest",
-  "save_spec_revision",
-  "read_spec",
-  "read_agent_results",
-  "create_assignment",
-  "update_assignment",
-  "propose_code_change_set",
-  "run_static_analysis_readonly",
-  "read_code_change_set",
-  "run_validation_command",
-  "inspect_preview",
-  "read_validation_evidence",
-  "emit_verdict",
-  "write_file",
-  "run_command",
-  "git_push",
-  "delete_file",
-  "write_project_file",
-  "run_shell",
-  "direct_fs_write",
-  "arbitrary_shell",
-  "run_arbitrary_command",
-]);
-
 export const AgentToolCallStatusSchema = z.enum([
   "started",
   "succeeded",
@@ -134,23 +103,9 @@ export const AgentToolResultSchema = z.object({
   durationMs: z.number().int().nonnegative(),
 });
 
-export const AgentProfileSchema = z.object({
-  id: AgentProfileIdSchema,
-  agentName: AgentNameSchema.optional(),
-  label: z.string().trim().min(1),
-  purpose: z.string().trim().min(1),
-  allowedTools: z.array(AgentToolNameSchema).default([]),
-  forbiddenTools: z.array(AgentToolNameSchema).default([]),
-  inputContract: z.string().trim().min(1),
-  outputContract: z.string().trim().min(1),
-});
-
-export type AgentProfileId = z.infer<typeof AgentProfileIdSchema>;
-export type AgentToolName = z.infer<typeof AgentToolNameSchema>;
 export type AgentToolCallStatus = z.infer<typeof AgentToolCallStatusSchema>;
 export type AgentToolCall = z.infer<typeof AgentToolCallSchema>;
 export type AgentToolResult = z.infer<typeof AgentToolResultSchema>;
-export type AgentProfile = z.infer<typeof AgentProfileSchema>;
 
 export function getLatestSuccessfulAgentResult(
   results: readonly AgentResult[],

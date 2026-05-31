@@ -6,6 +6,7 @@ import "./styles/agent-flow-map.css";
 import { AgentFlowCanvas } from "./components/AgentFlowCanvas.js";
 import { FlowToolbar } from "./components/FlowToolbar.js";
 import { RunFlowDrawer } from "./components/RunFlowDrawer.js";
+import { RunTelemetryPanel } from "./components/RunTelemetryPanel.js";
 import { useFlowGraph } from "./hooks/useFlowGraph.js";
 import { useRunFlowData } from "./hooks/useRunFlowData.js";
 import { useRunFlowEvents } from "./hooks/useRunFlowEvents.js";
@@ -16,7 +17,6 @@ import type {
   HorusWorkflowNodeId,
 } from "./types/api.types.js";
 import type { FlowDetailLevel, FlowEdgeVisibility } from "./types/flow.types.js";
-import { createIdleHorusRunSnapshot } from "./utils/createIdleHorusRunSnapshot.js";
 
 interface AgentFlowPageProps {
   workflowState: WorkflowState | null;
@@ -44,16 +44,43 @@ function AgentFlowPageContent({ workflowState, events }: AgentFlowPageProps): JS
     if (!runData.run) return null;
     return applyLiveEvents(runData.run, streamedEvents);
   }, [runData.run, streamedEvents]);
-  const displayRun = useMemo(() => run ?? createIdleHorusRunSnapshot(), [run]);
   const graph = useFlowGraph({
-    run: displayRun,
+    run,
     detailLevel,
     edgeVisibility,
     showAgentExecutions: detailLevel === "micro" && showAgentExecutions,
     replaySequence: null,
   });
   const selection = useFlowSelection(graph);
-  const layoutKey = `${displayRun.threadId}:${detailLevel}:${edgeVisibility}:${showAgentExecutions ? "exec" : "workflow"}`;
+  const layoutKey = run
+    ? `${run.threadId}:${detailLevel}:${edgeVisibility}:${showAgentExecutions ? "exec" : "workflow"}`
+    : `empty:${detailLevel}:${edgeVisibility}:${showAgentExecutions ? "exec" : "workflow"}`;
+
+  if (!run) {
+    return (
+      <div className="agent-flow-map-root">
+        <div className="agent-flow-page">
+          <FlowToolbar
+            run={null}
+            runOptions={runData.runOptions}
+            activeRunId={runData.activeRunId}
+            detailLevel={detailLevel}
+            edgeVisibility={edgeVisibility}
+            showAgentExecutions={showAgentExecutions}
+            onChangeRun={runData.setActiveRunId}
+            onChangeDetailLevel={setDetailLevel}
+            onChangeEdgeVisibility={setEdgeVisibility}
+            onToggleAgentExecutions={() => setShowAgentExecutions((current) => !current)}
+            onFocusActive={() => setFocusRequest((current) => current + 1)}
+          />
+          <section className="agent-flow-empty">
+            <h2>Nenhuma execução ativa</h2>
+            <p>O mapa aparece quando uma run real existir no runtime do Horus.</p>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   if (!graph) {
     return (
@@ -83,18 +110,21 @@ function AgentFlowPageContent({ workflowState, events }: AgentFlowPageProps): JS
           onFocusActive={() => setFocusRequest((current) => current + 1)}
         />
         <section className={`agent-flow-workbench ${selection.selectedNode ? "is-inspector-open" : ""}`}>
-          <div className="agent-flow-canvas-shell">
-            <AgentFlowCanvas
-              graph={graph}
-              selectedNodeId={selection.selectedNodeId}
-              layoutKey={layoutKey}
-              onSelectNode={selection.setSelectedNodeId}
-              focusRequest={focusRequest}
-            />
+          <div className="agent-flow-main-stack">
+            <div className="agent-flow-canvas-shell">
+              <AgentFlowCanvas
+                graph={graph}
+                selectedNodeId={selection.selectedNodeId}
+                layoutKey={layoutKey}
+                onSelectNode={selection.setSelectedNodeId}
+                focusRequest={focusRequest}
+              />
+            </div>
+            <RunTelemetryPanel run={run} />
           </div>
           {selection.selectedNode && (
             <RunFlowDrawer
-              run={displayRun}
+              run={run}
               node={selection.selectedNode}
               onClose={() => selection.setSelectedNodeId(null)}
             />
@@ -204,6 +234,13 @@ function nodeFromLiveEvent(
   if (event.type === "validation_evidence") return "qaAgent";
   if (event.type === "patch_proposed") return "frontAgent";
   if (event.type === "patch_applied") return "curatorAgent";
+  if (
+    event.type === "tool_call_started" ||
+    event.type === "tool_call_finished" ||
+    event.type === "tool_call_blocked"
+  ) {
+    return event.nodeId ?? "frontAgent";
+  }
   if (event.type === "error") return "fail";
   return null;
 }
@@ -212,6 +249,13 @@ function phaseFromLiveEvent(event: HorusRunEventSnapshot): HorusRunEventSnapshot
   if (event.type === "patch_proposed") return "patching";
   if (event.type === "patch_applied") return "applying";
   if (event.type === "validation_evidence") return "validating";
+  if (
+    event.type === "tool_call_started" ||
+    event.type === "tool_call_finished"
+  ) {
+    return event.phase;
+  }
+  if (event.type === "tool_call_blocked") return "failed";
   if (event.type === "retry_started" || event.type === "awaiting_retry_approval") return "retrying";
   if (event.type === "awaiting_approval") return "planning";
   if (event.type === "error") return "failed";
@@ -230,6 +274,11 @@ function eventTypeFromLiveEvent(
     return event.evidence?.status === "failed" ? "validation_failed" : "validation_passed";
   }
   if (event.type === "retry_started") return "retry_started";
+  if (event.type === "tool_call_started") return "tool_call_started";
+  if (event.type === "tool_call_finished") {
+    return event.eventType === "failed" ? "failed" : "tool_call_finished";
+  }
+  if (event.type === "tool_call_blocked") return "tool_call_blocked";
   if (event.type === "awaiting_approval" || event.type === "awaiting_retry_approval") {
     return "awaiting_approval";
   }
@@ -253,6 +302,13 @@ function actorKindFromLiveEvent(
   event: HorusRunEventSnapshot
 ): HorusRunEventSnapshot["actorKind"] {
   if (event.type === "patch_applied" || event.type === "validation_evidence") return "tool";
+  if (
+    event.type === "tool_call_started" ||
+    event.type === "tool_call_finished" ||
+    event.type === "tool_call_blocked"
+  ) {
+    return "tool";
+  }
   if (event.type === "awaiting_approval" || event.type === "awaiting_retry_approval") return "human";
   if (event.type === "error") return "system";
   return "agent";
@@ -261,6 +317,13 @@ function actorKindFromLiveEvent(
 function actorNameFromLiveEvent(event: HorusRunEventSnapshot): string {
   if (event.type === "patch_applied") return "CodeChangeSetApplier";
   if (event.type === "validation_evidence") return "Runtime validation";
+  if (
+    event.type === "tool_call_started" ||
+    event.type === "tool_call_finished" ||
+    event.type === "tool_call_blocked"
+  ) {
+    return event.actorName ?? "Agent tool";
+  }
   if (event.type === "awaiting_approval") return "Human review";
   if (event.type === "awaiting_retry_approval") return "Retry approval";
   if (event.type === "retry_started") return "Odin";

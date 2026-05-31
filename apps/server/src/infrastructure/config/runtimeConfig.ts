@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isProductionRuntime } from "./runtimeMode.js";
 
 export type PersistenceDriver = "file" | "postgres";
 
@@ -17,8 +18,14 @@ export interface RuntimeConfig {
     previewSessionsDir: string;
     codeChangeSetsDir: string;
     workflowEventsDir: string;
+    agentExecutionLedgerDir: string;
+    agentOperationalSessionsDir: string;
     projectConstructionDir: string;
     agentSkillsDir: string;
+    agentMemoryDir: string;
+    agentArtifactsDir: string;
+    agentCircuitBreakersDir: string;
+    codingTasksDir: string;
     projectWorkspacesDir: string;
     projectRunWorktreesDir: string;
     langgraphCheckpointsDir: string;
@@ -74,6 +81,7 @@ export function loadRuntimeConfig(
 ): RuntimeConfig {
   const repositoryRoot = resolve(options.repositoryRoot ?? DEFAULT_REPOSITORY_ROOT);
   const persistenceDriver = readPersistenceDriver(env);
+  assertProductionPersistenceSafety(env, persistenceDriver);
   const dataDir = resolveDefaultDataDir(repositoryRoot, env);
   const projectWorkspacesDir = resolveFromRoot(
     repositoryRoot,
@@ -98,13 +106,46 @@ export function loadRuntimeConfig(
       previewSessionsDir: resolveFromDataDir(dataDir, "preview-sessions"),
       codeChangeSetsDir: resolveFromDataDir(dataDir, "code-change-sets"),
       workflowEventsDir: resolveFromDataDir(dataDir, "workflow-events"),
+      agentExecutionLedgerDir: resolveFromDataDir(
+        dataDir,
+        "agent-execution-ledger"
+      ),
+      agentOperationalSessionsDir: resolveFromDataDir(
+        dataDir,
+        "agent-operational-sessions"
+      ),
       projectConstructionDir: resolveFromDataDir(dataDir, "project-construction"),
       agentSkillsDir: resolveFromDataDir(dataDir, "agent-skills"),
+      agentMemoryDir: resolveFromDataDir(dataDir, "agent-memory"),
+      agentArtifactsDir: resolveFromDataDir(dataDir, "agent-artifacts"),
+      agentCircuitBreakersDir: resolveFromDataDir(
+        dataDir,
+        "agent-circuit-breakers"
+      ),
+      codingTasksDir: resolveFromDataDir(dataDir, "coding-tasks"),
       projectWorkspacesDir,
       projectRunWorktreesDir,
       langgraphCheckpointsDir: resolveFromDataDir(dataDir, "langgraph-checkpoints"),
     },
   };
+}
+
+function assertProductionPersistenceSafety(
+  env: Record<string, string | undefined>,
+  persistenceDriver: PersistenceDriver
+): void {
+  if (persistenceDriver !== "file") return;
+  const explicitlyMultiUser = readEnv(env, "HORUS_MULTI_USER") === "true";
+  if (explicitlyMultiUser) {
+    throw new Error(
+      "PERSISTENCE_DRIVER=file is not safe for HORUS_MULTI_USER=true. Use postgres for multi-user execution."
+    );
+  }
+  if (!isProductionRuntime(env)) return;
+  if (readEnv(env, "HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION") === "true") return;
+  throw new Error(
+    "PERSISTENCE_DRIVER=file is not production-safe without HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION=true. Use postgres for multi-user production."
+  );
 }
 
 export async function assertWritableDataDir(config: RuntimeConfig): Promise<void> {

@@ -89,3 +89,38 @@ test("FileFrontendProjectRegistry persists preview hygiene metadata", async () =
   assert.equal(loaded.projectWorkspaceId, "33333333-3333-4333-8333-333333333333");
   assert.equal(loaded.appFingerprint, "abc123");
 });
+
+test("FileFrontendProjectRegistry updates by project workspace id instead of creating duplicate preview projects", async () => {
+  const baseDir = await mkdtemp(join(tmpdir(), "horus-preview-projects-"));
+  const repoRoot = join(baseDir, "repo");
+  const appRoot = join(repoRoot, "generated");
+  await mkdir(join(repoRoot, "apps", "web"), { recursive: true });
+  await mkdir(appRoot, { recursive: true });
+  const registry = new FileFrontendProjectRegistry(
+    join(baseDir, "registry"),
+    repoRoot
+  );
+  const projectWorkspaceId = "33333333-3333-4333-8333-333333333333";
+
+  const first = await registry.registerProject({
+    name: "Generated App",
+    rootPath: "generated",
+    previewUrl: "http://127.0.0.1:5184",
+    projectWorkspaceId,
+  });
+  const second = await registry.registerProject({
+    name: "Renamed Generated App",
+    rootPath: "generated",
+    previewUrl: "http://127.0.0.1:5185",
+    projectWorkspaceId,
+  });
+  const projects = await registry.listProjects();
+  const generatedProjects = projects.filter(
+    (project) => project.projectWorkspaceId === projectWorkspaceId
+  );
+
+  assert.equal(second.id, first.id);
+  assert.equal(second.name, "Renamed Generated App");
+  assert.equal(second.previewUrl, "http://127.0.0.1:5185");
+  assert.equal(generatedProjects.length, 1);
+});

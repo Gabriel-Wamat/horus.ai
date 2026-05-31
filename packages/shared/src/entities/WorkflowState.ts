@@ -87,6 +87,7 @@ export const WorkflowCheckpointNodeSchema = z.object({
 export const WorkflowStateSchema = z.object({
   threadId: z.string().uuid(),
   workspaceFolderId: z.string().uuid().optional(),
+  projectWorkspaceId: z.string().uuid().optional(),
   frontendProjectId: z.string().uuid().optional(),
   frontendProjectRootPath: z.string().trim().min(1).optional(),
   previewSessionId: z.string().uuid().optional(),

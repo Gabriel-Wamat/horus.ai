@@ -1,0 +1,316 @@
+.spec-detail {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  --detail-accent: var(--p);
+  --detail-accent-soft: rgba(148, 163, 184, 0.12);
+  background: var(--s1);
+}
+
+.spec-detail-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title actions"
+    "tabs tabs";
+  align-items: start;
+  gap: 14px 22px;
+  min-height: 116px;
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+  padding: 20px 28px 18px;
+}
+
+.spec-detail-title {
+  grid-area: title;
+  min-width: 0;
+}
+
+.spec-detail-title .panel-kicker {
+  display: none;
+}
+
+.spec-detail-title .panel-title {
+  overflow: hidden;
+  color: #f5f6f7;
+  font-size: 16px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spec-detail-title .workflow-meta {
+  margin-top: 4px;
+  color: rgba(164, 173, 179, 0.78);
+  font-size: 12px;
+}
+
+.story-spec-tabs {
+  grid-area: tabs;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 4px;
+  width: fit-content;
+  min-height: 36px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.032);
+  padding: 3px;
+}
+
+.story-detail-actions {
+  grid-area: actions;
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 0;
+}
+
+.story-detail-actions .panel-action.danger {
+  border-color: rgba(240, 85, 108, 0.18);
+  color: #ff8999;
+}
+
+.spec-mode-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 5px;
+  min-height: 38px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 3px;
+}
+
+.spec-mode-button {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--t3);
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+
+.spec-mode-button:hover {
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--t2);
+}
+
+.spec-mode-toggle .spec-mode-button.active {
+  border-color: rgba(35, 235, 152, 0.58);
+  background: linear-gradient(180deg, #12b073 0%, #0e9b60 100%);
+  color: #06110d;
+}
+
+.spec-mode-toggle .spec-mode-button.active:focus-visible {
+  outline-color: rgba(35, 235, 152, 0.72);
+  box-shadow: 0 0 0 3px rgba(20, 199, 123, 0.18);
+}
+
+.story-spec-tab {
+  position: relative;
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--t3);
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 800;
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+
+.story-spec-tab:hover {
+  color: var(--t2);
+}
+
+.story-spec-tab.active {
+  border-color: rgba(35, 235, 152, 0.58);
+  background: linear-gradient(180deg, #12b073 0%, #0e9b60 100%);
+  color: #06110d;
+  box-shadow: none;
+}
+
+.tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.spec-detail-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 0;
+}
+
+.spec-detail-body > .story-detail-grid {
+  padding: 18px;
+}
+
+.document-preview {
+  --document-title: #dce6e1;
+  --document-heading: #cfdad5;
+  --document-body: #b8c4c0;
+  --document-muted: #8d9aa0;
+  --document-subtle: #69767d;
+  min-height: 100%;
+  padding: 34px 32px 48px;
+}
+
+.document-preview-title {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.095);
+}
+
+.document-preview-title h1 {
+  margin: 0;
+  max-width: 860px;
+  color: var(--document-title);
+  font-size: 25px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.document-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--document-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.document-preview-meta span + span::before {
+  margin-right: 8px;
+  color: rgba(148, 163, 184, 0.48);
+  content: "/";
+}
+
+.document-preview-section {
+  max-width: 980px;
+  padding: 20px 0 4px;
+}
+
+.document-preview-section + .document-preview-section {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.document-preview-section h2 {
+  margin: 0 0 12px;
+  color: var(--document-heading);
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.document-body,
+.document-check-row p,
+.document-list-row p,
+.document-mini-card p {
+  margin: 0;
+  color: var(--document-body);
+  font-size: 14px;
+  line-height: 1.62;
+}
+
+.document-checklist,
+.document-list {
+  display: grid;
+  gap: 7px;
+}
+
+.document-check-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.document-checkbox {
+  width: 13px;
+  height: 13px;
+  margin-top: 4px;
+  border: 1px solid rgba(231, 233, 234, 0.42);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.document-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.document-mini-card,
+.document-list-row {
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.026);
+  padding: 12px;
+}
+
+.document-mini-card {
+  display: grid;
+  gap: 6px;
+}
+
+.document-mini-card span,
+.document-list-row > span,
+.document-token-row span {
+  width: fit-content;
+  color: var(--document-muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.document-mini-card strong,
+.document-list-row strong {
+  display: block;
+  color: var(--document-title);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.document-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.document-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.document-token-row span {
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 5px 8px;
+}

@@ -11,15 +11,17 @@ function read(relativePath) {
   return readFileSync(resolve(webRoot, relativePath), "utf8");
 }
 
-test("Skills mode is reachable through URL navigation and Shell", () => {
+test("Skills mode remains reachable by URL without a sidebar shortcut", () => {
   const navigation = read("src/app/useAppNavigation.ts");
   const shell = read("src/components/Shell.tsx");
   const app = read("src/App.tsx");
 
   assert.match(navigation, /"skills"/);
   assert.match(navigation, /mode === "skills"/);
-  assert.match(shell, /activeMode === "skills"/);
-  assert.match(shell, /onChangeMode\("skills"\)/);
+  assert.doesNotMatch(shell, /aria-label="Skills"/);
+  assert.doesNotMatch(shell, /title="Skills"/);
+  assert.doesNotMatch(shell, /onChangeMode\("skills"\)/);
+  assert.doesNotMatch(shell, /<Icon name="skills" \/>/);
   assert.match(app, /<AgentSkillsPage \/>/);
 });
 

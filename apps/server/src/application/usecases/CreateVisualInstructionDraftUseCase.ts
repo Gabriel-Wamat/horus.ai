@@ -1,11 +1,11 @@
 import type { CreateVisualInstructionDraftInput } from "@u-build/shared";
 import type {
-  PreviewRuntimeManager,
+  PreviewRuntimePort,
   VisualInstructionDraftResult,
-} from "../../infrastructure/preview/PreviewRuntimeManager.js";
+} from "../ports/PreviewRuntimePort.js";
 
 export class CreateVisualInstructionDraftUseCase {
-  constructor(private readonly previewRuntime: PreviewRuntimeManager) {}
+  constructor(private readonly previewRuntime: PreviewRuntimePort) {}
 
   async execute(
     input: CreateVisualInstructionDraftInput

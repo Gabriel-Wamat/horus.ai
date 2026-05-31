@@ -11,6 +11,7 @@ export interface CuratorInputs {
   html: string;
   qaOutput: QaOutput;
   codeChangeSet?: CodeChangeSet;
+  candidateId?: string;
 }
 
 function asTestCases(value: unknown): QaOutput["testCases"] {
@@ -34,6 +35,9 @@ export function selectCuratorInputs(
 ): CuratorInputs {
   const frontResult = getLatestSuccessfulAgentResult(results, "front");
   const qaResult = getLatestSuccessfulAgentResult(results, "qa");
+  const codeChangeSet = frontResult?.output["codeChangeSet"]
+    ? CodeChangeSetSchema.parse(frontResult.output["codeChangeSet"])
+    : undefined;
 
   return {
     html: (frontResult?.output["html"] as string | undefined) ?? "",
@@ -46,11 +50,10 @@ export function selectCuratorInputs(
         ? { runtimeValidation: asRuntimeValidation(qaResult?.output["runtimeValidation"]) }
         : {}),
     },
-    ...(frontResult?.output["codeChangeSet"]
+    ...(codeChangeSet
       ? {
-          codeChangeSet: CodeChangeSetSchema.parse(
-            frontResult.output["codeChangeSet"]
-          ),
+          codeChangeSet,
+          candidateId: codeChangeSet.artifactCandidateId ?? codeChangeSet.id,
         }
       : {}),
   };

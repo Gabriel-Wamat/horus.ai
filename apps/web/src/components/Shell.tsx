@@ -1,13 +1,20 @@
 import { useState, type JSX, type ReactNode } from "react";
 
-export type ShellMode = "stories" | "files" | "preview" | "agents" | "skills";
+export type ShellMode =
+  | "stories"
+  | "files"
+  | "preview"
+  | "design"
+  | "agents"
+  | "telemetry"
+  | "skills";
 type SidebarIconName =
   | "menu"
   | "stories"
   | "files"
+  | "design"
+  | "telemetry"
   | "preview"
-  | "agents"
-  | "skills"
   | "settings";
 
 interface ShellProps {
@@ -56,22 +63,20 @@ function Icon({ name }: { name: SidebarIconName }): JSX.Element {
     );
   }
 
-  if (name === "agents") {
+  if (name === "telemetry") {
     return (
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="6" cy="7" r="2.5" />
-        <circle cx="18" cy="7" r="2.5" />
-        <circle cx="12" cy="17" r="2.5" />
-        <path d="M8.2 8.7 10.5 14M15.8 8.7 13.5 14M8.5 7h7" />
+        <path d="M4 18V8M10 18V4M16 18v-7M22 18H2" />
+        <path d="M6 8h8M12 4h6M14 11h6" />
       </svg>
     );
   }
 
-  if (name === "skills") {
+  if (name === "design") {
     return (
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5 4.5h9.5L19 9v10.5H5Z" />
-        <path d="M14.5 4.5V9H19M8 13h8M8 16h6" />
+        <path d="M5 4h5v5H5ZM14 4h5v5h-5ZM5 14h5v5H5ZM14 14h5v5h-5Z" />
+        <path d="M10 6.5h4M10 16.5h4M7.5 10v4M16.5 10v4" />
       </svg>
     );
   }
@@ -144,24 +149,24 @@ export function Shell({
           <span className="sidebar-label">Preview</span>
         </button>
         <button
-          className={`sidebar-icon-button ${activeMode === "agents" ? "active" : ""}`}
+          className={`sidebar-icon-button ${activeMode === "design" ? "active" : ""}`}
           type="button"
-          aria-label="Agents"
-          title="Agents"
-          onClick={() => onChangeMode("agents")}
+          aria-label="Design Studio"
+          title="Design Studio"
+          onClick={() => onChangeMode("design")}
         >
-          <Icon name="agents" />
-          <span className="sidebar-label">Agents</span>
+          <Icon name="design" />
+          <span className="sidebar-label">Design</span>
         </button>
         <button
-          className={`sidebar-icon-button ${activeMode === "skills" ? "active" : ""}`}
+          className={`sidebar-icon-button ${activeMode === "telemetry" ? "active" : ""}`}
           type="button"
-          aria-label="Skills"
-          title="Skills"
-          onClick={() => onChangeMode("skills")}
+          aria-label="Telemetria"
+          title="Telemetria"
+          onClick={() => onChangeMode("telemetry")}
         >
-          <Icon name="skills" />
-          <span className="sidebar-label">Skills</span>
+          <Icon name="telemetry" />
+          <span className="sidebar-label">Telemetria</span>
         </button>
         <div className="sidebar-spacer" />
         <div className="sidebar-separator" />

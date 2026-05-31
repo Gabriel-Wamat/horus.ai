@@ -1,10 +1,19 @@
 import { useState } from "react";
 
-export type AppMode = "stories" | "files" | "preview" | "agents" | "skills";
+export type AppMode =
+  | "stories"
+  | "files"
+  | "preview"
+  | "design"
+  | "agents"
+  | "telemetry"
+  | "skills";
 
 function readInitialMode(): AppMode {
   const mode = new URLSearchParams(window.location.search).get("mode");
+  if (mode === "design") return "design";
   if (mode === "agents") return "agents";
+  if (mode === "telemetry") return "telemetry";
   if (mode === "skills") return "skills";
   if (mode === "files") return "files";
   return mode === "preview" ? "preview" : "stories";
@@ -21,7 +30,9 @@ export function useAppNavigation(): {
     const url = new URL(window.location.href);
     if (
       mode === "preview" ||
+      mode === "design" ||
       mode === "agents" ||
+      mode === "telemetry" ||
       mode === "files" ||
       mode === "skills"
     ) {

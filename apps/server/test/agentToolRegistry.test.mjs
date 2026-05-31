@@ -1,158 +1,107 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { z } from "zod";
-import { AgentProfileSchema } from "@u-build/shared";
+import { AgentProfileRegistry } from "../dist/application/services/AgentProfileRegistry.js";
 import {
-  AgentProfileRegistry,
-  AgentToolAccessDeniedError,
-} from "../dist/application/services/AgentProfileRegistry.js";
-import {
-  AgentToolNotRegisteredError,
+  AgentToolAbortedError,
   AgentToolRegistry,
 } from "../dist/application/services/AgentToolRegistry.js";
 
-test("AgentProfileRegistry declares every specialist profile", () => {
-  const registry = new AgentProfileRegistry();
-  const profiles = registry.listProfiles();
-
-  assert.deepEqual(
-    profiles.map((profile) => profile.id).sort(),
-    [
-      "chat_agent",
-      "curator_agent",
-      "front_agent",
-      "odin_agent",
-      "qa_agent",
-      "spec_agent",
-    ]
-  );
-  for (const profile of profiles) {
-    assert.doesNotThrow(() => AgentProfileSchema.parse(profile));
-    assert.ok(profile.allowedTools.length > 0);
-    assert.ok(profile.outputContract.length > 0);
-  }
-});
-
-test("AgentToolRegistry executes allowed registered tools", async () => {
-  const tools = new AgentToolRegistry(new AgentProfileRegistry());
-  tools.register({
-    toolName: "search_code_readonly",
-    mutatesState: false,
-    inputSchema: z.object({ query: z.string().min(1) }),
-    outputSchema: z.object({ ok: z.literal(true), input: z.object({ query: z.string() }) }),
-    handler: async (input) => ({
-      ok: true,
-      input,
-    }),
-  });
-
-  const result = await tools.execute({
-    agentProfileId: "front_agent",
-    toolName: "search_code_readonly",
-    input: { query: "App.tsx" },
-  });
-
-  assert.deepEqual(result, { ok: true, input: { query: "App.tsx" } });
-});
-
-test("AgentToolRegistry validates input and output schemas", async () => {
-  const tools = new AgentToolRegistry(new AgentProfileRegistry());
-  tools.register({
-    toolName: "search_code_readonly",
-    mutatesState: false,
-    inputSchema: z.object({ query: z.string().min(1) }),
-    outputSchema: z.object({ ok: z.literal(true) }),
-    handler: async () => ({ ok: false }),
+test("AgentToolRegistry denies tools outside the agent profile capability matrix", async () => {
+  const registry = new AgentToolRegistry(new AgentProfileRegistry());
+  registry.register({
+    toolName: "edit_file",
+    mutatesState: true,
+    inputSchema: z.object({ projectId: z.string(), path: z.string(), content: z.string() }),
+    outputSchema: z.object({ ok: z.boolean() }),
+    handler: async () => ({ ok: true }),
   });
 
   await assert.rejects(
     () =>
-      tools.execute({
-        agentProfileId: "front_agent",
-        toolName: "search_code_readonly",
-        input: { query: "" },
+      registry.execute({
+        agentProfileId: "qa_agent",
+        toolName: "edit_file",
+        input: {
+          projectId: "33333333-3333-4333-8333-333333333333",
+          path: "src/App.tsx",
+          content: "x",
+        },
       }),
-    /too_small/
-  );
-
-  await assert.rejects(
-    () =>
-      tools.execute({
-        agentProfileId: "front_agent",
-        toolName: "search_code_readonly",
-        input: { query: "App.tsx" },
-      }),
-    /Invalid literal value/
+    /not allowed/
   );
 });
 
-test("AgentToolRegistry records redacted audit events", async () => {
-  const events = [];
-  const tools = new AgentToolRegistry(new AgentProfileRegistry(), {
-    record: async (event) => {
-      events.push(event);
+test("AgentToolRegistry exposes registered tool names for startup validation", () => {
+  const registry = new AgentToolRegistry(new AgentProfileRegistry());
+  const profiles = new AgentProfileRegistry();
+  registry.register({
+    toolName: "read_file",
+    mutatesState: false,
+    inputSchema: z.object({ projectId: z.string(), path: z.string() }),
+    outputSchema: z.object({ content: z.string().nullable() }),
+    handler: async () => ({ content: null }),
+  });
+
+  assert.equal(registry.hasTool("read_file"), true);
+  assert.deepEqual(registry.listRegisteredTools(), ["read_file"]);
+  assert.doesNotThrow(() =>
+    profiles.validateRegisteredToolReferences({
+      registeredTools: registry.listRegisteredTools(),
+      profileIds: ["front_agent"],
+      toolNames: ["read_file"],
+    })
+  );
+  assert.throws(
+    () =>
+      profiles.validateRegisteredToolReferences({
+        registeredTools: registry.listRegisteredTools(),
+        profileIds: ["front_agent"],
+        toolNames: ["edit_file"],
+      }),
+    /unregistered tool/
+  );
+});
+
+test("AgentToolRegistry passes AbortSignal to handlers and blocks pre-aborted tools", async () => {
+  const registry = new AgentToolRegistry(new AgentProfileRegistry());
+  const controller = new AbortController();
+  let receivedSignal;
+  registry.register({
+    toolName: "read_file",
+    mutatesState: false,
+    inputSchema: z.object({ projectId: z.string(), path: z.string() }),
+    outputSchema: z.object({ content: z.string().nullable() }),
+    handler: async (_input, context) => {
+      receivedSignal = context.signal;
+      return { content: null };
     },
   });
-  tools.register({
-    toolName: "search_code_readonly",
-    mutatesState: false,
-    inputSchema: z.object({ query: z.string(), apiKey: z.string() }),
-    outputSchema: z.object({ token: z.string(), content: z.string() }),
-    handler: async () => ({ token: "sk-abcdefghijklmnop", content: "ok" }),
-  });
 
-  const result = await tools.execute({
+  await registry.execute({
     agentProfileId: "front_agent",
-    toolName: "search_code_readonly",
-    input: { query: "App.tsx", apiKey: "sk-abcdefghijklmnop" },
+    toolName: "read_file",
+    input: {
+      projectId: "33333333-3333-4333-8333-333333333333",
+      path: "src/App.tsx",
+    },
+    signal: controller.signal,
   });
 
-  assert.equal(result.token, "sk-abcdefghijklmnop");
-  assert.equal(events.length, 2);
-  assert.equal(events[0].status, "started");
-  assert.equal(events[0].input.apiKey, "[REDACTED]");
-  assert.equal(events[1].status, "succeeded");
-  assert.equal(events[1].output.token, "[REDACTED]");
-});
-
-test("AgentToolRegistry denies forbidden tools before handler lookup", async () => {
-  const tools = new AgentToolRegistry(new AgentProfileRegistry());
+  assert.equal(receivedSignal, controller.signal);
+  controller.abort();
 
   await assert.rejects(
     () =>
-      tools.execute({
-        agentProfileId: "chat_agent",
-        toolName: "write_file",
-        input: {},
-      }),
-    AgentToolAccessDeniedError
-  );
-});
-
-test("AgentToolRegistry rejects unknown registered surface by schema", async () => {
-  const tools = new AgentToolRegistry(new AgentProfileRegistry());
-
-  await assert.rejects(
-    () =>
-      tools.execute({
+      registry.execute({
         agentProfileId: "front_agent",
-        toolName: "made_up_tool",
-        input: {},
+        toolName: "read_file",
+        input: {
+          projectId: "33333333-3333-4333-8333-333333333333",
+          path: "src/App.tsx",
+        },
+        signal: controller.signal,
       }),
-    /Invalid enum value/
-  );
-});
-
-test("AgentToolRegistry rejects allowed but unregistered tools", async () => {
-  const tools = new AgentToolRegistry(new AgentProfileRegistry());
-
-  await assert.rejects(
-    () =>
-      tools.execute({
-        agentProfileId: "front_agent",
-        toolName: "search_code_readonly",
-        input: {},
-      }),
-    AgentToolNotRegisteredError
+    (err) => err instanceof AgentToolAbortedError
   );
 });

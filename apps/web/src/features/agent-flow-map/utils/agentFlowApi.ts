@@ -1,4 +1,5 @@
 import type {
+  AgentFileOperationTelemetry,
   HorusRunEventSnapshot,
   HorusRunLocator,
   HorusRunSnapshot,
@@ -19,11 +20,37 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const agentFlowApi = {
-  listRuns: () => apiRequest<HorusRunLocator[]>("/api/agent-runs"),
+  listRuns: (options: {
+    projectId?: string | null;
+    limit?: number;
+    offset?: number;
+    query?: string;
+  } = {}) =>
+    apiRequest<HorusRunLocator[]>(buildRunsPath(options)),
+  async listRunsWithProjectFallback(options: {
+    projectId?: string | null;
+    limit?: number;
+    offset?: number;
+    query?: string;
+  } = {}) {
+    const scoped = await apiRequest<HorusRunLocator[]>(buildRunsPath(options));
+    if (!options.projectId || scoped.length > 0) return scoped;
+    const fallbackOptions = {
+      ...(options.limit !== undefined ? { limit: options.limit } : {}),
+      ...(options.offset !== undefined ? { offset: options.offset } : {}),
+      ...(options.query ? { query: options.query } : {}),
+    };
+    return apiRequest<HorusRunLocator[]>(buildRunsPath(fallbackOptions));
+  },
   getRun: (threadId: string) =>
     apiRequest<HorusRunSnapshot>(`/api/agent-runs/${threadId}`),
   listEvents: (threadId: string) =>
     apiRequest<HorusRunEventSnapshot[]>(`/api/agent-runs/${threadId}/events`),
+  listFileOperations: (threadId: string) =>
+    apiRequest<{
+      threadId: string;
+      operations: AgentFileOperationTelemetry[];
+    }>(`/api/agent-runs/${threadId}/file-operations`),
   streamRunEvents(
     threadId: string,
     sinceSequence: number,
@@ -35,7 +62,8 @@ export const agentFlowApi = {
       `/api/agent-runs/${threadId}/events/stream?${params.toString()}`
     );
     const parse = (event: MessageEvent<string>) => {
-      onEvent(JSON.parse(event.data) as HorusRunEventSnapshot);
+      const parsed = parseRunEventPayload(event.data);
+      if (parsed) onEvent(parsed);
     };
     const eventTypes = [
       "node_started",
@@ -50,6 +78,7 @@ export const agentFlowApi = {
       "tool_call_started",
       "tool_call_finished",
       "tool_call_blocked",
+      "command_output",
       "error",
     ];
     for (const type of eventTypes) {
@@ -64,4 +93,142 @@ export const agentFlowApi = {
       },
     };
   },
+  streamFileOperations(
+    threadId: string,
+    sinceSequence: number,
+    onOperation: (operation: AgentFileOperationTelemetry) => void
+  ) {
+    const params = new URLSearchParams();
+    params.set("since_sequence", String(sinceSequence));
+    const source = new EventSource(
+      `/api/agent-runs/${threadId}/file-operations/stream?${params.toString()}`
+    );
+    const parse = (event: MessageEvent<string>) => {
+      const parsed = parseFileOperationPayload(event.data);
+      if (parsed) onOperation(parsed);
+    };
+    source.addEventListener("file_operation", parse as EventListener);
+    return {
+      close() {
+        source.removeEventListener("file_operation", parse as EventListener);
+        source.close();
+      },
+    };
+  },
+  listAgentDebugTraces: (filter: {
+    projectId?: string | null;
+    workflowThreadId?: string | null;
+    userStoryId?: string | null;
+    agentName?: string | null;
+    limit?: number;
+  } = {}) => {
+    const params = new URLSearchParams();
+    if (filter.projectId) params.set("project_id", filter.projectId);
+    if (filter.workflowThreadId)
+      params.set("thread_id", filter.workflowThreadId);
+    if (filter.userStoryId) params.set("user_story_id", filter.userStoryId);
+    if (filter.agentName) params.set("agent_name", filter.agentName);
+    if (filter.limit !== undefined) params.set("limit", String(filter.limit));
+    const qs = params.toString();
+    return apiRequest<AgentDebugTraceResponse>(
+      `/api/agent-debug-traces${qs ? `?${qs}` : ""}`
+    );
+  },
 };
+
+export interface AgentDebugTraceEntryView {
+  id: string;
+  projectId: string | null;
+  workflowThreadId: string | null;
+  userStoryId: string | null;
+  agentName: string | null;
+  agentProfileId: string | null;
+  turn: number;
+  contextSnapshotHash: string | null;
+  contextSummary: {
+    stack: string | null;
+    runtimeHintCount: number;
+    editableRootCount: number;
+    protectedPathCount: number;
+    requiredValidationKinds: string[];
+  };
+  hypothesis: string | null;
+  action: string;
+  outcome: "success" | "failure" | "skipped" | "blocked" | "pending";
+  durationMs: number;
+  notes: string[];
+  filesRead: string[];
+  filesWritten: string[];
+  createdAt: string;
+}
+
+export interface AgentDebugTraceResponse {
+  entries: AgentDebugTraceEntryView[];
+  filter: Record<string, unknown>;
+  generatedAt: string;
+}
+
+function buildRunsPath(options: {
+  projectId?: string | null;
+  limit?: number;
+  offset?: number;
+  query?: string;
+}): string {
+  const params = new URLSearchParams();
+  if (options.projectId) params.set("project_id", options.projectId);
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
+  if (options.offset !== undefined) params.set("offset", String(options.offset));
+  if (options.query) params.set("q", options.query);
+  const query = params.toString();
+  return `/api/agent-runs${query ? `?${query}` : ""}`;
+}
+
+function parseRunEventPayload(data: string): HorusRunEventSnapshot | null {
+  if (!data || data === "undefined") return null;
+  try {
+    const parsed = JSON.parse(data) as Partial<HorusRunEventSnapshot>;
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      typeof parsed.id !== "string" ||
+      typeof parsed.threadId !== "string" ||
+      typeof parsed.sequence !== "number" ||
+      typeof parsed.type !== "string"
+    ) {
+      return null;
+    }
+    return parsed as HorusRunEventSnapshot;
+  } catch (err) {
+    console.warn(
+      "[agentFlowApi] Ignoring invalid workflow event payload:",
+      err instanceof Error ? err.message : String(err)
+    );
+    return null;
+  }
+}
+
+function parseFileOperationPayload(data: string): AgentFileOperationTelemetry | null {
+  if (!data || data === "undefined") return null;
+  try {
+    const parsed = JSON.parse(data) as Partial<AgentFileOperationTelemetry>;
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      typeof parsed.id !== "string" ||
+      typeof parsed.threadId !== "string" ||
+      typeof parsed.sequence !== "number" ||
+      typeof parsed.path !== "string" ||
+      typeof parsed.operationType !== "string" ||
+      typeof parsed.status !== "string"
+    ) {
+      return null;
+    }
+    return parsed as AgentFileOperationTelemetry;
+  } catch (err) {
+    console.warn(
+      "[agentFlowApi] Ignoring invalid file operation payload:",
+      err instanceof Error ? err.message : String(err)
+    );
+    return null;
+  }
+}

@@ -90,7 +90,11 @@ export class PostgresFrontendProjectRepository
   }): Promise<FrontendProject> {
     const rootPath = await canonicalizeProjectRoot(this.repositoryRoot, input.rootPath);
     const slug = slugify(input.name, "frontend-project");
-    const existing = await this.findBySlug(slug);
+    const existing =
+      input.projectWorkspaceId === undefined || input.projectWorkspaceId === null
+        ? await this.findBySlug(slug)
+        : (await this.findByProjectWorkspaceId(input.projectWorkspaceId)) ??
+          (await this.findBySlug(slug));
     const project = FrontendProjectSchema.parse({
       id: existing?.id ?? uuidv4(),
       name: input.name.trim(),
@@ -126,6 +130,17 @@ export class PostgresFrontendProjectRepository
     const result = await this.pool.query<ProjectRow>(
       "SELECT * FROM frontend_projects WHERE slug = $1 ORDER BY created_at LIMIT 1",
       [slug]
+    );
+    const row = result.rows[0];
+    return row ? projectFromRow(row) : null;
+  }
+
+  private async findByProjectWorkspaceId(
+    projectWorkspaceId: string
+  ): Promise<FrontendProject | null> {
+    const result = await this.pool.query<ProjectRow>(
+      "SELECT * FROM frontend_projects WHERE project_workspace_id = $1 ORDER BY created_at LIMIT 1",
+      [projectWorkspaceId]
     );
     const row = result.rows[0];
     return row ? projectFromRow(row) : null;

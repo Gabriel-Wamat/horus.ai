@@ -2,6 +2,7 @@
   "name": "u-build",
   "version": "0.0.0",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
@@ -11,11 +12,16 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
+    "cache:redis-smoke": "node scripts/redis-cache-smoke.mjs",
+    "e2e:chat-preview": "node scripts/horus-chat-preview-e2e.mjs",
     "preview:smoke": "node scripts/preview-browser-smoke.mjs",
+    "security:secrets": "node scripts/secret-scan.mjs",
     "spec:worktree-audit": "node scripts/worktree-spec-audit.mjs",
     "spec:worktree-audit:test": "node --test scripts/worktree-spec-audit.test.mjs",
     "test": "pnpm build && node --test packages/shared/test/*.test.mjs apps/server/test/*.test.mjs",
     "type-check": "turbo run type-check",
+    "verify:ci": "pnpm lint && pnpm type-check && pnpm security:secrets && pnpm test && pnpm --filter @u-build/web test:guards",
+    "verify:production-smoke": "node scripts/production-hardening-smoke.mjs",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {

@@ -13,6 +13,10 @@ import {
   type BrowserPreviewAdapter,
   type BrowserPreviewStartResult,
 } from "./NoopBrowserPreviewAdapter.js";
+import {
+  buildAllowlistedChildEnv,
+  DEFAULT_INHERITED_CHILD_ENV_KEYS,
+} from "../process/ChildProcessEnv.js";
 
 interface ManagedPreviewProcess {
   child: ChildProcess;
@@ -34,6 +38,7 @@ export interface ProcessBrowserPreviewAdapterOptions {
   fetchTimeoutMs?: number;
   readinessStabilityMs?: number;
   allowedExecutables?: readonly string[];
+  inheritedEnvKeys?: readonly string[];
   killProcessGroup?: boolean;
   readinessProbe?: (previewUrl: string) => Promise<boolean>;
 }
@@ -90,6 +95,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   private readonly fetchTimeoutMs: number;
   private readonly readinessStabilityMs: number;
   private readonly allowedExecutables: readonly string[] | undefined;
+  private readonly inheritedEnvKeys: readonly string[];
   private readonly killProcessGroupEnabled: boolean;
   private readonly readinessProbe: ((previewUrl: string) => Promise<boolean>) | undefined;
 
@@ -102,6 +108,8 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     this.readinessStabilityMs =
       options.readinessStabilityMs ?? DEFAULT_READINESS_STABILITY_MS;
     this.allowedExecutables = options.allowedExecutables;
+    this.inheritedEnvKeys =
+      options.inheritedEnvKeys ?? DEFAULT_INHERITED_CHILD_ENV_KEYS;
     this.killProcessGroupEnabled = options.killProcessGroup ?? true;
     this.readinessProbe = options.readinessProbe;
   }
@@ -197,7 +205,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   ): ManagedPreviewProcess {
     const child = spawn(command.executable, command.args, {
       cwd: command.cwd,
-      env: { ...process.env, ...command.env },
+      env: buildAllowlistedChildEnv(command.env, this.inheritedEnvKeys),
       detached: true,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
