@@ -1,4 +1,4 @@
-import type { FrontendProject } from "@u-build/shared";
+import type { FrontendProject, PreviewSession } from "@u-build/shared";
 
 export interface ActiveProjectConstruction {
   readonly projectWorkspaceId: string;
@@ -6,6 +6,8 @@ export interface ActiveProjectConstruction {
   readonly workflowThreadId: string | null;
   readonly frontendProjectId: string | null;
   readonly frontendProject: FrontendProject | null;
+  readonly previewSessionId: string | null;
+  readonly previewSession: PreviewSession | null;
   readonly projectName: string;
   readonly startedAt: string | null;
 }

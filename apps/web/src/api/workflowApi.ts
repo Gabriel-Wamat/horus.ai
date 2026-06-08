@@ -11,6 +11,7 @@ import type {
   ProjectConstructionRun,
   ProjectWorkspace,
   FrontendProject,
+  PreviewSession,
 } from "@u-build/shared";
 
 const BASE = "/api";
@@ -36,6 +37,7 @@ export interface StartProjectConstructionResponse {
   projectWorkspace: ProjectWorkspace;
   constructionRun: ProjectConstructionRun;
   frontendProject: FrontendProject | null;
+  previewSession: PreviewSession | null;
   reusedProjectWorkspace?: boolean;
 }
 
