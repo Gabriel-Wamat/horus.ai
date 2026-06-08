@@ -253,6 +253,10 @@ export const VisualGateIssueCategorySchema = z.enum([
   "visual_identity_drift",
   "excessive_frames",
   "missing_state",
+  "workflow_metadata",
+  "fake_runtime_data",
+  "wrong_surface_pattern",
+  "palette_without_rationale",
   "capture_unavailable",
 ]);
 

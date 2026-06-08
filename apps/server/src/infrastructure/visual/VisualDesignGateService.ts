@@ -378,8 +378,24 @@ function evaluateVisualIssues(
   const excessiveFrames = detectExcessiveFrames(input, combined, screenshotIds);
   if (excessiveFrames) issues.push(excessiveFrames);
 
+  const metadataCopyIssue = detectWorkflowMetadataCopy(input, combined, screenshotIds);
+  if (metadataCopyIssue) issues.push(metadataCopyIssue);
+
+  const fakeDataIssue = detectFakeRuntimeData(combined, screenshotIds);
+  if (fakeDataIssue) issues.push(fakeDataIssue);
+
+  const surfacePatternIssue = detectSurfacePatternMismatch(
+    input,
+    combined,
+    screenshotIds
+  );
+  if (surfacePatternIssue) issues.push(surfacePatternIssue);
+
   const colorIssue = detectColorIdentityDrift(input, combined, screenshotIds);
   if (colorIssue) issues.push(colorIssue);
+
+  const paletteStrategyIssue = detectPaletteStrategyGap(input, combined, screenshotIds);
+  if (paletteStrategyIssue) issues.push(paletteStrategyIssue);
 
   const stateIssue = detectMissingStates(input, combined, screenshotIds);
   if (stateIssue) issues.push(stateIssue);
@@ -518,6 +534,167 @@ function issue(input: {
   };
 }
 
+function detectWorkflowMetadataCopy(
+  input: VisualGateInput,
+  content: string,
+  evidenceIds: string[]
+): VisualGateIssue | null {
+  const visibleContent = normalizeTextForScanning(content);
+  const domainText = normalizeTextForScanning(
+    [
+      input.spec.summary,
+      input.spec.technicalApproach,
+      ...input.spec.acceptanceCriteria,
+      input.spec.designBrief?.userIntent.primaryUserGoal ?? "",
+      input.spec.designBrief?.userIntent.successOutcome ?? "",
+    ].join(" ")
+  );
+  const forbiddenTokens = [
+    "user story",
+    "criterios de aceite",
+    "critérios de aceite",
+    "visualcontract",
+    "project os",
+    "fallback",
+  ];
+  const observed = [
+    ...forbiddenTokens.filter(
+      (token) => visibleContent.includes(token) && !domainText.includes(token)
+    ),
+    ...findWorkflowStoryIds(content),
+  ];
+
+  if (observed.length === 0) return null;
+  return issue({
+    severity: "high",
+    category: "workflow_metadata",
+    location: "product copy",
+    observed: `A UI candidata expõe metadados de workflow: ${[
+      ...new Set(observed),
+    ]
+      .slice(0, 6)
+      .join(", ")}.`,
+    expected:
+      "Copy visível deve falar do produto e do usuário final, sem ids USxx ou termos internos de SDD/agentes.",
+    evidenceIds,
+  });
+}
+
+function detectFakeRuntimeData(
+  content: string,
+  evidenceIds: string[]
+): VisualGateIssue | null {
+  const normalized = normalizeTextForScanning(content);
+  const markers = [
+    "math.random",
+    "mockdata",
+    "mock data",
+    "mocktasks",
+    "fakedata",
+    "fake data",
+    "fixture",
+    "dummy",
+    "lorem ipsum",
+    "sample tasks",
+    "sampledata",
+  ];
+  const observed = markers.filter((marker) => normalized.includes(marker));
+  if (observed.length === 0) return null;
+
+  return issue({
+    severity: "high",
+    category: "fake_runtime_data",
+    location: "runtime data",
+    observed: `Foram detectados sinais de dados simulados em runtime: ${observed
+      .slice(0, 5)
+      .join(", ")}.`,
+    expected:
+      "A entrega deve iniciar vazia, usar adapters reais/injetáveis ou contratos existentes, sem mock/fake/fixture aplicado ao runtime.",
+    evidenceIds,
+  });
+}
+
+function detectSurfacePatternMismatch(
+  input: VisualGateInput,
+  content: string,
+  evidenceIds: string[]
+): VisualGateIssue | null {
+  const surfaceType = input.spec.designBrief?.surfaceType;
+  if (!surfaceType || surfaceType === "dashboard") return null;
+
+  const normalized = normalizeTextForScanning(content);
+  const dashboardMarkers = [
+    "project os",
+    "desempenho do projeto",
+    "status do projeto",
+    "frentes ativas",
+    "atualizado agora",
+    "dashboard",
+    "kpi",
+    "analytics",
+  ].filter((marker) => normalized.includes(marker));
+  if (dashboardMarkers.length < 2) return null;
+
+  const crudLikeSurface =
+    surfaceType === "crud" ||
+    surfaceType === "form" ||
+    surfaceType === "data-table" ||
+    surfaceType === "settings";
+  if (!crudLikeSurface) return null;
+
+  return issue({
+    severity: "high",
+    category: "wrong_surface_pattern",
+    location: "information architecture",
+    observed: `surfaceType "${surfaceType}" parece ter sido renderizado como dashboard genérico: ${dashboardMarkers
+      .slice(0, 4)
+      .join(", ")}.`,
+    expected:
+      "A hierarquia visual deve seguir o surfaceType e a intenção do usuário, não uma tela de métricas/projeto quando o pedido é CRUD/formulário.",
+    evidenceIds,
+  });
+}
+
+function detectPaletteStrategyGap(
+  input: VisualGateInput,
+  content: string,
+  evidenceIds: string[]
+): VisualGateIssue | null {
+  if (!input.spec.designBrief?.visualStrategy) return null;
+  const normalizedColors = extractColors(content)
+    .map(normalizeColor)
+    .filter((color): color is string => Boolean(color));
+  const uniqueColors = [...new Set(normalizedColors)];
+  if (uniqueColors.length < 4) return null;
+
+  const hueFamilies = new Set(
+    uniqueColors
+      .map(hueFamily)
+      .filter((family): family is string => Boolean(family) && family !== "neutral")
+  );
+  const semanticSignals = ["danger", "error", "warning", "success", "invalid"].some(
+    (token) => normalizeTextForScanning(content).includes(token)
+  );
+  const needsSemanticStates = hasNonEmptyDesignStates(input, [
+    "error",
+    "validation",
+    "success",
+  ]);
+  if (hueFamilies.size > 1 && (!needsSemanticStates || semanticSignals)) {
+    return null;
+  }
+
+  return issue({
+    severity: "medium",
+    category: "palette_without_rationale",
+    location: "color strategy",
+    observed: `A paleta usa ${uniqueColors.length} cores, mas concentra a hierarquia em uma única família cromática sem sinais semânticos suficientes.`,
+    expected:
+      "A visualStrategy deve virar papéis reais: background, surface, text, accent, status/erro/sucesso e utilitários quando o domínio exigir.",
+    evidenceIds,
+  });
+}
+
 function isFrontendVisualPath(path: string): boolean {
   return /\.(html|css|tsx|jsx|ts|js)$/i.test(path);
 }
@@ -536,6 +713,56 @@ function renderArtifactsAsHtml(artifacts: VisualInspectableArtifact[]): string {
     )
     .join("\n");
   return `<!doctype html><html><body>${body}</body></html>`;
+}
+
+function normalizeTextForScanning(content: string): string {
+  return content
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findWorkflowStoryIds(content: string): string[] {
+  const hits: string[] = [];
+  for (let index = 0; index < content.length - 3; index += 1) {
+    const first = content[index];
+    const second = content[index + 1];
+    if (!first || !second) continue;
+    if (first.toLowerCase() !== "u" || second.toLowerCase() !== "s") continue;
+
+    let cursor = index + 2;
+    let digits = "";
+    while (cursor < content.length && isAsciiDigit(content[cursor])) {
+      digits += content[cursor];
+      cursor += 1;
+    }
+    if (digits.length >= 2 && digits.length <= 4) {
+      hits.push(`US${digits}`);
+      index = cursor;
+    }
+  }
+  return [...new Set(hits)];
+}
+
+function isAsciiDigit(value: string | undefined): boolean {
+  if (!value) return false;
+  const code = value.charCodeAt(0);
+  return code >= 48 && code <= 57;
+}
+
+function hasNonEmptyDesignStates(
+  input: VisualGateInput,
+  states: readonly string[]
+): boolean {
+  const stateMatrix = input.spec.designBrief?.stateMatrix;
+  if (!stateMatrix) return false;
+  return states.some((state) => {
+    const entries = stateMatrix[state as keyof typeof stateMatrix];
+    return Array.isArray(entries) && entries.length > 0;
+  });
 }
 
 function visibleTextLength(content: string): number {
@@ -593,6 +820,14 @@ function isHighSaturationHex(color: string): boolean {
   return saturation >= 0.68 && lightness >= 0.28 && lightness <= 0.76;
 }
 
+function hueFamily(color: string): string | null {
+  const rgb = hexToRgb(color);
+  if (!rgb) return null;
+  const { hue, saturation } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  if (saturation < 0.12) return "neutral";
+  return String(Math.round(hue / 30) * 30);
+}
+
 function hexToRgb(color: string): { r: number; g: number; b: number } | null {
   const match = color.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
   if (!match) return null;
@@ -607,18 +842,26 @@ function rgbToHsl(
   rValue: number,
   gValue: number,
   bValue: number
-): { saturation: number; lightness: number } {
+): { hue: number; saturation: number; lightness: number } {
   const r = rValue / 255;
   const g = gValue / 255;
   const b = bValue / 255;
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const lightness = (max + min) / 2;
-  if (max === min) return { saturation: 0, lightness };
+  if (max === min) return { hue: 0, saturation: 0, lightness };
   const delta = max - min;
   const saturation =
     lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-  return { saturation, lightness };
+  let hue = 0;
+  if (max === r) {
+    hue = (g - b) / delta + (g < b ? 6 : 0);
+  } else if (max === g) {
+    hue = (b - r) / delta + 2;
+  } else {
+    hue = (r - g) / delta + 4;
+  }
+  return { hue: hue * 60, saturation, lightness };
 }
 
 function toStringArray(value: unknown): string[] {
