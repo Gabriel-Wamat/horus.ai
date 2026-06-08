@@ -14,6 +14,7 @@ import type {
 import { ProjectContextSnapshotSchema } from "@u-build/shared";
 import type { KeyValueCachePort } from "../ports/KeyValueCachePort.js";
 import { ProjectIndexManifestStore } from "./ProjectIndexManifestStore.js";
+import type { ProjectIndexSnapshotSummary } from "./ProjectIndexManifestStore.js";
 import { ProjectInspectionService } from "./ProjectInspectionService.js";
 import { ReadOnlyCodeContextService } from "./ReadOnlyCodeContextService.js";
 import { RuntimeEvidenceAggregator } from "./RuntimeEvidenceAggregator.js";
@@ -156,6 +157,12 @@ export class ProjectContextEngine {
           mtimeBucket,
           fileCount: cached.codeContext.files.length,
           stack: cached.inspection.framework.name,
+          repositoryIndex: await buildProjectIndexSummary({
+            projectRootPath,
+            inspection: cached.inspection,
+            codeContext: cached.codeContext,
+            checkedAt: this.now().toISOString(),
+          }),
         });
         return ProjectContextSnapshotSchema.parse(refreshed);
       }
@@ -224,6 +231,12 @@ export class ProjectContextEngine {
       mtimeBucket,
       fileCount: parsed.codeContext.files.length,
       stack: parsed.inspection.framework.name,
+      repositoryIndex: await buildProjectIndexSummary({
+        projectRootPath,
+        inspection: parsed.inspection,
+        codeContext: parsed.codeContext,
+        checkedAt: parsed.generatedAt,
+      }),
     });
     return parsed;
   }
@@ -235,12 +248,122 @@ export class ProjectContextEngine {
     mtimeBucket: number;
     fileCount: number | null;
     stack: string | null;
+    repositoryIndex?: ProjectIndexSnapshotSummary | undefined;
   }): Promise<void> {
     if (!this.manifestStore) return;
     await this.manifestStore
       .recordSnapshotResult(input)
       .catch(() => undefined);
   }
+}
+
+async function buildProjectIndexSummary(input: {
+  projectRootPath: string;
+  inspection: ProjectInspectionProfile;
+  codeContext: CodeContextBundle;
+  checkedAt: string;
+}): Promise<ProjectIndexSnapshotSummary> {
+  const files = await Promise.all(
+    input.inspection.editableFiles.map(async (file) => {
+      const contentHash = await hashProjectFile(input.projectRootPath, file.path);
+      return {
+        path: file.path,
+        contentHash,
+        sizeBytes: file.sizeBytes,
+        modifiedAt: file.modifiedAt,
+        language: file.language,
+      };
+    })
+  );
+  const structural = input.codeContext.structuralContext;
+  const symbols = structural?.symbols ?? [];
+  const importCount = symbols.filter((symbol) => symbol.kind === "import").length;
+  const exportCount = symbols.filter((symbol) => symbol.kind === "export").length;
+  const chunks = structural?.semanticMatches ?? [];
+  const contentSignature = sha256(
+    JSON.stringify({
+      files: files.map((file) => [file.path, file.contentHash]),
+      chunks: chunks.map((chunk) => [
+        chunk.path,
+        chunk.kind,
+        chunk.startLine,
+        chunk.endLine,
+        chunk.symbolNames,
+      ]),
+    })
+  );
+  return {
+    files,
+    ignorePolicy: {
+      gitignoreApplied: await fileExists(input.projectRootPath, ".gitignore"),
+      horusignoreApplied: await fileExists(input.projectRootPath, ".horusignore"),
+      ignoredEntries: input.inspection.stats.ignoredEntries,
+      blockedFiles: input.inspection.stats.blockedFiles,
+      binaryFiles: input.inspection.stats.binaryFiles,
+      oversizedFiles: input.inspection.stats.oversizedFiles,
+    },
+    ast: {
+      status: structural?.status ?? "unavailable",
+      parsedDocumentCount: structural?.parsedDocumentCount ?? 0,
+      symbolCount: structural?.symbolCount ?? 0,
+      diagnosticCount: structural?.diagnosticCount ?? 0,
+      importCount,
+    },
+    chunks: chunks.map((chunk) => ({
+      path: chunk.path,
+      kind: chunk.kind,
+      startLine: chunk.startLine,
+      endLine: chunk.endLine,
+      symbolNames: chunk.symbolNames,
+    })),
+    embeddings: {
+      enabled: chunks.length > 0,
+      embeddedChunkCount: chunks.length,
+    },
+    graph: {
+      status: structural
+        ? structural.status === "failed"
+          ? "failed"
+          : "partial"
+        : "unavailable",
+      nodeCount: new Set([
+        ...files.map((file) => `file:${file.path}`),
+        ...symbols.map((symbol) => `symbol:${symbol.path}:${symbol.name}`),
+      ]).size,
+      edgeCount: importCount + exportCount,
+      importCount,
+      exportCount,
+    },
+    freshness: {
+      status: "fresh",
+      contentSignature,
+      checkedAt: input.checkedAt,
+    },
+    retrievalFusion: [
+      "explicit_paths",
+      "runtime_errors",
+      "git_diff",
+      "lexical_bm25",
+      "ast_symbols",
+      "graph_neighbors",
+      "semantic_embeddings",
+      "reranker",
+      "budget_packer",
+    ],
+  };
+}
+
+async function hashProjectFile(projectRootPath: string, relativePath: string): Promise<string> {
+  const raw = await fs.readFile(join(projectRootPath, relativePath)).catch(() => null);
+  if (!raw) return sha256(`${relativePath}:unreadable`);
+  return sha256(raw);
+}
+
+async function fileExists(projectRootPath: string, relativePath: string): Promise<boolean> {
+  return fs
+    .access(join(projectRootPath, relativePath))
+    .then(() => true)
+    .catch(() => false);
 }
 
 function buildCacheKey(input: {
@@ -300,7 +423,7 @@ async function maxEditableRootMtime(
   return Math.floor(max / 1000) * 1000; // Bucket to 1s to avoid micro-churn.
 }
 
-function sha256(value: string): string {
+function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
 

@@ -3,6 +3,7 @@ import {
   AgentProfileIdSchema,
   AgentToolNameSchema,
 } from "./AgentToolProfile.js";
+import { AgentContextReceiptSchema } from "./AgentContextReceipt.js";
 import type { AgentName } from "./AgentToolProfile.js";
 export {
   AgentNameSchema,
@@ -31,6 +32,7 @@ const AgentResultArtifactContextSchema = z.object({
   specRevisionId: z.string().optional(),
   chatSessionId: z.string().uuid().optional(),
   sourceMessageId: z.string().uuid().optional(),
+  contextReceipt: AgentContextReceiptSchema.optional(),
 });
 
 export const AgentResultSchema = z.discriminatedUnion("status", [

@@ -19,6 +19,7 @@ import { createChatModel } from "../llm/createChatModel.js";
 import { invokeChatModel } from "../llm/invokeChatModel.js";
 import { QaPreviewSmokeResultSchema } from "../preview/QaPreviewSmokeValidationService.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatDesignBriefForPrompt } from "../design/DesignBriefPrompt.js";
 import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 
 const TestCaseSchema = z.object({
@@ -224,6 +225,7 @@ Valide especificamente essa alteração, além dos critérios de aceite da user 
   const visualContractBlock = spec.visualContract
     ? `# VisualContract da SPEC\n${JSON.stringify(spec.visualContract, null, 2)}`
     : "# VisualContract da SPEC\nNao informado; valide preservacao da identidade local pelo contexto visual quando disponivel.";
+  const designBriefBlock = formatDesignBriefForPrompt(spec);
 
   const skill = appendRuntimeAgentSkills(
     loadAgentSkill("qa-frontend-testing"),
@@ -236,6 +238,7 @@ ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
 ${visualContractBlock}
+${designBriefBlock}
 
 ${formatPromptContextForPrompt(promptContext)}
 
@@ -262,6 +265,8 @@ ${criteria}
 Gere um caso de teste por critério de aceite. Cada caso deve ter steps claros e objetivo com o resultado esperado.
 Se houver contratos futuros de API/Rotas, teste a prontidão do frontend por meio de boundary/adapters injetáveis, estados de loading/empty/error/success e compatibilidade de shape; não assuma que existe backend real nem peça mocks em código aplicado ao projeto.
 Inclua cobertura visual para visualContract quando existir: tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns.
+Inclua cobertura para designBrief: surfaceType correto, intenção do usuário, regiões/hierarquia/fluxo de informationArchitecture, componentes e variantes de componentInventory, todos os estados aplicáveis da stateMatrix, designSystemBinding e visualStrategy.
+Inclua uma verificação negativa quando aplicável: a UI final não deve renderizar metadados SDD/workflow como copy de produto, incluindo ids US01/US02, "User Story", "Spec", "Critérios de aceite", "Pattern", "visualContract", "Project OS", "Horus", "fallback" ou termos de agente.
 IDs devem ser TC-01, TC-02, etc.`;
 
   const model = createChatModel("qa", {

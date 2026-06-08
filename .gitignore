@@ -19,6 +19,9 @@ spec/
 apps/**/test/
 apps/**/tests/
 apps/**/__tests__/
+!apps/server/test/
+apps/server/test/*
+!apps/server/test/frontAgentDesignIntelligence.test.mjs
 packages/**/test/
 packages/**/tests/
 scripts/*.test.mjs
@@ -35,6 +38,18 @@ apps/web/src/features/design-studio/
 !/skills/agents/**
 /skills/*.md
 /skills/scripts/
+!/docs/
+!/docs/spec/
+docs/spec/**
+!/docs/spec/README.md
+!/docs/spec/CHANGELOG.md
+!/docs/spec/features/
+!/docs/spec/features/109-professionalization-master-plan.md
+!/docs/spec/features/110-live-preview-file-tree-execution-spine.md
+!/docs/spec/features/111-runtime-visual-curator-design-evaluator.md
+!/docs/spec/features/112-surface-pattern-library-design-intelligence.md
+!/docs/spec/features/113-docker-ci-release-hardening.md
+!/docs/spec/features/114-ops-recovery-observability-control-plane.md
 
 .vite/
 .next/

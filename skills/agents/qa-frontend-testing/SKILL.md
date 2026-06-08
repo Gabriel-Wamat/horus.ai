@@ -37,7 +37,7 @@ Use this skill when the workflow asks the QA Agent to:
 - revise QA output after curator feedback;
 - validate a static HTML/CSS/JavaScript artifact;
 - validate frontend readiness for future backend routes described in `apiEndpoints`;
-- validate data adapter and mock-data behavior described by the spec;
+- validate adapter-compatible state and future route-readiness described by the spec;
 - check responsive behavior and accessibility basics;
 - ensure acceptance criteria are covered by concrete steps.
 
@@ -90,9 +90,11 @@ principles:
   evidence_first:
     - "Trace tests to acceptance criteria."
     - "Use component names, technical approach, data models, and apiEndpoints from the spec."
-    - "When the spec describes future backend routes, test the frontend adapter/mock behavior and visible states rather than real network availability."
+    - "When the spec describes future backend routes, test frontend adapter-compatible state and visible states rather than real network availability or fake runtime data."
     - "Use curator feedback as a correction contract on retries."
+    - "Use designBrief to derive UI construction tests before relying on generic visual checks."
     - "Use visualContract to create explicit visual QA coverage for tokens, density, states, responsivity, accessibility, and antiPatterns."
+    - "Check that final product UI copy does not expose SDD/workflow metadata such as USxx ids, User Story, Spec, Pattern, visualContract, Project OS, Horus, fallback, or agent terms."
   architecture:
     - "Separate primary journey, component behavior, responsive checks, and accessibility checks."
     - "Separate route-readiness tests from real backend integration tests."
@@ -123,7 +125,8 @@ request_analysis:
     - "Interaction requirements"
     - "Technical approach and data adapter expectations"
     - "Future API/route contracts if present"
-    - "Data models and mock-data shapes"
+    - "Data models and adapter-compatible local state shapes"
+    - "DesignBrief surfaceType, userIntent, informationArchitecture, componentInventory, stateMatrix, designSystemBinding, and visualStrategy"
     - "Responsive and accessibility expectations"
   out_of_scope:
     - "Backend implementation details"
@@ -152,9 +155,10 @@ coverage_matrix:
     - "Keyboard/focus behavior"
     - "Long text and empty state"
     - "Loading, error, and disabled states"
-    - "Future route contract compatibility through mock data or adapter functions"
+    - "Future route contract compatibility through local state or adapter boundaries"
     - "Data model fields rendered with correct labels, formatting, and fallbacks"
     - "Visual identity drift from visualContract or project design context"
+    - "SDD/workflow metadata leaking into visible product copy"
 ```
 
 ### Step 3 - Generate Test Cases
@@ -168,10 +172,12 @@ Implementation rules:
 - Include negative/edge cases when the spec includes input or dynamic data.
 - Add at least one route-readiness test when `apiEndpoints` is non-empty.
 - Add at least one data rendering/fallback test when `dataModels` is non-empty.
+- Add designBrief coverage when present: surface type, primary flow, required regions, component variants, stateMatrix states, design-system binding, and visual strategy.
 - Add at least one visual-contract test when `visualContract` is present.
+- Add at least one copy hygiene test when the story title or spec contains requirement ids, agent terms, or workflow metadata.
 - Add loading, empty, and error-state tests when the technical approach mentions adapter-backed data.
 - Do not write "verify API call succeeds" unless the spec explicitly says a real backend route exists.
-- Prefer "verify the UI uses mock/adapter-compatible data and exposes loading/error fallback" for future route contracts.
+- Prefer "verify the UI uses adapter-compatible state and exposes loading/error fallback" for future route contracts.
 
 ### Step 4 - Self-Check Before Returning
 
@@ -181,7 +187,7 @@ self_check:
   - "No test only says 'page loads'."
   - "At least one test addresses responsive behavior when UI layout exists."
   - "At least one test addresses accessibility basics when controls exist."
-  - "Future route contracts are covered through adapter/mock behavior if apiEndpoints exist."
+  - "Future route contracts are covered through adapter-compatible local state if apiEndpoints exist."
   - "Data model fields are covered when dynamic data appears in the spec."
   - "Steps are executable by a human tester."
 ```
@@ -231,7 +237,7 @@ architecture_checklist:
   - "Does each test case have one clear responsibility?"
   - "Are criteria, steps, and expected results aligned?"
   - "Are frontend-specific risks represented?"
-  - "Are future backend route contracts tested safely through adapter/mock expectations?"
+  - "Are future backend route contracts tested safely through adapter-compatible state expectations?"
   - "Are data models represented in visible rendering, fallback, or interaction checks?"
 ```
 

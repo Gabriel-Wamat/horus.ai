@@ -19,6 +19,7 @@ import { invokeChatModel } from "../llm/invokeChatModel.js";
 import type { FrontendFileOperationPlan } from "../code/buildFrontendCodeChangeSet.js";
 import type { ProjectWorkspaceContextSnapshot } from "../project/ProjectExecutionService.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatDesignBriefForPrompt } from "../design/DesignBriefPrompt.js";
 import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 import {
   CodeAwareFrontendOutputSchema,
@@ -102,6 +103,7 @@ Use este pedido como a intenção executora atual. Não gere uma nova spec; apli
 `
     : "";
   const visualContractBlock = buildVisualContractPromptBlock(spec);
+  const designBriefBlock = formatDesignBriefForPrompt(spec);
   const designContextBlock = formatDesignContextForPrompt(designContext);
   const timeoutMs = resolveFrontAgentTimeoutMs();
 
@@ -134,6 +136,7 @@ ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
 ${visualContractBlock}
+${designBriefBlock}
 
 ${promptContextBlock}
 
@@ -181,6 +184,10 @@ ${filesBlock}
 - Operações delete devem usar afterContent=null.
 - Preserve arquitetura, imports, componentes, estilos e padrões existentes.
 - Não use CDNs externos, chamadas de rede inventadas, mock/fake adapters, Math.random, fixtures ou dados simulados em runtime.
+- Não use metadados de SDD/workflow como copy visível ao usuário final: ids como US01/US02, "User Story", "Spec", "Critérios de aceite", "Pattern", "visualContract", "Project OS", "Horus", "fallback" ou termos de agente só podem aparecer em código/comentários técnicos, nunca na interface.
+- Transforme título/summary/criteria em linguagem de produto: nome da tela, ação principal, labels e estados que uma pessoa real veria no domínio do app.
+- Use designBrief como contrato de produto antes de escrever UI: surfaceType define a família de interface; userIntent define a ação real; informationArchitecture define regiões e fluxo; componentInventory define componentes/variantes; stateMatrix define estados obrigatórios; designSystemBinding define tokens/componentes/imports permitidos; visualStrategy define papéis visuais.
+- Antes de escolher cores, derive uma estratégia de design a partir de domínio, público, contexto de uso, hierarquia e estados; use papéis claros de background, surface, text, accent, semantic/status e category/utility. Não escolha uma paleta por gosto, não use uma família única de cor como solução inteira e não copie tema escuro genérico sem evidência.
 - Não crie HTML standalone em generated/horus quando houver projeto real com package.json, src/main.tsx, src/App.tsx, rotas ou componentes existentes.
 - Em projetos React/TypeScript/Vite, implemente componentes TSX, tipos, estilos e adapters reais; não substitua a aplicação por HTML estático.
 - Qualquer arquivo novo em src/ deve ser importado por um arquivo já alcançável a partir do entrypoint do framework, como src/main.tsx, src/App.tsx ou sistema de rotas.
@@ -258,6 +265,7 @@ ${skill}
 ${reflectionBlock}
 ${executionBriefBlock}
 ${visualContractBlock}
+${designBriefBlock}
 
 ${promptContextBlock}
 
@@ -288,7 +296,12 @@ ${criteria}
 - CSS e JS devem estar embutidos no HTML (dentro das tags <style> e <script>)
 - Design responsivo usando CSS Flexbox e/ou Grid com media queries
 - Use variáveis CSS (--cor-primaria, --cor-fundo, etc.) para o tema
-- Se precisar de dados locais para estados visuais, use constantes nomeadas como fixtures de desenvolvimento somente dentro do HTML gerado, nunca em CodeChangeSet aplicado ao projeto real
+- Prefira estado inicial vazio e interações reais no browser; use dados locais iniciais somente quando um critério de aceite exigir itens preexistentes visíveis
+- Não use mock/fake adapter, Math.random, CDN externo ou chamada externa inventada
+- Não use metadados de SDD/workflow como copy visível ao usuário final: ids como US01/US02, "User Story", "Spec", "Critérios de aceite", "Pattern", "visualContract", "Project OS", "Horus", "fallback" ou termos de agente só podem aparecer em código/comentários técnicos, nunca na interface.
+- Transforme título/summary/criteria em linguagem de produto: nome da tela, ação principal, labels e estados que uma pessoa real veria no domínio do app.
+- Use designBrief como contrato de produto antes de escrever UI: surfaceType define a família de interface; userIntent define a ação real; informationArchitecture define regiões e fluxo; componentInventory define componentes/variantes; stateMatrix define estados obrigatórios; designSystemBinding define tokens/componentes/imports permitidos; visualStrategy define papéis visuais.
+- Antes de escolher cores, derive uma estratégia de design a partir de domínio, público, contexto de uso, hierarquia e estados; use papéis claros de background, surface, text, accent, semantic/status e category/utility. Não escolha uma paleta por gosto, não use uma família única de cor como solução inteira e não copie tema escuro genérico sem evidência.
 - Se houver contratos futuros de API/Rotas, descreva a camada adaptadora esperada sem fingir chamadas externas reais
 - Selecione e aplique o frontend pattern declarado na spec/visualContract. Se ausente, escolha um destes ids antes de escrever HTML: operational-dashboard, chat-preview-workbench, workflow-map, form-crud-tool, content-landing ou custom-product-surface.
 - Inclua um comentario HTML curto ou texto interno tecnico apenas se necessario para tornar o pattern auditavel; nunca mostre o pattern como copy visivel ao usuario final.
@@ -889,6 +902,7 @@ Trate este pedido como a intenção executora atual. Se o pedido for uma altera�
     input.promptContext?.runtimeSkills ?? []
   );
   const visualContractBlock = buildVisualContractPromptBlock(input.spec);
+  const designBriefBlock = formatDesignBriefForPrompt(input.spec);
   const designContextBlock = formatDesignContextForPrompt(input.designContext);
   const promptContextBlock = formatPromptContextForPrompt(input.promptContext);
   const timeoutMs = resolveFrontAgentTimeoutMs();
@@ -899,6 +913,7 @@ Trate este pedido como a intenção executora atual. Se o pedido for uma altera�
 ${skill}
 ${executionBriefBlock}
 ${visualContractBlock}
+${designBriefBlock}
 
 ${promptContextBlock}
 
@@ -924,6 +939,10 @@ Campos:
 - Nunca escreva fora dos writeRoots.
 - Nunca edite .git, node_modules, dist, build ou arquivos de lock sem necessidade explícita da spec.
 - Não use mock, fake adapter, fixture em runtime, Math.random, CDN externo ou chamada externa inventada.
+- Não use metadados de SDD/workflow como copy visível ao usuário final: ids como US01/US02, "User Story", "Spec", "Critérios de aceite", "Pattern", "visualContract", "Project OS", "Horus", "fallback" ou termos de agente só podem aparecer em código/comentários técnicos, nunca na interface.
+- Transforme título/summary/criteria em linguagem de produto: nome da tela, ação principal, labels e estados que uma pessoa real veria no domínio do app.
+- Use designBrief como contrato de produto antes de escrever UI: surfaceType define a família de interface; userIntent define a ação real; informationArchitecture define regiões e fluxo; componentInventory define componentes/variantes; stateMatrix define estados obrigatórios; designSystemBinding define tokens/componentes/imports permitidos; visualStrategy define papéis visuais.
+- Antes de escolher cores, derive uma estratégia de design a partir de domínio, público, contexto de uso, hierarquia e estados; use papéis claros de background, surface, text, accent, semantic/status e category/utility. Não escolha uma paleta por gosto, não use uma família única de cor como solução inteira e não copie tema escuro genérico sem evidência.
 - O código precisa ser alcançável pelo entrypoint existente do projeto.
 - Para projectStack React/TypeScript/Vite, edite a aplicação real por meio de src/main.tsx, src/App.tsx, src/features, src/components, src/styles e tipos/adapters coesos.
 - Para projectStack React/TypeScript/Vite, não gere HTML standalone, não escreva generated/horus como implementação e não substitua a aplicação por uma página isolada.
@@ -1059,7 +1078,7 @@ function buildReactViteFallbackFrontendOutput(input: {
       ? input.error.message
       : "FrontAgent file operation generation timeout.";
   return {
-    html: `Pattern: operational-dashboard. Fallback do FrontAgent acionado porque o plano LLM expirou: ${reason}`,
+    html: `Pattern: form-crud-tool. Fallback defensivo do FrontAgent acionado porque o plano LLM expirou: ${reason}`,
     operations: [
       {
         targetPath: "src/App.tsx",
@@ -1070,7 +1089,7 @@ function buildReactViteFallbackFrontendOutput(input: {
       {
         targetPath: "src/styles/app.css",
         rationale:
-          "Padronizar layout, navegacao, dashboard, tarefas e calendario com identidade visual escura e cinza.",
+          "Aplicar tokens visuais defensivos com superficie clara, acento funcional e estados sem depender de tema generico.",
         afterContent: buildProjectManagerAppCss(),
       },
     ],
@@ -1094,7 +1113,7 @@ function buildReactViteFallbackProjectPlan(
 
   return ProjectExecutionPlanSchema.parse({
     summary:
-      "Pattern: operational-dashboard. Fallback do FrontAgent aplicado apos timeout do plano LLM; gera uma SPA React/Vite coesa com dashboard, tarefas e calendario usando tokens locais.",
+      "Pattern: form-crud-tool. Fallback defensivo aplicado apos timeout do plano LLM; gera uma SPA React/Vite sem fixtures, com formulario, lista vazia inicial, filtros e estados locais.",
     fileOperations: [
       {
         operation: "write",
@@ -1107,7 +1126,7 @@ function buildReactViteFallbackProjectPlan(
         operation: "write",
         path: "src/styles/app.css",
         reason:
-          "Padronizar layout, navegacao, dashboard, tarefas e calendario com identidade visual escura e cinza.",
+          "Aplicar tokens visuais defensivos com superficie clara, acento funcional e estados sem depender de tema generico.",
         content: buildProjectManagerAppCss(),
       },
     ],
@@ -1115,7 +1134,7 @@ function buildReactViteFallbackProjectPlan(
     validationCommandIds,
     risks: [
       `Plano LLM original expirou: ${reason}`,
-      "Fallback cobre a experiencia visual e interativa local, mas nao integra APIs externas ausentes no workspace.",
+      "Fallback cobre a experiencia visual e interativa local sem dados simulados; a geracao inteligente principal deve ser refeita pelo LLM quando disponivel.",
     ],
   });
 }

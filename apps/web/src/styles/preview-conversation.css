@@ -409,6 +409,7 @@
 }
 
 .execution-console-timeline,
+.execution-console-context-list,
 .execution-console-file-list,
 .execution-console-terminal,
 .execution-console-validation-list,
@@ -428,6 +429,10 @@
 
 .execution-console-file-list {
   max-height: 190px;
+}
+
+.execution-console-context-list {
+  max-height: 220px;
 }
 
 .execution-console-terminal {
@@ -787,6 +792,70 @@
   border-radius: 8px;
   background: rgba(3, 8, 12, 0.3);
   padding: 8px;
+}
+
+.execution-console-context-row {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(3, 8, 12, 0.3);
+  padding: 8px;
+}
+
+.execution-console-context-row header {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.execution-console-context-row header div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.execution-console-context-row strong,
+.execution-console-context-row code {
+  overflow: hidden;
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-console-context-row code {
+  color: var(--t3);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+}
+
+.execution-console-context-row header span,
+.execution-console-context-row p,
+.execution-console-context-row li {
+  overflow: hidden;
+  color: var(--t3);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.execution-console-context-row p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.execution-console-context-row ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .execution-console-validation-chain header {

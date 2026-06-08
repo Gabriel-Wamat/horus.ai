@@ -8,7 +8,7 @@ description: Use this skill when the Front Agent must generate or revise fronten
 ```yaml
 id: "front-design-frontend"
 agent: "front"
-version: "0.6.0"
+version: "0.7.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into FrontAgent prompt before implementation rules."
@@ -86,9 +86,14 @@ principles:
     - "Do not change acceptance criteria."
   evidence_first:
     - "Use the user story, spec summary, components, data models, and acceptance criteria as source of truth."
+    - "Use designBrief as the primary UI construction contract when present."
     - "Use visualContract and DesignContextBundle as mandatory visual constraints, not optional inspiration."
     - "Treat curator feedback as a correction contract on retries."
     - "Do not claim support for a state or interaction unless implemented."
+  product_copy:
+    - "Never use SDD/workflow metadata as user-facing copy: USxx ids, User Story, Spec, Acceptance Criteria, Pattern, visualContract, Project OS, Horus, fallback, or agent terms."
+    - "Translate requirement metadata into product language: screen name, primary action, labels, empty states, validation messages, and status names from the domain."
+    - "Use the user story title as evidence, not as the literal H1 when it contains issue/story prefixes or implementation language."
   architecture:
     - "For real projects, keep code reachable from the selected stack entrypoint or route system."
     - "For React/Vite/TypeScript, use src/main.tsx, src/App.tsx, src/features, src/components, src/styles, and typed contracts."
@@ -101,7 +106,10 @@ principles:
     - "Avoid layout shifts caused by dynamic labels, hover states, or long text."
   visual_identity:
     - "Select exactly one frontend pattern before implementation: operational-dashboard, chat-preview-workbench, workflow-map, form-crud-tool, content-landing, or custom-product-surface."
+    - "Use designBrief.surfaceType to prevent wrong surfaces, such as dashboards for CRUD flows or landing pages for tools."
     - "Preserve detected project tokens, typography, surfaces, spacing, density, and component patterns."
+    - "When no reliable identity exists, derive a color strategy from domain, audience, context of use, hierarchy, contrast, and states before choosing tokens."
+    - "Assign explicit color roles: background, surface, text, accent, semantic/status, and category/utility when applicable."
     - "Do not create a parallel palette, high-saturation highlight scheme, or generic landing-page styling when project identity exists."
     - "Do not add excessive frames, nested cards, or decorative UI that conflicts with the visualContract."
     - "If the user requests a visual change, apply it through the existing identity unless visualContract.mode is guided_redesign."
@@ -111,6 +119,55 @@ principles:
 ```
 
 ## Workflow
+
+## DesignBrief Consumption
+
+When `Spec.designBrief` is present, implement from it before interpreting broad prose:
+
+```yaml
+design_brief_usage:
+  surfaceType:
+    - "Choose the screen family and reject incompatible layouts."
+  userIntent:
+    - "Use the real user goal to write product copy and prioritize controls."
+  informationArchitecture:
+    - "Create regions, hierarchy, navigation, and primary flow exactly from the contract."
+  componentInventory:
+    - "Build or reuse the listed components and variants; do not replace them with generic cards."
+  stateMatrix:
+    - "Implement applicable empty, loading, success, error, selected, disabled, validation, overflow, and mobile states."
+  designSystemBinding:
+    - "Reuse listed tokens, components, allowed libraries, imports, and anti-patterns."
+  visualStrategy:
+    - "Implement color roles, typography, density, radius, shadow, motion, and domain rationale through CSS/tokens."
+```
+
+If designBrief conflicts with generic pattern instincts, designBrief wins unless it contradicts the user's explicit acceptance criteria.
+
+## Designer Color Strategy
+
+Before writing CSS for a blank or weakly defined project, make a short internal design decision:
+
+```yaml
+color_strategy:
+  domain_read:
+    - "What is the product domain, user's mental model, and usage environment?"
+    - "Is the interface for calm repeated work, urgent triage, creation, finance, healthcare, education, media, or entertainment?"
+  roles:
+    background: "Low-noise canvas that supports the expected usage duration."
+    surface: "Panels/forms/lists that create hierarchy without excessive framing."
+    text: "Primary and muted text with accessible contrast."
+    accent: "Primary action and selected state only."
+    semantic_status: "Success, warning, error, progress, overdue, or completion states."
+    category_utility: "Optional secondary hues for categories, tags, or charts when the domain needs distinction."
+  rejects:
+    - "Arbitrary hex lists without usage rules."
+    - "One-hue palette pretending to be a full identity."
+    - "Generic dark-blue/teal dashboard for every tool."
+    - "High-saturation colors repeated across large surfaces."
+```
+
+Expose the result through CSS variables and interaction states. Do not show this reasoning as visible UI text.
 
 ### Step 1 - Understand The Spec
 
@@ -213,7 +270,7 @@ Implementation rules:
 - Start UI markup with semantic structure.
 - Define CSS variables for color, spacing, radius, type, and shadows.
 - Use CSS Grid/Flexbox with responsive constraints.
-- Use realistic mock data from the spec.
+- Prefer empty states and user-created local state; seed records only when the spec explicitly requires preexisting visible data.
 - Implement interactive behavior with small functions.
 - Keep content inspectable and useful.
 - Buttons must always use the `icon + name` pattern. Do not create text-only buttons for actions when an icon can clarify intent.
@@ -247,7 +304,7 @@ Return only the structured output requested by the runtime. In project mode, ret
 3. Create a clear visual hierarchy with restrained typography, consistent spacing, and no oversized text inside compact UI regions.
 4. Use responsive layouts with explicit constraints, stable grids, sensible breakpoints, and no overlapping or overflowing text.
 5. Prefer semantic HTML, accessible labels, keyboard-friendly controls, meaningful landmarks, and sufficient color contrast.
-6. Use real content structures and realistic mock data derived from the spec rather than generic filler.
+6. Use real content structures and empty/local interaction state by default; do not seed runtime with fake records unless an acceptance criterion explicitly requires preexisting visible data.
 7. Keep CSS organized with variables, component-level sections, predictable states, and no one-note color palette.
 8. Implement complete interactive behavior expected by the spec, including empty, loading, selected, hover, focus, and error states when relevant.
 9. Standardize action buttons as `icon + visible name`, preserving accessible labels, stable dimensions, and consistent hover/active states.
@@ -262,7 +319,7 @@ Return only the structured output requested by the runtime. In project mode, ret
 agent_error_mitigation:
   anti_hallucination:
     - "Do not invent APIs, backend calls, libraries, or assets."
-    - "If content is missing, use typed local development data only when clearly labeled and not pretending to be a live integration."
+    - "If content is missing, prefer empty states and user-created local state; do not use runtime fixtures to make the UI look complete."
   anti_overengineering:
     - "Do not implement a framework inside vanilla JS."
     - "Do not add abstractions unless they simplify visible behavior."

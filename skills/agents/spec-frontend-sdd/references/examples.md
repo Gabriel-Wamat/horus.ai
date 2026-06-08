@@ -37,7 +37,7 @@ Why it is weak:
 ```yaml
 method: "GET"
 path: "/api/workspace/folders"
-description: "Future contract for loading workspace folders used by the folder rail; current static artifact must use a mock adapter with this same response shape."
+description: "Future contract for loading workspace folders used by the folder rail; current frontend must keep adapter-compatible empty/local state with this same response shape."
 requestSchema: {}
 responseSchema:
   folders:

@@ -1,4 +1,5 @@
 import type { UBuildState, UBuildUpdate } from "../state.js";
+import type { ProjectContextSnapshot } from "@u-build/shared";
 import type { LangGraphDependencies } from "../dependencies.js";
 import { defaultLangGraphDependencies } from "../dependencies.js";
 import { summarizePromptContextForResult } from "../../prompt/PromptContextAssembler.js";
@@ -56,12 +57,26 @@ export function createOdinAgentNode(deps: LangGraphDependencies) {
           retryCount: state.retryCount,
         })
       : undefined;
+    let projectSnapshot: ProjectContextSnapshot | undefined;
+    if (
+      deps.buildProjectContextSnapshot &&
+      state.frontendProjectId &&
+      state.frontendProjectRootPath
+    ) {
+      projectSnapshot = await deps.buildProjectContextSnapshot({
+        projectId: state.frontendProjectId,
+        projectRootPath: state.frontendProjectRootPath,
+        query: [userStory.title, state.executionBrief].filter(Boolean).join("\n") || userStory.title,
+        agentProfileId: "odin_agent",
+      });
+    }
     const contextProfile = deps.buildAgentContextProfile
       ? await deps.buildAgentContextProfile({
           agentName: "odin",
           agentProfileId: "odin_agent",
           userStory,
           spec,
+          codeContext: projectSnapshot?.codeContext,
           operationalMemory,
           curatorFeedback: curatorFeedback ?? null,
           routingDecision: agents,
@@ -73,6 +88,25 @@ export function createOdinAgentNode(deps: LangGraphDependencies) {
       basePromptContext,
       contextProfile
     );
+    const contextReceipt = deps.buildAgentContextReceipt
+      ? await deps.buildAgentContextReceipt({
+          threadId: state.threadId,
+          userStoryId: userStory.id,
+          agentName: "odin",
+          agentProfileId: "odin_agent",
+          snapshot: projectSnapshot,
+          codeContext: projectSnapshot?.codeContext,
+        })
+      : undefined;
+    if (contextReceipt) {
+      deps.emitWorkflowEvent?.({
+        type: "context_receipt",
+        threadId: state.threadId,
+        userStoryId: userStory.id,
+        receipt: contextReceipt,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     console.log(
       `[odinAgentNode] Routing for ${userStory.id} (retry=${state.retryCount}): [${agents.join(", ")}]`
@@ -97,6 +131,7 @@ export function createOdinAgentNode(deps: LangGraphDependencies) {
             },
             executionTimeMs: Date.now() - start,
             completedAt: new Date().toISOString(),
+            ...(contextReceipt ? { contextReceipt } : {}),
             ...(state.sourceChatSessionId
               ? { chatSessionId: state.sourceChatSessionId }
               : {}),

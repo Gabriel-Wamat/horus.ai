@@ -72,6 +72,7 @@ import { ProjectFileBrowserService } from "../project/ProjectFileBrowserService.
 import { ProjectWorkspaceService } from "../project/ProjectWorkspaceService.js";
 import {
   defaultLangGraphDependencies,
+  sharedRuntimeEvidenceAggregator,
   type LangGraphDependencies,
 } from "../langgraph/dependencies.js";
 import {
@@ -218,6 +219,7 @@ export async function createApp(
       projectInspector,
       shellRuntime: new ShellCommandRuntime(),
       previewSmokeValidator: qaPreviewSmokeValidation,
+      runtimeEvidence: sharedRuntimeEvidenceAggregator,
     });
     defaultAgentProfileRegistry.validateRegisteredToolReferences({
       registeredTools: activeAgentToolRegistry.listRegisteredTools(),

@@ -121,6 +121,25 @@ function requirementsFromSpec(spec: Spec): SpecRequirementRef[] {
     });
   }
 
+  if (spec.designBrief) {
+    requirements.push({
+      id: "design_brief:1",
+      kind: "design_brief",
+      label: "Design brief",
+      text: [
+        spec.designBrief.surfaceType,
+        spec.designBrief.userIntent.primaryUserGoal,
+        spec.designBrief.userIntent.successOutcome,
+        spec.designBrief.informationArchitecture.navigationModel,
+        ...spec.designBrief.informationArchitecture.hierarchy,
+        ...spec.designBrief.componentInventory.map((component) => component.name),
+        ...spec.designBrief.designSystemBinding.antiPatterns,
+        spec.designBrief.visualStrategy.domainRationale,
+      ].join(". "),
+      index: 0,
+    });
+  }
+
   return requirements;
 }
 

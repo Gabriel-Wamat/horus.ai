@@ -5,6 +5,8 @@ import type { ExecutionTaskRecord, ExecutionTaskResult } from "./ExecutionTaskRu
 import type {
   ShellCommandRuntimeExecuteInput,
   ShellCommandRuntimePort,
+  ShellCommandOutputRead,
+  ShellCommandTaskSummary,
 } from "../../application/ports/ShellCommandRuntimePort.js";
 import { CliCommandPolicy } from "./CliCommandPolicy.js";
 import { ExecutionTaskRuntime } from "./ExecutionTaskRuntime.js";
@@ -39,10 +41,7 @@ export class ShellCommandRuntime implements ShellCommandRuntimePort {
     if (!executable) {
       throw new Error("ShellCommandRuntime requires executable or command.");
     }
-    const runner = new ExecutionTaskRuntime({
-      policy: new CliCommandPolicy({ allowedRoot: input.projectRootPath }),
-      outputBaseDir: resolve(input.projectRootPath, ".horus", "execution-tasks"),
-    });
+    const runner = buildExecutionTaskRuntime(input.projectRootPath);
     const handle = await runner.start(
       {
         id: input.request.commandId,
@@ -133,6 +132,45 @@ export class ShellCommandRuntime implements ShellCommandRuntimePort {
       background: false,
     });
   }
+
+  async listTasks(input: {
+    readonly projectRootPath: string;
+    readonly limit?: number | undefined;
+  }): Promise<ShellCommandTaskSummary[]> {
+    const runner = buildExecutionTaskRuntime(input.projectRootPath);
+    const tasks = await runner.listTasks({ limit: input.limit });
+    return tasks.map((task) => ({
+      taskId: task.taskId,
+      commandId: task.commandId,
+      status: task.status,
+      startedAt: task.startedAt,
+      stdoutTail: task.stdoutTail,
+      stderrTail: task.stderrTail,
+    }));
+  }
+
+  async readOutput(input: {
+    readonly projectRootPath: string;
+    readonly taskId: string;
+    readonly stream: "stdout" | "stderr";
+    readonly offset?: number | undefined;
+    readonly limit?: number | undefined;
+  }): Promise<ShellCommandOutputRead> {
+    const runner = buildExecutionTaskRuntime(input.projectRootPath);
+    return runner.readOutput({
+      taskId: input.taskId,
+      stream: input.stream,
+      ...(input.offset !== undefined ? { offset: input.offset } : {}),
+      ...(input.limit !== undefined ? { limit: input.limit } : {}),
+    });
+  }
+}
+
+function buildExecutionTaskRuntime(projectRootPath: string): ExecutionTaskRuntime {
+  return new ExecutionTaskRuntime({
+    policy: new CliCommandPolicy({ allowedRoot: projectRootPath }),
+    outputBaseDir: resolve(projectRootPath, ".horus", "execution-tasks"),
+  });
 }
 
 function buildShellCommandResult(input: {

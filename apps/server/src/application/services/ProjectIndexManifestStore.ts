@@ -21,8 +21,60 @@ export interface ProjectIndexManifestRecord {
   readonly invalidations: number;
   readonly fileCount: number | null;
   readonly stack: string | null;
+  readonly repositoryIndex?: ProjectIndexSnapshotSummary | undefined;
   readonly notes: readonly string[];
   readonly updatedAt: string;
+}
+
+export interface ProjectIndexSnapshotSummary {
+  readonly files: readonly {
+    readonly path: string;
+    readonly contentHash: string;
+    readonly sizeBytes: number;
+    readonly modifiedAt: string;
+    readonly language?: string | undefined;
+  }[];
+  readonly ignorePolicy: {
+    readonly gitignoreApplied: boolean;
+    readonly horusignoreApplied: boolean;
+    readonly ignoredEntries: number;
+    readonly blockedFiles: number;
+    readonly binaryFiles: number;
+    readonly oversizedFiles: number;
+  };
+  readonly ast: {
+    readonly status: "complete" | "partial" | "failed" | "unavailable";
+    readonly parsedDocumentCount: number;
+    readonly symbolCount: number;
+    readonly diagnosticCount: number;
+    readonly importCount: number;
+  };
+  readonly chunks: readonly {
+    readonly path: string;
+    readonly kind: string;
+    readonly startLine: number;
+    readonly endLine: number;
+    readonly symbolNames: readonly string[];
+  }[];
+  readonly embeddings: {
+    readonly enabled: boolean;
+    readonly provider?: string | undefined;
+    readonly model?: string | undefined;
+    readonly embeddedChunkCount: number;
+  };
+  readonly graph: {
+    readonly status: "complete" | "partial" | "failed" | "unavailable";
+    readonly nodeCount: number;
+    readonly edgeCount: number;
+    readonly importCount: number;
+    readonly exportCount: number;
+  };
+  readonly freshness: {
+    readonly status: "fresh" | "stale" | "rebuild_required";
+    readonly contentSignature: string;
+    readonly checkedAt: string;
+  };
+  readonly retrievalFusion: readonly string[];
 }
 
 export interface RecordSnapshotResultInput {
@@ -32,6 +84,7 @@ export interface RecordSnapshotResultInput {
   readonly mtimeBucket: number;
   readonly fileCount: number | null;
   readonly stack: string | null;
+  readonly repositoryIndex?: ProjectIndexSnapshotSummary | undefined;
   readonly notes?: readonly string[];
   readonly now?: () => Date;
 }
@@ -75,6 +128,7 @@ export class ProjectIndexManifestStore {
       invalidations: (previous?.invalidations ?? 0) + (isInvalidation ? 1 : 0),
       fileCount: input.fileCount,
       stack: input.stack,
+      ...(input.repositoryIndex ? { repositoryIndex: input.repositoryIndex } : {}),
       notes: dedupe([...(previous?.notes ?? []), ...(input.notes ?? [])]).slice(-20),
       updatedAt: now().toISOString(),
     };
