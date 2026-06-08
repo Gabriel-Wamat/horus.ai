@@ -139,9 +139,9 @@ The server entrypoint is:
 apps/server/dist/main.js
 ```
 
-Runtime behavior is configured through environment variables such as `PORT`, `HOST`, `PERSISTENCE_DRIVER`, `DATABASE_URL`, `HORUS_AUTH_MODE`, `HORUS_API_TOKEN`, and provider settings.
+Runtime behavior for local use is intentionally small: choose an LLM provider, set the matching API key, and optionally change `PORT`, `HOST`, `CORS_ORIGIN`, or `HORUS_DATA_DIR`.
 
-For local use, leave `PERSISTENCE_DRIVER`, `HORUS_AUTH_MODE`, and `HORUS_API_TOKEN` unset. Horus will use file persistence under `.horus/data` and no local auth token.
+By default, Horus uses file persistence under `.horus/data` and does not require a local auth token or database.
 
 ## Docker Run
 
@@ -212,29 +212,12 @@ Expected result:
 - Docker stack becomes healthy
 - `pnpm verify:docker` succeeds against `http://localhost:8080`
 
-## Production Notes
-
-For a real multi-user deployment, configure explicit production settings instead of the local defaults:
-
-```bash
-HORUS_ENV=production
-HORUS_AUTH_MODE=token
-HORUS_API_TOKEN=<server-token>
-HORUS_TENANT_ID=<tenant-id>
-PERSISTENCE_DRIVER=postgres
-DATABASE_URL=<postgres-url>
-CORS_ORIGIN=<allowed-origin>
-```
-
-The local Docker Compose file is intentionally optimized for first-run usability. Production deployments should provide their own database, secret management, TLS, and reverse proxy policy.
-
 ## Troubleshooting
 
 - Missing provider key: configure `.env` or a provider profile in the UI.
 - Port conflict: set `PORT`, `HOST`, or Compose port mappings.
 - CORS issue: set `CORS_ORIGIN` only when using split frontend/API origins.
-- Lost local state: verify `HORUS_DATA_DIR` and `PERSISTENCE_DRIVER`.
-- Postgres startup failure: only applies when `PERSISTENCE_DRIVER=postgres`; verify `DATABASE_URL`, `DATABASE_SSL`, and migration logs.
+- Lost local state: verify `HORUS_DATA_DIR` or the `horus-data` Docker volume.
 - Docker hangs or fails with `input/output error`: inspect Docker Desktop logs for `EXT4-fs` or `vda1` read-only errors. That is a local Docker VM disk problem. Restart Docker Desktop first; if it remains read-only, repair or reset Docker Desktop data before rerunning the stack.
 
 ## License
