@@ -179,6 +179,57 @@ export const HorusAgentEvidenceSummarySchema = z.object({
   errorMessages: z.array(z.string().trim().min(1)).default([]),
 });
 
+export const AgentOperationTimelineItemKindSchema = z.enum([
+  "file",
+  "command",
+  "diff",
+  "failure",
+  "retry",
+  "validation",
+  "event",
+]);
+
+export const AgentOperationTimelineStatusSchema = z.enum([
+  "running",
+  "succeeded",
+  "failed",
+  "blocked",
+  "awaiting_approval",
+  "info",
+]);
+
+export const AgentOperationTimelineItemSchema = z.object({
+  id: z.string().min(1),
+  kind: AgentOperationTimelineItemKindSchema,
+  status: AgentOperationTimelineStatusSchema,
+  title: z.string().min(1),
+  detail: z.string().nullable().default(null),
+  timestamp: z.string().datetime(),
+  sourceEventId: z.string().min(1).nullable().default(null),
+  operationId: z.string().min(1).nullable().default(null),
+  commandId: z.string().trim().min(1).nullable().default(null),
+  taskId: z.string().trim().min(1).nullable().default(null),
+  filePath: z.string().trim().min(1).nullable().default(null),
+  diffId: z.string().trim().min(1).nullable().default(null),
+});
+
+export const AgentOperationTimelineGroupSchema = z.object({
+  id: z.string().min(1),
+  threadId: z.string().uuid(),
+  groupKey: z.string().min(1),
+  operationalSessionId: z.string().uuid().nullable().default(null),
+  taskId: z.string().trim().min(1).nullable().default(null),
+  agentName: AgentNameSchema.nullable().default(null),
+  agentProfileId: AgentProfileIdSchema.nullable().default(null),
+  nodeId: HorusWorkflowNodeIdSchema.nullable().default(null),
+  toolName: AgentToolNameSchema.nullable().default(null),
+  title: z.string().min(1),
+  status: AgentOperationTimelineStatusSchema,
+  startedAt: z.string().datetime(),
+  finishedAt: z.string().datetime().nullable().default(null),
+  items: z.array(AgentOperationTimelineItemSchema).default([]),
+});
+
 export const HorusRunStorySnapshotSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1),
@@ -203,6 +254,7 @@ export const HorusRunSnapshotSchema = z.object({
   agentExecutions: z.array(HorusAgentExecutionSnapshotSchema),
   events: z.array(HorusRunEventSnapshotSchema),
   evidenceSummaries: z.array(HorusAgentEvidenceSummarySchema).default([]),
+  operationTimeline: z.array(AgentOperationTimelineGroupSchema).default([]),
   runbookEntries: z.array(AgentRunbookEntrySchema).default([]),
   validationSummary: ValidationGateSummarySchema.optional(),
   sourceState: WorkflowStateSchema,
@@ -290,6 +342,18 @@ export type HorusWorkflowStepSnapshot = z.infer<typeof HorusWorkflowStepSnapshot
 export type HorusRunEventSnapshot = z.infer<typeof HorusRunEventSnapshotSchema>;
 export type HorusAgentExecutionSnapshot = z.infer<typeof HorusAgentExecutionSnapshotSchema>;
 export type HorusAgentEvidenceSummary = z.infer<typeof HorusAgentEvidenceSummarySchema>;
+export type AgentOperationTimelineItemKind = z.infer<
+  typeof AgentOperationTimelineItemKindSchema
+>;
+export type AgentOperationTimelineStatus = z.infer<
+  typeof AgentOperationTimelineStatusSchema
+>;
+export type AgentOperationTimelineItem = z.infer<
+  typeof AgentOperationTimelineItemSchema
+>;
+export type AgentOperationTimelineGroup = z.infer<
+  typeof AgentOperationTimelineGroupSchema
+>;
 export type HorusRunStorySnapshot = z.infer<typeof HorusRunStorySnapshotSchema>;
 export type HorusRunSnapshot = z.infer<typeof HorusRunSnapshotSchema>;
 export type HorusRunLocator = z.infer<typeof HorusRunLocatorSchema>;

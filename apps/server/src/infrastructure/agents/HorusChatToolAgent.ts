@@ -49,6 +49,11 @@ import {
   shellCommandResultToChatStreamEvent,
   type ToolCallEvidence,
 } from "./HorusChatToolEvidence.js";
+import {
+  createHorusChatTextStreamPolisher,
+  HORUS_CHAT_RESPONSE_STYLE_PROMPT,
+  polishHorusChatAssistantText,
+} from "../../application/services/HorusChatResponseStyle.js";
 
 export {
   resolveProjectToolRuntimeId,
@@ -201,7 +206,7 @@ const CHAT_TOOL_SPECS: ChatToolSpec[] = [
   {
     name: "run_command",
     description:
-      "Run a governed project command through the controlled shell runtime. Prefer registered commandId for known validations; use command for real bash diagnostics with pipes/conditionals when the catalog is not enough. Use background=true for long-running tasks.",
+      "Run a governed project command through the controlled shell runtime. Prefer registered commandId for known validations; use command only for simple allowed diagnostics. Pipelines, redirection, command substitution, chained shell logic, and arbitrary shell scripts are denied by policy. Use background=true for long-running tasks.",
     schema: z.object({
       commandId: z.string(),
       command: z.string().optional(),
@@ -233,7 +238,7 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
     for await (const event of this.streamAgent(input)) {
       if (event.type === "text") text += event.text;
     }
-    const trimmed = text.trim();
+    const trimmed = polishHorusChatAssistantText(text);
     if (!trimmed) {
       throw new Error("Horus tool agent returned an empty response.");
     }
@@ -251,13 +256,18 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
   async *streamAgent(
     input: HorusChatToolAgentInput
   ): AsyncIterable<HorusChatAgentStreamEvent> {
+    const directConversation = shouldUseDirectConversationalAnswer(input);
     const toolProjectId = resolveProjectToolRuntimeId(input.project);
     const tools = toolProjectId ? this.buildBoundTools() : [];
     const baseModel = createChatModel(
       "horus",
-      { temperature: 0.2, maxTokens: 2200 },
+      { temperature: 0.2, maxTokens: directConversation ? 900 : 2200 },
       input.llmSettings
     );
+    if (directConversation) {
+      yield* streamDirectConversationalAnswer(baseModel as unknown as InvokableModel, input);
+      return;
+    }
     const model: InvokableModel = (
       tools.length > 0 && typeof baseModel.bindTools === "function"
         ? baseModel.bindTools(tools)
@@ -457,6 +467,7 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
       let response: AIMessage;
       let bufferedText = "";
       const holdTextUntilToolDecision = shouldHoldTextUntilToolDecision(input);
+      const textPolisher = createHorusChatTextStreamPolisher();
       if (typeof model.stream === "function") {
         const tokenStream = await model.stream(messages, options);
         let aggregated: AIMessageChunk | undefined;
@@ -468,9 +479,19 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
             if (holdTextUntilToolDecision) {
               bufferedText += piece;
             } else {
-              yieldedText = true;
-              yield { type: "text", text: piece };
+              const polishedPiece = textPolisher.push(piece);
+              if (polishedPiece) {
+                yieldedText = true;
+                yield { type: "text", text: polishedPiece };
+              }
             }
+          }
+        }
+        if (!holdTextUntilToolDecision) {
+          const polishedTail = textPolisher.finish();
+          if (polishedTail) {
+            yieldedText = true;
+            yield { type: "text", text: polishedTail };
           }
         }
         response = (aggregated ?? new AIMessage("")) as unknown as AIMessage;
@@ -481,8 +502,11 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
           if (holdTextUntilToolDecision) {
             bufferedText += textPart;
           } else {
-            yieldedText = true;
-            yield { type: "text", text: textPart };
+            const polishedText = polishHorusChatAssistantText(textPart);
+            if (polishedText) {
+              yieldedText = true;
+              yield { type: "text", text: polishedText };
+            }
           }
         }
       }
@@ -503,9 +527,10 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
           messages.push(new HumanMessage(buildForcedCodeChangeContinuationPrompt()));
           continue;
         }
-        if (bufferedText) {
+        const polishedBufferedText = polishHorusChatAssistantText(bufferedText);
+        if (polishedBufferedText) {
           yieldedText = true;
-          yield { type: "text", text: bufferedText };
+          yield { type: "text", text: polishedBufferedText };
         }
         return;
       }
@@ -706,12 +731,12 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
         [
           ...messages,
           new HumanMessage(
-            "Resuma em português o que você fez e o estado atual, sem chamar mais ferramentas."
+            "Finalize em português com o ponto principal primeiro, o que foi feito, a validação real e o estado atual. Não chame mais ferramentas."
           ),
         ],
         buildChatModelInvokeOptions(input.signal)
       );
-      const closingText = extractText(closing.content);
+      const closingText = polishHorusChatAssistantText(extractText(closing.content));
       if (closingText) yield { type: "text", text: closingText };
     }
   }
@@ -756,6 +781,79 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
       };
     }
   }
+}
+
+export function shouldUseDirectConversationalAnswer(
+  input: Pick<HorusChatToolAgentInput, "intentKind" | "message">
+): boolean {
+  if (isCodeChangeIntent(input)) return false;
+  return !shouldAutoRunDiagnostics(input.message);
+}
+
+async function* streamDirectConversationalAnswer(
+  model: InvokableModel,
+  input: HorusChatToolAgentInput
+): AsyncIterable<HorusChatAgentStreamEvent> {
+  const messages: BaseMessage[] = [
+    new SystemMessage(buildDirectConversationalPrompt(input)),
+    new HumanMessage(input.message),
+  ];
+  const options = buildChatModelInvokeOptions(input.signal);
+
+  if (typeof model.stream === "function") {
+    const tokenStream = await model.stream(messages, options);
+    const textPolisher = createHorusChatTextStreamPolisher();
+    for await (const chunk of tokenStream) {
+      throwIfAborted(input.signal);
+      const piece = extractText(chunk.content);
+      if (!piece) continue;
+      const polishedPiece = textPolisher.push(piece);
+      if (polishedPiece) yield { type: "text", text: polishedPiece };
+    }
+    const polishedTail = textPolisher.finish();
+    if (polishedTail) yield { type: "text", text: polishedTail };
+    return;
+  }
+
+  const response = await model.invoke(messages, options);
+  const text = polishHorusChatAssistantText(extractText(response.content));
+  if (text) yield { type: "text", text };
+}
+
+function buildDirectConversationalPrompt(input: HorusChatToolAgentInput): string {
+  const { context, project, codeContext } = input;
+  const chatHistory = context.messages
+    .slice(-8)
+    .map((message) => `${message.role}: ${message.compactBody ?? message.body}`)
+    .join("\n");
+  const codeEvidence = formatCodeExcerpts(codeContext);
+
+  return `# Identidade
+Você é Horus, um agente de engenharia conversando dentro do produto.
+Esta é uma resposta direta: não chame ferramentas, não fale de tools e não diga
+que executou validação se nenhuma validação foi executada.
+
+${HORUS_CHAT_RESPONSE_STYLE_PROMPT}
+
+Regras de forma:
+- respeite limites explícitos do usuário; se ele pedir exatamente N bullets,
+  responda com exatamente N bullets e nada além disso;
+- se o usuário pedir uma frase curta, entregue uma frase curta;
+- para resumo, priorize produto, arquitetura e estado atual, sem relatório
+  operacional.
+
+# Contexto atual
+chat_session_id: ${context.session.id}
+active_user_story: ${context.activeUserStory.title}
+active_user_story_description: ${context.activeUserStory.description}
+active_spec_summary: ${context.activeSpec?.summary ?? "sem spec ativa"}
+selected_project_name: ${project?.name ?? "nenhum"}
+selected_project_root: ${project?.rootPath ?? "nenhum"}
+
+${codeEvidence}
+
+# Histórico recente do chat
+${chatHistory || "sem mensagens anteriores"}`;
 }
 
 function rememberShellToolMetadata(input: {
@@ -816,10 +914,11 @@ uma ferramenta, leia o resultado e continue até concluir. Ferramentas disponív
   trecho primeiro com read_file startLine/endLine.
 - delete_file: remover arquivo. SEMPRE leia o arquivo antes.
 - run_validation_command / run_command: validar e executar comandos governados.
-  run_command aceita command para bash real (pipes, condicionais e inspeção de
-  terminal) ou executable/args para chamadas diretas. O runtime grava stdout/stderr,
-  streama progresso no Execution Console, permite background=true, kill/retry e
-  aplica permissões do perfil antes de spawnar.
+  run_command aceita command apenas para diagnósticos simples permitidos ou
+  executable/args para chamadas diretas. Pipes, redirecionamento, substituição de
+  comando, encadeamento de shell e scripts arbitrários são bloqueados por política.
+  O runtime grava stdout/stderr, streama progresso no Execution Console, permite
+  background=true, kill/retry e aplica permissões do perfil antes de spawnar.
 
 Regras de execução:
 - Quando o usuário pedir uma mudança clara, EXECUTE de fato via ferramentas; não
@@ -836,8 +935,8 @@ Regras de execução:
 - Antes de editar, leia o arquivo. Faça mudanças mínimas e coerentes com a spec ativa.
 - Depois de alterar código, rode validação quando houver comando aplicável. Se
   falhar, leia a linha do erro, corrija e valide de novo até passar ou atingir o limite.
-- Para diagnóstico de CLI que precisa de pipe, encadeamento ou inspeção curta,
-  use run_command com command em vez de tentar simular shell com executable/args.
+- Para diagnóstico de CLI, prefira commandId registrado ou executable/args. Se
+  usar command, mantenha uma chamada simples aceita pela política do runtime.
 - Para servidores dev/watchers ou comandos longos, use run_command com
   background=true. O retorno traz taskId para acompanhar, parar ou tentar de novo
   pelo Execution Console; não espere um servidor ficar bloqueando o chat.
@@ -862,10 +961,12 @@ ${toolsSection}
 
 ${turnContract}
 
-# Estilo
-- Responda sempre em português brasileiro, direto e técnico, como um parceiro sênior.
+${HORUS_CHAT_RESPONSE_STYLE_PROMPT}
+
+Regras adicionais para agente com ferramentas:
 - Para saudações ou perguntas simples, responda curto e natural, sem burocracia.
-- Não exponha jargão interno (profiles, schemas) nem chaves/segredos.
+- Quando executar ferramentas, não narre intenção antiga como se fosse resultado:
+  diferencie "rodei", "falhou", "não rodei" e "não havia comando governado".
 - Use a spec ativa como contrato quando existir; se não houver, não invente.
 
 # Contexto isolado

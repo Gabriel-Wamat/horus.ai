@@ -20,6 +20,7 @@ export class ShellCommandRuntime implements ShellCommandRuntimePort {
       parentSpanId?: string | null;
       toolCallId?: string | null;
       runId?: string | null;
+      operationalSessionId?: string | null;
       projectId?: string | null;
       agentId?: string | null;
       filePath?: string | null;
@@ -52,6 +53,9 @@ export class ShellCommandRuntime implements ShellCommandRuntimePort {
           : {}),
         ...(request.toolCallId !== undefined ? { toolCallId: request.toolCallId } : {}),
         ...(request.runId !== undefined ? { runId: request.runId } : {}),
+        ...(request.operationalSessionId !== undefined
+          ? { operationalSessionId: request.operationalSessionId }
+          : {}),
         ...(request.projectId !== undefined ? { projectId: request.projectId } : {}),
         ...(request.agentId !== undefined ? { agentId: request.agentId } : {}),
         ...(request.filePath !== undefined ? { filePath: request.filePath } : {}),
@@ -80,6 +84,7 @@ export class ShellCommandRuntime implements ShellCommandRuntimePort {
                 parentSpanId: event.parentSpanId,
                 toolCallId: event.toolCallId,
                 runId: event.runId,
+                operationalSessionId: event.operationalSessionId,
                 projectId: event.projectId,
                 agentId: event.agentId,
                 filePath: event.filePath,
@@ -145,6 +150,7 @@ function buildShellCommandResult(input: {
     parentSpanId: input.task.parentSpanId,
     toolCallId: input.task.toolCallId,
     runId: input.task.runId,
+    operationalSessionId: input.task.operationalSessionId,
     projectId: input.task.projectId,
     agentId: input.task.agentId,
     filePath: input.task.filePath,

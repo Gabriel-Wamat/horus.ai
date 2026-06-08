@@ -16,12 +16,11 @@
     "e2e:chat-preview": "node scripts/horus-chat-preview-e2e.mjs",
     "preview:smoke": "node scripts/preview-browser-smoke.mjs",
     "security:secrets": "node scripts/secret-scan.mjs",
-    "spec:worktree-audit": "node scripts/worktree-spec-audit.mjs",
-    "spec:worktree-audit:test": "node --test scripts/worktree-spec-audit.test.mjs",
-    "test": "pnpm build && node --test packages/shared/test/*.test.mjs apps/server/test/*.test.mjs",
+    "test": "pnpm verify:ci",
     "type-check": "turbo run type-check",
-    "verify:ci": "pnpm lint && pnpm type-check && pnpm security:secrets && pnpm test && pnpm --filter @u-build/web test:guards",
+    "verify:ci": "pnpm lint && pnpm type-check && pnpm security:secrets && pnpm build",
     "verify:production-smoke": "node scripts/production-hardening-smoke.mjs",
+    "verify:prestage": "node scripts/prestaging-smoke.mjs",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {

@@ -14,18 +14,23 @@ services:
       retries: 20
 
   api:
-    build: .
+    build:
+      context: .
+      target: server-runtime
     depends_on:
       postgres:
         condition: service_healthy
     environment:
+      HORUS_ENV: production
+      HORUS_AUTH_MODE: token
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
       PERSISTENCE_DRIVER: postgres
       DATABASE_URL: postgresql://horus:${POSTGRES_PASSWORD}@postgres:5432/horus
-      CORS_ORIGIN: ${CORS_ORIGIN:?Set CORS_ORIGIN}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       HORUS_API_TOKEN: ${HORUS_API_TOKEN:?Set HORUS_API_TOKEN}
+      HORUS_API_ADMIN_TOKEN: ${HORUS_API_ADMIN_TOKEN:-}
       HORUS_TENANT_ID: ${HORUS_TENANT_ID:?Set HORUS_TENANT_ID}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-gpt-5-mini}
@@ -33,7 +38,7 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
     ports:
-      - "3000:3000"
+      - "3001:3000"
     healthcheck:
       test:
         [
@@ -42,6 +47,24 @@ services:
           "-e",
           "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      target: web-runtime
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      HORUS_API_TOKEN: ${HORUS_API_TOKEN:?Set HORUS_API_TOKEN}
+      HORUS_TENANT_ID: ${HORUS_TENANT_ID:?Set HORUS_TENANT_ID}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 10s
       timeout: 5s
       retries: 12

@@ -6,7 +6,7 @@ import type {
   ValidationStepKind,
 } from "@u-build/shared";
 
-const COMMAND_LIMIT = 5;
+const COMMAND_LIMIT = 6;
 const EXECUTABLE_VALIDATION_CATEGORIES = new Set<ProjectScriptCategory>([
   "typecheck",
   "check",
@@ -76,7 +76,19 @@ function selectValidationCommandIds(snapshot: ProjectContextSnapshot): string[] 
     }
   }
 
-  return [...new Set(selected)].slice(0, COMMAND_LIMIT);
+  const bootstrap = selectBootstrapCommandIds(snapshot, selected);
+  return [...new Set([...bootstrap, ...selected])].slice(0, COMMAND_LIMIT);
+}
+
+function selectBootstrapCommandIds(
+  snapshot: ProjectContextSnapshot,
+  validationCommandIds: readonly string[]
+): string[] {
+  if (validationCommandIds.length === 0) return [];
+  const packageManager = snapshot.inspection.packageManager;
+  if (!packageManager || packageManager.status !== "detected") return [];
+  if (packageManager.name === "unknown") return [];
+  return ["install-root-dependencies"];
 }
 
 function groupScriptsByCategory(

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -66,11 +66,37 @@ async function listGitCandidateFiles() {
     "--cached",
     "--others",
     "--exclude-standard",
-  ]);
+  ]).catch(() => ({ stdout: "" }));
+  if (stdout.length === 0) {
+    return listFilesystemCandidateFiles(process.cwd());
+  }
   return stdout
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+}
+
+async function listFilesystemCandidateFiles(rootDir) {
+  const files = [];
+  await collectCandidateFiles(rootDir, rootDir, files);
+  return files;
+}
+
+async function collectCandidateFiles(rootDir, currentDir, files) {
+  const entries = await readdir(currentDir, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    const absolutePath = join(currentDir, entry.name);
+    const relativePath = relative(rootDir, absolutePath).split(sep).join("/");
+    if (entry.isDirectory()) {
+      if (shouldScanPath(`${relativePath}/`)) {
+        await collectCandidateFiles(rootDir, absolutePath, files);
+      }
+      continue;
+    }
+    if (entry.isFile()) {
+      files.push(relativePath);
+    }
+  }
 }
 
 function shouldScanPath(filePath) {

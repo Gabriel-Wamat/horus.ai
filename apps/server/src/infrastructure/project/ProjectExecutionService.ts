@@ -227,6 +227,7 @@ export class ProjectExecutionService {
       parentSpanId?: string | null;
       toolCallId?: string | null;
       runId?: string | null;
+      operationalSessionId?: string | null;
       projectId?: string | null;
       agentId?: string | null;
       filePath?: string | null;
@@ -280,6 +281,9 @@ export class ProjectExecutionService {
                   ...(event.parentSpanId ? { parentSpanId: event.parentSpanId } : {}),
                   ...(event.toolCallId ? { toolCallId: event.toolCallId } : {}),
                   ...(event.runId ? { runId: event.runId } : {}),
+                  ...(event.operationalSessionId
+                    ? { operationalSessionId: event.operationalSessionId }
+                    : {}),
                   ...(event.projectId ? { projectId: event.projectId } : {}),
                   ...(event.agentId ? { agentId: event.agentId } : {}),
                   ...(event.filePath ? { filePath: event.filePath } : {}),

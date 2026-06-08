@@ -10,6 +10,11 @@ import {
   buildChatModelInvokeOptions,
   invokeChatModel,
 } from "../llm/invokeChatModel.js";
+import {
+  HORUS_CHAT_RESPONSE_STYLE_PROMPT,
+  polishHorusChatAssistantText,
+  streamPolishedHorusChatText,
+} from "../../application/services/HorusChatResponseStyle.js";
 
 export interface HorusChatAnswerInput {
   message: string;
@@ -35,7 +40,7 @@ export class HorusChatAgentImpl implements HorusChatResponder {
       new SystemMessage(buildHorusSystemPrompt(input)),
       new HumanMessage(buildHorusUserPrompt(input)),
     ], input.signal);
-    const text = extractText(response.content).trim();
+    const text = polishHorusChatAssistantText(extractText(response.content));
     if (!text) {
       throw new Error("Horus LLM returned an empty response.");
     }
@@ -55,10 +60,16 @@ export class HorusChatAgentImpl implements HorusChatResponder {
       messages,
       buildChatModelInvokeOptions(input.signal)
     );
-    for await (const chunk of stream) {
-      const text = extractText(chunk.content);
-      if (text) yield text;
-    }
+    yield* streamPolishedHorusChatText(extractTextChunks(stream));
+  }
+}
+
+async function* extractTextChunks(
+  stream: AsyncIterable<{ content: unknown }>
+): AsyncIterable<string> {
+  for await (const chunk of stream) {
+    const text = extractText(chunk.content);
+    if (text) yield text;
   }
 }
 
@@ -118,19 +129,15 @@ Nesta resposta:
 - se faltar contexto para responder com seguranca, diga exatamente qual dado
   falta e por que ele importa.
 
-# Estilo de resposta
-- Responda sempre em portugues brasileiro.
-- Seja direto, tecnico e util. Evite frases genericas de assistente.
-- Use tom de parceiro de engenharia senior: claro, factual e sem exagero.
+${HORUS_CHAT_RESPONSE_STYLE_PROMPT}
+
+Regras adicionais para resposta conversacional:
 - Para saudacoes simples, responda em 1 ou 2 frases, identifique-se como Horus
-  e diga uma capacidade concreta ligada ao contexto atual. Nao responda apenas
-  "como posso ajudar?".
+  e cite uma capacidade concreta ligada ao contexto atual.
 - Para perguntas tecnicas, explique a conclusao e cite os sinais de contexto
   usados, sem inventar arquivos, APIs ou estados.
 - Para pedidos ambiguos, mantenha em chat e ofereca a menor proxima decisao
   segura.
-- Nao use markdown pesado sem necessidade; use bullets apenas quando eles
-  melhorarem a leitura.
 - Nao exponha chaves, tokens, variaveis sensiveis, segredos ou valores de env.
 
 # Regras de grounding

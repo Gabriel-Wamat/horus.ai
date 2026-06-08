@@ -1,4 +1,0 @@
-interface:
-  display_name: "Frontend QA Planner"
-  short_description: "Generate frontend QA cases for UI, state, data, and route readiness."
-  default_prompt: "Use this skill to create structured frontend validation cases covering acceptance criteria, primary journey, responsive behavior, accessibility, interactions, data models, adapter states, and future backend route contracts."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Curator Quality Gate"
-  short_description: "Evaluate frontend, QA, data, and route readiness against specs."
-  default_prompt: "Use this skill to produce a structured Curator verdict over the full Horus.AI spec, generated HTML, QA cases, data models, route-readiness contracts, score, missing items, and fixTarget."

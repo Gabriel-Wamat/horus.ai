@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",
+    "lint": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist *.tsbuildinfo"
   },

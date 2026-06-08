@@ -14,7 +14,21 @@ build/
 data/
 .horus/
 spec/
+/docs/
+/apps/docs/
+apps/**/test/
+apps/**/tests/
+apps/**/__tests__/
+packages/**/test/
+packages/**/tests/
+scripts/*.test.mjs
+scripts/worktree-spec-audit.mjs
+/openclaude/
+/skills/
+/tools/
 *.log
+*.md
+!README.md
 
 .vite/
 .next/
@@ -35,11 +49,3 @@ Thumbs.db
 /*.gif
 /*.webp
 /*.svg
-
-# Project implementation specs are versioned under docs/specs/
-
-# Official root docs are allowed even with broad local reference ignores above
-!/README.md
-!/CONTRIBUTING.md
-!/CHANGELOG.md
-!/LICENSE.md

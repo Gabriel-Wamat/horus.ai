@@ -8,6 +8,7 @@ export interface CommandPermissionSpec {
   readonly parentSpanId?: string | null;
   readonly toolCallId?: string | null;
   readonly runId?: string | null;
+  readonly operationalSessionId?: string | null;
   readonly projectId?: string | null;
   readonly agentId?: string | null;
   readonly filePath?: string | null;
@@ -64,23 +65,8 @@ export interface NormalizedCommandPermissionSpec {
   readonly approvalReason: string | null;
 }
 
-const DEFAULT_ALLOWED_EXECUTABLES = [
-  "node",
-  process.execPath,
-  "pnpm",
-  "npm",
-  "yarn",
-  "bun",
-] as const;
-
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_TIMEOUT_MS = 120_000;
-const DEFAULT_SHELL = "bash";
-
-const SHELL_EXECUTABLES: Readonly<Record<"bash" | "sh", string>> = {
-  bash: "/bin/bash",
-  sh: "/bin/sh",
-};
 
 const SAFE_SHELL_UTILITIES = new Set([
   "[",
@@ -106,6 +92,16 @@ const SAFE_SHELL_UTILITIES = new Set([
   "wc",
   "xargs",
 ]);
+
+const DEFAULT_ALLOWED_EXECUTABLES = [
+  "node",
+  process.execPath,
+  "pnpm",
+  "npm",
+  "yarn",
+  "bun",
+  ...SAFE_SHELL_UTILITIES,
+] as const;
 
 const DENIED_EXECUTABLES = new Set([
   "curl",
@@ -560,6 +556,7 @@ interface ShellCommandSegment {
 interface ShellScriptAnalysis {
   readonly tokens: string[];
   readonly commands: ShellCommandSegment[];
+  readonly hasEnvironmentAssignment: boolean;
   readonly hasRedirection: boolean;
   readonly redirectionOperator: string | null;
   readonly hasUnmanagedBackground: boolean;
@@ -596,6 +593,7 @@ function analyzeShellScript(script: string): ShellScriptAnalysis {
   let current: { executable: string; args: string[] } | null = null;
   let expectingCommand = true;
   let skipRedirectTarget = false;
+  let hasEnvironmentAssignment = false;
 
   for (const token of tokens) {
     if (SHELL_REDIRECT_OPERATORS.has(token)) {
@@ -619,7 +617,10 @@ function analyzeShellScript(script: string): ShellScriptAnalysis {
       continue;
     }
     if (expectingCommand) {
-      if (isEnvironmentAssignment(token)) continue;
+      if (isEnvironmentAssignment(token)) {
+        hasEnvironmentAssignment = true;
+        continue;
+      }
       current = { executable: token, args: [] };
       commands.push(current);
       expectingCommand = false;
@@ -631,6 +632,7 @@ function analyzeShellScript(script: string): ShellScriptAnalysis {
   return {
     tokens,
     commands,
+    hasEnvironmentAssignment,
     hasRedirection: tokens.some((token) => SHELL_REDIRECT_OPERATORS.has(token)),
     redirectionOperator:
       tokens.find((token) => SHELL_REDIRECT_OPERATORS.has(token)) ?? null,
@@ -725,6 +727,7 @@ export class CommandPermissionEngine {
       return this.reject(profileDecision.reason, {
         approvalRequired: profileDecision.approvalRequired,
         risk: profileDecision.risk,
+        action: profileDecision.approvalRequired ? "ask" : "deny",
       });
     }
 
@@ -776,7 +779,6 @@ export class CommandPermissionEngine {
     timeoutMs: number;
   }): Promise<CommandPermissionDecision> {
     const command = input.spec.command?.trim() ?? "";
-    const shell = input.spec.shell ?? DEFAULT_SHELL;
     const analysis = analyzeShellScript(command);
     const profileDecision = this.evaluateShellProfilePolicy({
       agentId: input.spec.agentId,
@@ -787,18 +789,39 @@ export class CommandPermissionEngine {
       return this.reject(profileDecision.reason, {
         approvalRequired: profileDecision.approvalRequired,
         risk: profileDecision.risk,
+        action: profileDecision.approvalRequired ? "ask" : "deny",
       });
     }
 
+    const simpleCommandReason = this.simpleShellCommandDenialReason(analysis);
+    if (simpleCommandReason) return this.reject(simpleCommandReason);
+    const commandSegment = analysis.commands[0];
+    if (!commandSegment) return this.reject("command is empty");
+    const executable = commandSegment.executable;
+    const name = executableName(executable);
+    if (
+      !SAFE_SHELL_UTILITIES.has(name) &&
+      !this.allowedExecutables.has(executable) &&
+      !this.allowedExecutables.has(name)
+    ) {
+      return this.reject(`executable is not allowlisted: ${executable}`);
+    }
+
+    const packageScriptReason = await this.evaluatePackageScript({
+      executableName: name,
+      args: commandSegment.args,
+      cwd: input.cwd,
+    });
+    if (packageScriptReason) return this.reject(packageScriptReason);
+
     const approvalReason =
-      this.shellApprovalRequiredReason(analysis) ??
       this.shellCommandApprovalRequiredReason(analysis) ??
       profileDecision.approvalReason;
     const approvalRequired = approvalReason !== null;
     if (approvalRequired && input.spec.approved !== true) {
       return this.reject(approvalReason, {
         approvalRequired: true,
-        risk: analysis.hasCommandSubstitution || analysis.hasRedirection ? "high" : "medium",
+        risk: "medium",
         action: "ask",
       });
     }
@@ -811,9 +834,9 @@ export class CommandPermissionEngine {
       risk: approvalRequired ? "medium" : profileDecision.risk,
       normalized: {
         id: input.spec.id.trim(),
-        executable: SHELL_EXECUTABLES[shell],
-        executableName: shell,
-        args: ["-lc", command],
+        executable,
+        executableName: name,
+        args: commandSegment.args,
         cwd: input.cwd,
         timeoutMs: input.timeoutMs,
         env: { ...(input.spec.env ?? {}) },
@@ -872,12 +895,21 @@ export class CommandPermissionEngine {
     return null;
   }
 
-  private shellApprovalRequiredReason(analysis: ShellScriptAnalysis): string | null {
+  private simpleShellCommandDenialReason(analysis: ShellScriptAnalysis): string | null {
+    if (analysis.hasEnvironmentAssignment) {
+      return "inline environment assignments are not allowed in command text; use explicit env";
+    }
     if (analysis.hasCommandSubstitution) {
-      return "shell command substitution requires explicit approval";
+      return "shell command substitution is not allowed";
     }
     if (analysis.hasRedirection) {
-      return "shell redirection requires explicit approval";
+      return `shell redirection is not allowed: ${analysis.redirectionOperator ?? "redirection"}`;
+    }
+    if (analysis.hasUnmanagedBackground) {
+      return "unmanaged shell background operator is not allowed; use background=true";
+    }
+    if (analysis.commands.length !== 1) {
+      return "shell command text must be a single simple command";
     }
     return null;
   }

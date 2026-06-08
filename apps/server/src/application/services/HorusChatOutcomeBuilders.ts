@@ -53,10 +53,10 @@ export function labelForIntent(intent: HorusChatIntent): string {
     if (intent.previewAction === "reload") return "Recarregando preview";
     return "Iniciando preview";
   }
-  if (intent.kind === "code_change") return "Vou mexer nisso";
-  if (intent.kind === "generate_spec") return "Vou preparar a spec";
-  if (intent.kind === "clarify") return "Preciso de um detalhe";
-  return "Não posso executar isso";
+  if (intent.kind === "code_change") return "Editando projeto";
+  if (intent.kind === "generate_spec") return "Preparando spec";
+  if (intent.kind === "clarify") return "Preciso confirmar algo";
+  return "Não executável neste chat";
 }
 
 export function buildEvidenceSources(
@@ -87,7 +87,7 @@ export function mapGroundingStatus(
 }
 
 export function buildResponderFailureFallback(): string {
-  return "Não consegui gerar a resposta pelo modelo agora. Sua mensagem ficou salva e o chat continua disponível.";
+  return "Tive uma falha ao gerar a resposta agora. Sua mensagem ficou salva e o chat continua íntegro para retomar por ela.";
 }
 
 export function buildStreamFailureMessage(input: {
@@ -95,24 +95,24 @@ export function buildStreamFailureMessage(input: {
   contextMismatch?: boolean;
 }): string {
   if (input.contextMismatch) {
-    return "O contexto mudou no meio da resposta. Confira o projeto selecionado e tente de novo.";
+    return "O projeto ou contexto mudou no meio da resposta. Confira a seleção atual e envie o pedido novamente.";
   }
 
   if (input.stage === "classifying_intent") {
-    return "Não ficou claro se isso era pergunta ou mudança no código. Sua mensagem ficou salva; tente mandar de novo de forma mais direta.";
+    return "Fiquei em dúvida se você queria uma resposta ou uma alteração no código. Sua mensagem ficou salva; mande a ação com o arquivo ou objetivo principal.";
   }
 
   if (input.stage === "starting_action") {
-    return "Não consegui iniciar a execução. Sua mensagem ficou salva; tente de novo.";
+    return "Não consegui iniciar a execução. Nada novo foi aplicado; sua mensagem ficou salva para uma nova tentativa.";
   }
 
   if (input.stage === "streaming_answer") {
-    return "Comecei a responder, mas a geração falhou. Sua mensagem ficou salva; tente de novo.";
+    return "A resposta caiu no meio. Sua mensagem ficou salva e o histórico continua íntegro; posso retomar pelo mesmo pedido.";
   }
 
   if (input.stage === "saving_assistant_message") {
     return "Concluí a resposta, mas não consegui salvar no histórico. Recarregue a conversa.";
   }
 
-  return "Não consegui concluir esse pedido. Sua mensagem ficou salva; tente de novo.";
+  return "Não consegui concluir esse pedido agora. Sua mensagem ficou salva e o chat continua disponível.";
 }

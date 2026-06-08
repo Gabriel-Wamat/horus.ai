@@ -352,7 +352,6 @@ export class SubmitHorusChatTurnUseCase {
         intent.kind === "answer_question" || intent.kind === "code_change";
       let outcome: HorusChatOutcome;
       if (useAgentLoop) {
-        operationalWorkflowThreadId ??= project ? uuidv4() : undefined;
         failureStage = "loading_code_context";
         const codeContext = project && shouldLoadCodeContextForChatAnswer(effectiveMessage)
           ? await this.codeContextReader.buildContext({
@@ -497,7 +496,7 @@ export class SubmitHorusChatTurnUseCase {
             ? { retrievalNotes: exposedCodeContext.retrievalNotes }
             : {}),
           ...(toolSteps.length ? { toolSteps } : {}),
-          summary: summary.trim() || "Não consegui gerar uma resposta para esta mensagem.",
+          summary: summary.trim() || buildResponderFailureFallback(),
         };
       } else {
         const action = actionForIntent(intent);

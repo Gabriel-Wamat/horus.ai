@@ -41,12 +41,17 @@ export function useProjectChatScope({
     setIsLoadingProjectChatScope(true);
     void (async () => {
       const candidateIds = new Set<string>();
-      if (projectWorkspaceFolderId) candidateIds.add(projectWorkspaceFolderId);
 
       const folders = await workflowApi.listWorkspaceFolders();
       const matchingFolder = findProjectWorkspaceFolder(folders, selectedProject);
+      const listedFolderIds = new Set(folders.map((folder) => folder.id));
+      if (projectWorkspaceFolderId && listedFolderIds.has(projectWorkspaceFolderId)) {
+        candidateIds.add(projectWorkspaceFolderId);
+      }
       if (matchingFolder) candidateIds.add(matchingFolder.id);
-      if (workspaceFolderId) candidateIds.add(workspaceFolderId);
+      if (workspaceFolderId && listedFolderIds.has(workspaceFolderId)) {
+        candidateIds.add(workspaceFolderId);
+      }
 
       for (const folderId of candidateIds) {
         const artifacts = await workflowApi
