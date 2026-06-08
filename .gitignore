@@ -21,6 +21,7 @@ apps/**/tests/
 apps/**/__tests__/
 !apps/server/test/
 apps/server/test/*
+!apps/server/test/curatorRetryLimit.test.mjs
 !apps/server/test/frontAgentDesignIntelligence.test.mjs
 !apps/server/test/projectConstructionPreviewSession.test.mjs
 packages/**/test/

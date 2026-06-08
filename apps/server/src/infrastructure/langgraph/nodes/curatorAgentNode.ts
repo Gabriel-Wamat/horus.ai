@@ -12,7 +12,13 @@ import { summarizePromptContextForResult } from "../../prompt/PromptContextAssem
 import { attachAgentContextProfile } from "../../../application/services/AgentContextProfileService.js";
 import { defaultRuntimeHintCollector } from "../../../application/services/RuntimeHintCollector.js";
 import { buildRuntimeHintsFromHistory } from "../agentRuntimeContext.js";
-import type { ProjectContextSnapshot } from "@u-build/shared";
+import type {
+  ProjectContextSnapshot,
+  RuntimeValidationCommandEvidence,
+  RuntimeValidationEvidence,
+  Spec,
+  VisualGateResult,
+} from "@u-build/shared";
 
 const MAX_RETRIES = 3;
 
@@ -263,6 +269,15 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
       frontToolLoop?.status === "succeeded" &&
       frontToolLoop.changedFiles.length > 0;
 
+    const professionalEvidenceGate = evaluateProfessionalCuratorEvidenceGate({
+      state,
+      spec,
+      codeChangeSetPresent: Boolean(codeChangeSet),
+      preflight,
+      visualGate,
+      qaRuntimeValidation: qaOutput.runtimeValidation,
+    });
+
     const validation =
       deterministicCodeChangeGatesUnavailable
         ? {
@@ -295,6 +310,8 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
               missingItems: visualGateFeedbackItems(visualGate),
               fixTarget: "front" as const,
             }
+          : professionalEvidenceGate && !professionalEvidenceGate.passed
+            ? professionalEvidenceGate
           : deterministicCodeChangeGatesRequired &&
               codeChangeSet &&
               preflight?.passed === true &&
@@ -388,6 +405,14 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
                 runtimeValidation: preflight.runtimeEvidence,
             }
             : {}),
+        ...(professionalEvidenceGate
+          ? {
+              professionalEvidenceGate: {
+                passed: professionalEvidenceGate.passed,
+                missingItems: professionalEvidenceGate.missingItems,
+              },
+            }
+          : {}),
         ...(operationalMemory ? { operationalMemory } : {}),
         ...(traceability ? { traceability } : {}),
         ...(promptContext
@@ -520,6 +545,142 @@ function selectLatestFrontToolLoop(
     }
   }
   return undefined;
+}
+
+interface CuratorValidationVerdict {
+  passed: boolean;
+  score: number;
+  notes: string;
+  missingItems: string[];
+  fixTarget: "front" | "qa" | "both";
+}
+
+interface ProfessionalCuratorEvidenceGateInput {
+  state: UBuildState;
+  spec: Spec;
+  codeChangeSetPresent: boolean;
+  preflight:
+    | {
+        passed: boolean;
+        runtimeEvidence: RuntimeValidationEvidence;
+      }
+    | undefined;
+  visualGate: VisualGateResult | undefined;
+  qaRuntimeValidation: RuntimeValidationEvidence | undefined;
+}
+
+function evaluateProfessionalCuratorEvidenceGate(
+  input: ProfessionalCuratorEvidenceGateInput
+): CuratorValidationVerdict | undefined {
+  if (input.state.workflowMode !== "project_construction") return undefined;
+
+  const missingItems: string[] = [];
+  if (!input.spec.designBrief) {
+    missingItems.push(
+      "[curator:designBrief] missing structured DesignBrief contract"
+    );
+  }
+  if (!input.codeChangeSetPresent) {
+    missingItems.push("[curator:code] missing auditable CodeChangeSet");
+  }
+  if (!input.preflight) {
+    missingItems.push("[curator:preflight] missing terminal preflight evidence");
+  } else {
+    if (input.preflight.runtimeEvidence.status !== "passed") {
+      missingItems.push(
+        `[curator:preflight] terminal runtime evidence status is ${input.preflight.runtimeEvidence.status}`
+      );
+    }
+    const preflightCommands = latestCommandsById(
+      input.preflight.runtimeEvidence.commands
+    );
+    if (!hasCommandEvidence(preflightCommands, ["build-", "type-check-", "check-"])) {
+      missingItems.push(
+        "[curator:build] missing passed build/type-check/check command evidence"
+      );
+    }
+  }
+
+  const qaRuntime = input.qaRuntimeValidation;
+  if (!qaRuntime) {
+    missingItems.push("[curator:qa] missing QA runtime validation evidence");
+  } else {
+    const qaCommands = latestCommandsById(qaRuntime.commands);
+    if (!hasCommandEvidence(qaCommands, ["test-"])) {
+      missingItems.push("[curator:test] missing passed test command evidence");
+    }
+    if (qaRuntime.preview.status !== "passed") {
+      const previewDetail = input.state.previewSessionId
+        ? qaRuntime.preview.message
+        : "missing previewSessionId";
+      missingItems.push(
+        `[curator:preview] preview smoke did not pass: ${previewDetail}`
+      );
+    }
+  }
+
+  if (!input.visualGate) {
+    missingItems.push("[curator:visual] missing visual gate result");
+  } else {
+    if (input.visualGate.status !== "passed") {
+      missingItems.push(
+        `[curator:visual] visual gate status is ${input.visualGate.status}`
+      );
+    }
+    if (input.visualGate.screenshots.length === 0) {
+      missingItems.push(
+        "[curator:screenshot] missing desktop/mobile visual capture evidence"
+      );
+    }
+    if (input.visualGate.screenshots.some((screenshot) => !screenshot.nonBlank)) {
+      missingItems.push(
+        "[curator:screenshot] visual capture contains blank viewport evidence"
+      );
+    }
+  }
+
+  if (missingItems.length === 0) {
+    return {
+      passed: true,
+      score: 100,
+      notes:
+        "Curador confirmou evidência profissional completa: DesignBrief, CodeChangeSet, preflight terminal, testes, preview smoke e captura visual.",
+      missingItems: [],
+      fixTarget: "front",
+    };
+  }
+
+  return {
+    passed: false,
+    score: 0,
+    notes:
+      "Curador bloqueou a entrega em modo fail-closed porque faltam evidências obrigatórias de runtime/design.",
+    missingItems,
+    fixTarget: "both",
+  };
+}
+
+function latestCommandsById(
+  commands: readonly RuntimeValidationCommandEvidence[]
+): RuntimeValidationCommandEvidence[] {
+  const latest = new Map<string, RuntimeValidationCommandEvidence>();
+  for (const command of commands) {
+    latest.set(command.commandId, command);
+  }
+  return [...latest.values()];
+}
+
+function hasCommandEvidence(
+  commands: readonly RuntimeValidationCommandEvidence[],
+  acceptedCommandIdPrefixes: readonly string[]
+): boolean {
+  return commands.some(
+    (command) =>
+      command.exitCode === 0 &&
+      !command.interactivePromptDetected &&
+      (!command.approvalRequired || command.approved) &&
+      acceptedCommandIdPrefixes.some((prefix) => command.commandId.startsWith(prefix))
+  );
 }
 
 function buildCuratorPreflightTraceContext(input: {
