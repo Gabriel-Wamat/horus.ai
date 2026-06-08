@@ -28,3 +28,44 @@ jobs:
 
       - name: Verify
         run: pnpm verify:ci
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate compose file
+        run: docker compose config
+
+      - name: Build Docker targets
+        run: |
+          docker build --target server-runtime --tag horus-api:ci .
+          docker build --target web-runtime --tag horus-web:ci .
+
+      - name: Start Docker stack
+        run: docker compose up -d --build --wait
+
+      - name: Docker smoke
+        run: pnpm verify:docker
+
+      - name: Docker logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop Docker stack
+        if: always()
+        run: docker compose down -v --remove-orphans

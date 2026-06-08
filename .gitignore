@@ -43,6 +43,7 @@ apps/web/src/features/design-studio/
 /skills/*.md
 /skills/scripts/
 !/docs/
+!/docs/RELEASE_CHECKLIST.md
 !/docs/spec/
 docs/spec/**
 !/docs/spec/README.md

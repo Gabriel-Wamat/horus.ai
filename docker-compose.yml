@@ -9,7 +9,8 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       HORUS_REPOSITORY_ROOT: /app
-      PERSISTENCE_DRIVER: file
+      PERSISTENCE_DRIVER: ${PERSISTENCE_DRIVER:-file}
+      HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION: ${HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION:-true}
       HORUS_DATA_DIR: /app/.horus/data
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
@@ -18,6 +19,7 @@ services:
       QA_AGENT_LLM_TIMEOUT_MS: ${QA_AGENT_LLM_TIMEOUT_MS:-45000}
       HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST: 0.0.0.0
       HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST:-localhost}
+      DATABASE_URL: ${DATABASE_URL:-postgres://horus:horus@postgres:5432/horus}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -38,6 +40,36 @@ services:
       timeout: 5s
       retries: 12
 
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-horus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-horus}
+      POSTGRES_DB: ${POSTGRES_DB:-horus}
+    volumes:
+      - horus-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    build:
+      context: .
+      target: server-runtime
+    profiles: ["postgres"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PERSISTENCE_DRIVER: postgres
+      DATABASE_URL: ${DATABASE_URL:-postgres://horus:horus@postgres:5432/horus}
+    command: ["node", "dist/infrastructure/database/migrateCli.js"]
+    restart: "no"
+
   web:
     build:
       context: .
@@ -55,3 +87,4 @@ services:
 
 volumes:
   horus-data:
+  horus-postgres:
