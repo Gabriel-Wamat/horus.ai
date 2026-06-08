@@ -17,6 +17,30 @@ scripts/          Operational scripts required by install/build/smoke checks
 
 The repository must not include local runtime state, logs, generated builds, documentation folders, internal specs, test folders, screenshots, OpenClaude baselines, experimental UI prototypes, or Markdown files other than this README and agent skill bundles under `skills/agents`.
 
+## System Flow
+
+```mermaid
+flowchart LR
+  UserStory["User Story"] --> Spec["Spec Agent"]
+  Spec --> ODIN["ODIN"]
+  ODIN --> Front["Front Agent"]
+  ODIN --> QA["QA Agent"]
+  Front --> Curator["Curator"]
+  QA --> Curator
+  Curator -- "Pass" --> Output["Preview / Files / Evidence"]
+  Curator -- "Fail" --> ODIN
+
+  Spec -. "events" .-> Telemetry["Telemetry Collector"]
+  ODIN -. "routing trace" .-> Telemetry
+  Front -. "file ops / diffs / shell output" .-> Telemetry
+  QA -. "validation commands / retries" .-> Telemetry
+  Curator -. "verdict / quality gates" .-> Telemetry
+  Telemetry --> Timeline["Execution Console / Operation Timeline"]
+  Timeline --> Output
+```
+
+Telemetry is collected during the same agent execution flow, not as a separate after-the-fact report. Each agent emits structured operational events with the current task/session identifiers, touched files, command output, diffs, retries, validation status, failures, and final verdict. The web console projects those events into a navigable execution timeline so the operator can inspect what changed, which commands ran, why a retry happened, and which evidence supported the final preview.
+
 ## Requirements
 
 - Node.js 22

@@ -37,8 +37,8 @@ function Icon({ name }: { name: SidebarIconName }): JSX.Element {
   if (name === "stories") {
     return (
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5Z" />
-        <path d="M4 5.5v16M8 7h7M8 11h6" />
+        <rect x="6" y="4" width="12" height="16" rx="2" />
+        <path d="M9 9h6M9 13h6M9 17h4" />
       </svg>
     );
   }
@@ -56,7 +56,7 @@ function Icon({ name }: { name: SidebarIconName }): JSX.Element {
     return (
       <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5Z" />
-        <path d="M7 11h10M7 15h7" />
+        <path d="m9 12.25-2 2 2 2M15 12.25l2 2-2 2M13 11.75l-2 5" />
       </svg>
     );
   }
@@ -163,9 +163,19 @@ export function Shell({
 
       <main className="main">
         <header className="topbar">
-          <div>
-            <h1 className="brand-title">{title}</h1>
-            <p className="brand-subtitle">{subtitle}</p>
+          <div className="brand-lockup">
+            <img
+              className="brand-mark"
+              src="/brand/horus-ai-eye-icon.png"
+              alt=""
+              width="36"
+              height="36"
+              decoding="async"
+            />
+            <div className="brand-copy">
+              <h1 className="brand-title">{title}</h1>
+              <p className="brand-subtitle">{subtitle}</p>
+            </div>
           </div>
           <div className="status-row">
             {status.map((item) => (
