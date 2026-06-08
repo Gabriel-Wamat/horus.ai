@@ -17,6 +17,7 @@ import {
 } from "../llm/invokeChatModel.js";
 import { resolveAgentModelConfig } from "../llm/providerConfig.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatSurfacePatternLibraryForPrompt } from "../design/SurfacePatternLibrary.js";
 import { appendRuntimeAgentSkills } from "../agentSkills/loadAgentSkill.js";
 import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 
@@ -701,6 +702,9 @@ ${formatPromptContextForPrompt(promptContext)}
 
 ${formatDesignContextForPrompt(designContext)}
 
+# Biblioteca versionada de patterns por surfaceType
+${formatSurfacePatternLibraryForPrompt()}
+
 # UserStory JSON
 ${JSON.stringify(
   {
@@ -729,6 +733,7 @@ ${JSON.stringify(
 - acceptanceCriteria deve cobrir todos os critérios da UserStory em linguagem técnica e observável para QA
 - designBrief é obrigatório e deve ser produzido antes da implementação: ele é o contrato de Design Intelligence que Front/QA/Curator usarão
 - designBrief.surfaceType deve classificar a interface com exatamente um tipo: crud, dashboard, calendar, kanban, editor-canvas, chat-preview, workflow-map, auth, onboarding, settings, file-browser, report, checkout, media-gallery, form, search-results, detail-view, data-table ou custom
+- Escolha o pattern, informationArchitecture, componentInventory, stateMatrix, designSystemBinding e visualStrategy a partir da biblioteca versionada de patterns por surfaceType acima; não use dashboard genérico quando a biblioteca indicar outra intenção
 - designBrief.userIntent deve explicar o que o usuário está tentando fazer, seu modelo mental, o resultado de sucesso e o que fica fora do escopo
 - designBrief.informationArchitecture deve listar regiões da tela, hierarquia, navegação e fluxo primário em linguagem acionável para o FrontAgent
 - designBrief.componentInventory deve listar componentes esperados, variantes e quando usar cada componente; use nomes do domínio e componentes reais do projeto quando conhecidos
@@ -770,13 +775,7 @@ Siga o protocolo operacional abaixo, derivado da skill versionada:
 - use contratos reais ou adapters injetáveis; não solicite mock/fake data em runtime aplicado ao projeto;
 - produza designBrief como contrato estruturado antes do FrontAgent: surfaceType, userIntent, informationArchitecture, componentInventory, stateMatrix, designSystemBinding e visualStrategy;
 - use designBrief.surfaceType para selecionar o pattern e impedir generic dashboards/landing pages quando o domínio pedir CRUD, calendário, kanban, editor/canvas, chat-preview, workflow-map, auth, onboarding, settings, file-browser, report, checkout ou media gallery;
-- escolha exatamente um frontend pattern e carregue-o no technicalApproach como "Pattern: <id>": operational-dashboard, chat-preview-workbench, workflow-map, form-crud-tool, content-landing ou custom-product-surface;
-- use operational-dashboard para ferramentas internas, monitoramento, admin, CRM, analytics, file browsing e consoles de trabalho densos;
-- use chat-preview-workbench para chat com preview, progresso de agentes, output gerado e controles de execução;
-- use workflow-map para grafos, mapas de dependência, pipelines e topologias de agentes;
-- use form-crud-tool para configurações, CRUD, key management, formulários e fluxos com validação;
-- use content-landing somente para marketing, portfolio, produto público, venue, pessoa, marca ou storytelling;
-- use custom-product-surface somente quando nenhum pattern conhecido se encaixar e explique a razão;
+- escolha exatamente o frontend pattern indicado pela biblioteca versionada de patterns por surfaceType e carregue-o no technicalApproach como "Pattern: <id>";
 - registre o pattern em visualContract.layoutArchetype e use componentPolicy.requiredPatterns/forbiddenPatterns para tornar a escolha validável;
 - defina colorPolicy como estrategia cromatica de designer, com papeis para background, surface, text, accent, semantic/status e category/utility quando aplicavel, explicando uso por dominio, publico, contraste, hierarquia e estados;
 - aplique política de componentes: componentes/tokens existentes primeiro, bibliotecas já instaladas segundo, HTML/CSS/JS nativo terceiro, sem dependências inventadas;
