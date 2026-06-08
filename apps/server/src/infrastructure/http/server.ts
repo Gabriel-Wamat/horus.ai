@@ -50,6 +50,7 @@ import { createLlmSettingsRouter } from "./routes/llmSettingsRoutes.js";
 import { createAgentSkillRouter } from "./routes/agentSkillRoutes.js";
 import { createCodingRouter } from "./routes/codingRoutes.js";
 import { createExecutionTaskRouter } from "./routes/executionTaskRoutes.js";
+import { createOpsControlPlaneRouter } from "./routes/opsControlPlaneRoutes.js";
 import { ProcessBrowserPreviewAdapter } from "../preview/ProcessBrowserPreviewAdapter.js";
 import type { BrowserPreviewAdapter } from "../preview/NoopBrowserPreviewAdapter.js";
 import { PreviewRuntimeManager } from "../preview/PreviewRuntimeManager.js";
@@ -458,6 +459,15 @@ export async function createApp(
     "/api",
     createExecutionTaskRouter({
       projectConstruction: repositories.projectConstruction,
+    })
+  );
+  app.use(
+    "/api/ops",
+    createOpsControlPlaneRouter({
+      ledger: repositories.agentExecutionLedger,
+      projectConstruction: repositories.projectConstruction,
+      persistenceDriver: repositories.driver,
+      recoverPendingExecutions: () => orchestrator.recoverPendingExecutions(),
     })
   );
   app.use("/api/events", createEventRouter(eventStream));

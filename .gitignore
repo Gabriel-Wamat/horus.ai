@@ -23,6 +23,7 @@ apps/**/__tests__/
 apps/server/test/*
 !apps/server/test/curatorRetryLimit.test.mjs
 !apps/server/test/frontAgentDesignIntelligence.test.mjs
+!apps/server/test/opsControlPlane.test.mjs
 !apps/server/test/projectConstructionPreviewSession.test.mjs
 !apps/server/test/surfacePatternLibrary.test.mjs
 !apps/server/test/visualDesignGateProfessional.test.mjs
