@@ -8,6 +8,7 @@ import {
   type ProjectConstructionRun,
   type ProjectWorkspace,
   type PreviewCommand,
+  type PreviewSession,
   type Spec,
   type UserStory,
   type WorkspaceArtifactContext,
@@ -23,6 +24,7 @@ import type {
   ProjectExecutionRunner,
   ProjectWorkspaceProvider,
 } from "../ports/ProjectServicesPort.js";
+import type { PreviewRuntimePort } from "../ports/PreviewRuntimePort.js";
 
 export class ProjectConstructionValidationError extends Error {
   constructor(message: string) {
@@ -35,6 +37,7 @@ export interface StartProjectConstructionResult {
   projectWorkspace: ProjectWorkspace;
   constructionRun: ProjectConstructionRun;
   frontendProject: FrontendProject | null;
+  previewSession: PreviewSession | null;
   reusedProjectWorkspace: boolean;
 }
 
@@ -48,6 +51,7 @@ export interface ProjectConstructionWorkflowStarter {
     projectWorkspaceId?: string;
     frontendProjectId?: string;
     frontendProjectRootPath?: string;
+    previewSessionId?: string;
     llmSettings?: LlmSettings;
   }): Promise<{ threadId: string }>;
 }
@@ -119,7 +123,11 @@ export class StartProjectConstructionUseCase {
     private readonly projectExecutionService: ProjectExecutionRunner,
     private readonly env: Record<string, string | undefined> = process.env,
     private readonly workflowStarter?: ProjectConstructionWorkflowStarter,
-    private readonly llmSettingsResolver?: ProjectConstructionLlmSettingsResolver
+    private readonly llmSettingsResolver?: ProjectConstructionLlmSettingsResolver,
+    private readonly previewRuntime?: Pick<
+      PreviewRuntimePort,
+      "createSession" | "startSession"
+    >
   ) {}
 
   async execute(rawInput: unknown): Promise<StartProjectConstructionResult> {
@@ -232,6 +240,7 @@ export class StartProjectConstructionUseCase {
         prepared.workspacePath,
         config
       );
+      const previewSession = await this.createAndStartPreviewSession(frontendProject);
       const initialSpecs: Record<string, Spec> = {};
       for (const context of contexts) {
         if (context.spec) initialSpecs[context.story.id] = context.spec;
@@ -259,6 +268,7 @@ export class StartProjectConstructionUseCase {
         projectWorkspaceId: project.id,
         ...(frontendProject ? { frontendProjectId: frontendProject.id } : {}),
         frontendProjectRootPath: prepared.workspacePath,
+        ...(previewSession ? { previewSessionId: previewSession.id } : {}),
         ...(llmSettings ? { llmSettings } : {}),
       });
 
@@ -272,6 +282,7 @@ export class StartProjectConstructionUseCase {
         projectWorkspace: project,
         constructionRun: started,
         frontendProject,
+        previewSession,
         reusedProjectWorkspace,
       };
     } catch (err) {
@@ -348,6 +359,29 @@ export class StartProjectConstructionUseCase {
       archivedAt: null,
       archivedReason: null,
     });
+  }
+
+  private async createAndStartPreviewSession(
+    frontendProject: FrontendProject | null
+  ): Promise<PreviewSession | null> {
+    if (!frontendProject || !this.previewRuntime) return null;
+
+    const created = await this.previewRuntime.createSession({
+      projectId: frontendProject.id,
+      route: frontendProject.defaultRoute,
+      device: "pc",
+    });
+
+    try {
+      const started = await this.previewRuntime.startSession(created.session.id);
+      return started.session;
+    } catch (err) {
+      console.warn(
+        `Preview session ${created.session.id} was created but could not be started.`,
+        err
+      );
+      return created.session;
+    }
   }
 }
 

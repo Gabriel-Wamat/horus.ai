@@ -70,6 +70,8 @@ export function useProjectConstructionAction({
         workflowThreadId: result.constructionRun.workflowRunId,
         frontendProjectId: result.frontendProject?.id ?? null,
         frontendProject: result.frontendProject,
+        previewSessionId: result.previewSession?.id ?? null,
+        previewSession: result.previewSession,
         projectName: result.projectWorkspace.name,
         startedAt: result.constructionRun.startedAt,
       };
@@ -89,7 +91,10 @@ export function useProjectConstructionAction({
         title: result.reusedProjectWorkspace
           ? "Construção retomada"
           : "Construção iniciada",
-        body: "Os agentes estão preparando o software.",
+        body:
+          result.previewSession?.status === "running"
+            ? "Preview e arquivos estão sendo atualizados em tempo real."
+            : "Os agentes estão preparando o software.",
       });
       if (result.constructionRun.workflowRunId) {
         statusPollRef.current = window.setInterval(() => {

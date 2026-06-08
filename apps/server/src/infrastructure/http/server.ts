@@ -330,7 +330,8 @@ export async function createApp(
     projectExecutionService,
     env,
     orchestrator,
-    llmSettingsResolver
+    llmSettingsResolver,
+    previewRuntime
   );
   const horusOdinIntentRouter =
     options.horusIntentRouter ??

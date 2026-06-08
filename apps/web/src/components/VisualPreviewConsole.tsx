@@ -105,14 +105,25 @@ export function VisualPreviewConsole({
     if (!activeConstruction) return;
     let cancelled = false;
     const activeProject = activeConstruction.frontendProject;
+    const activeSession = activeConstruction.previewSession;
 
     if (activeProject) {
       setProjects((current) => upsertPreviewProject(current, activeProject));
       setSelectedProjectId(activeProject.id);
       setRoute(activeProject.defaultRoute);
-      setSession(null);
+      setSession(activeSession ?? null);
       setTimeline([]);
       setError(null);
+      if (activeSession) {
+        void previewApi
+          .listTimeline(activeSession.id)
+          .then((events) => {
+            if (!cancelled) {
+              setTimeline((current) => mergeEvents(current, events));
+            }
+          })
+          .catch(() => undefined);
+      }
     }
 
     setIsLoadingProjects(true);
@@ -151,11 +162,16 @@ export function VisualPreviewConsole({
 
   useEffect(() => {
     if (!selectedProject) return;
+    const activeSession = activeConstruction?.previewSession ?? null;
     setRoute(selectedProject.defaultRoute);
+    if (activeSession?.projectId === selectedProject.id) {
+      setSession(activeSession);
+      return;
+    }
     setSession(null);
     setTimeline([]);
     setError(null);
-  }, [selectedProject]);
+  }, [activeConstruction?.previewSession, selectedProject]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -225,7 +241,9 @@ export function VisualPreviewConsole({
     }
     if (
       session?.projectId === selectedProject.id &&
-      (session.status === "running" || session.status === "starting")
+      (session.status === "running" ||
+        session.status === "starting" ||
+        session.status === "error")
     ) {
       return;
     }
