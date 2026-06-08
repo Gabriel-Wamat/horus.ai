@@ -13,7 +13,7 @@ services:
       HORUS_DATA_DIR: /app/.horus/data
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
-      LLM_MODEL: ${LLM_MODEL:-gpt-5-mini}
+      LLM_MODEL: ${LLM_MODEL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}

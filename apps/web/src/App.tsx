@@ -293,6 +293,7 @@ export function App(): JSX.Element {
       </Shell>
       <LlmSettingsModal
         isOpen={isSettingsOpen}
+        providers={workflow.llmProviders}
         profile={workflow.llmProfile}
         onClose={() => setIsSettingsOpen(false)}
         onSave={async (settings) => {

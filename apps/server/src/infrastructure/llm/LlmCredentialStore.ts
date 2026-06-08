@@ -10,7 +10,7 @@ import {
   type LlmSettingsDraft,
   type LlmSettingsProfile,
 } from "@u-build/shared";
-import { getDefaultBaseUrl } from "./providerConfig.js";
+import { getDefaultBaseUrl, getDefaultModel } from "./providerConfig.js";
 
 interface PersistedProfilesFile {
   defaultProfileId: string | null;
@@ -61,9 +61,9 @@ const PROVIDER_LABELS: Record<LlmProvider, string> = {
 };
 
 const PROVIDER_MODELS: Record<LlmProvider, string[]> = {
-  openai: ["gpt-5-mini", "gpt-4.1-mini"],
-  openrouter: ["openai/gpt-4.1-mini"],
-  groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+  openai: [getDefaultModel("openai"), "gpt-4.1-mini"],
+  openrouter: [getDefaultModel("openrouter"), "openai/gpt-4.1-mini"],
+  groq: [getDefaultModel("groq"), "llama-3.1-8b-instant"],
 };
 
 export class LlmProfileNotFoundError extends Error {

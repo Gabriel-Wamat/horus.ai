@@ -50,7 +50,25 @@ For the default OpenAI setup, fill only your API key:
 OPENAI_API_KEY=<your-openai-key>
 ```
 
-`LLM_PROVIDER=openai` and `LLM_MODEL=gpt-5-mini` are already the defaults. Use the optional provider fields in `.env.example` only if you want OpenRouter or Groq.
+`LLM_PROVIDER=openai` is already the default. Horus chooses a provider-specific default model when `LLM_MODEL` is unset. Use the optional provider fields in `.env.example` only if you want OpenRouter or Groq.
+
+Provider examples:
+
+```bash
+# OpenAI
+LLM_PROVIDER=openai
+OPENAI_API_KEY=<your-openai-key>
+
+# OpenRouter
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=<your-openrouter-key>
+
+# Groq
+LLM_PROVIDER=groq
+GROQ_API_KEY=<your-groq-key>
+```
+
+Set `LLM_MODEL` only when you want to override the provider default.
 
 Never commit `.env`, `.env.*.local`, `.horus/`, `data/`, logs, generated workspaces, or build output.
 
@@ -96,6 +114,7 @@ pnpm lint
 pnpm type-check
 pnpm security:secrets
 pnpm build
+pnpm verify:llm-providers
 ```
 
 This public distribution does not include test folders. Internal test suites and specs stay local/private and must not be committed to this repository.
