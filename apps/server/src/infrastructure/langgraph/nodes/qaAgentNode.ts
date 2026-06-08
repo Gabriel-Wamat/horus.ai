@@ -255,6 +255,7 @@ async function executeQaValidationCommands(input: {
     return [evidence];
   }
 
+  const operationalSessionId = randomUUID();
   const runtime = input.deps.createAgentToolRuntime({
     agentProfileId: "qa_agent",
     projectId: input.state.frontendProjectId,
@@ -268,6 +269,7 @@ async function executeQaValidationCommands(input: {
         parentSpanId?: string | null;
         toolCallId?: string | null;
         runId?: string | null;
+        operationalSessionId?: string | null;
         projectId?: string | null;
         agentId?: string | null;
         filePath?: string | null;
@@ -286,6 +288,7 @@ async function executeQaValidationCommands(input: {
         ...(tracedOutput.parentSpanId ? { parentSpanId: tracedOutput.parentSpanId } : {}),
         ...(tracedOutput.toolCallId ? { toolCallId: tracedOutput.toolCallId } : {}),
         ...(tracedOutput.runId ? { runId: tracedOutput.runId } : {}),
+        operationalSessionId: tracedOutput.operationalSessionId ?? operationalSessionId,
         ...(tracedOutput.projectId ? { projectId: tracedOutput.projectId } : {}),
         ...(tracedOutput.agentId ? { agentId: tracedOutput.agentId } : {}),
         ...(tracedOutput.filePath ? { filePath: tracedOutput.filePath } : {}),
@@ -321,6 +324,7 @@ async function executeQaValidationCommands(input: {
       parentSpanId: null,
       toolCallId,
       runId: input.state.threadId,
+      operationalSessionId,
       projectId: input.state.frontendProjectId,
       agentId: "qa_agent",
       filePath: null,
@@ -502,6 +506,7 @@ function emitQaValidationBlocked(input: {
   errorMessage: string;
 }): void {
   const toolCallId = randomUUID();
+  const operationalSessionId = randomUUID();
   input.deps.emitWorkflowEvent?.({
     type: "tool_call_blocked",
     threadId: input.state.threadId,
@@ -513,6 +518,7 @@ function emitQaValidationBlocked(input: {
     parentSpanId: null,
     toolCallId,
     runId: input.state.threadId,
+    operationalSessionId,
     projectId: input.state.frontendProjectId ?? null,
     agentId: "qa_agent",
     filePath: null,

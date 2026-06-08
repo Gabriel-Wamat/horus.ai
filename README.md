@@ -1,260 +1,205 @@
 # Horus.AI
 
-Horus.AI is an autonomous multi-agent software generation system. It receives user stories, turns them into technical specifications, coordinates implementation and QA agents, validates the generated work through a curator, and exposes the resulting project, preview, files, and execution evidence through a React web interface.
+Horus.AI is a TypeScript multi-agent software delivery console. It receives a user story, creates a technical specification, coordinates implementation and verification agents, validates the result, and exposes the generated project through a React preview UI.
 
-The project is a TypeScript monorepo built with pnpm and Turbo. It contains an Express/LangGraph backend, a React/Vite frontend, and shared Zod contracts used by both sides.
+This public repository is intentionally minimal. It contains only the source and operational files required to install, build, run, and reproduce the project.
 
-## Documentation Map
-
-| Start Here | Use It For |
-| --- | --- |
-| [Technical documentation site](https://docs-three-coral.vercel.app/docs) | Public Fumadocs documentation with search, architecture diagrams, configuration, runbooks, and contribution guidance |
-| `apps/docs` | Source for the documentation site |
-| [Quick Start](https://docs-three-coral.vercel.app/docs/quickstart) | Clean-clone setup and local development |
-| [Architecture](https://docs-three-coral.vercel.app/docs/architecture) | System design, agents, persistence, preview runtime |
-| [Runbook](https://docs-three-coral.vercel.app/docs/runbook) | Running, validating, resetting, troubleshooting |
-| [Configuration](https://docs-three-coral.vercel.app/docs/configuration) | Environment variables and secret handling |
-
-## What It Does
-
-- Converts user stories into versioned technical specs.
-- Orchestrates Spec, ODIN, Frontend, QA, and Curator agents through LangGraph.
-- Runs a validation loop with retry and human-in-the-loop checkpoints.
-- Persists workspaces, specs, chats, workflow state, preview sessions, and generated project metadata.
-- Supports file-mode local persistence and optional Postgres persistence.
-- Provides a visual preview console, project file browser, run-flow view, LLM settings UI, and chat-driven code-change loop.
-- Stores runtime evidence for previews, quality gates, command execution, and agent progress.
-
-## System Flow
-
-```mermaid
-flowchart LR
-  Story["User Story"] --> Spec["Spec Agent"]
-  Spec --> Odin["ODIN"]
-  Odin --> Front["Front Agent"]
-  Odin --> QA["QA Agent"]
-  Front --> Curator["Curator"]
-  QA --> Curator
-  Curator -->|"Fail"| Odin
-  Curator -->|"Pass"| Preview["Preview / Files / Evidence"]
-```
-
-## Repository Layout
+## Repository Contents
 
 ```text
-apps/
-  server/        Express API, LangGraph workflow, repositories, agents, preview runtime
-  web/           React/Vite application
-packages/
-  shared/        Zod schemas, shared entities, and ports
-skills/
-  agents/        Product runtime skills used by Horus agents
-tools/           Project-owned tool notes and future reusable tooling
-docs/            Supplemental engineering notes
+apps/server/      Express API, LangGraph workflow, agents, repositories, preview runtime
+apps/web/         React/Vite web application
+packages/shared/  Shared Zod schemas and TypeScript contracts
+docker/           nginx template for the pre-staging web container
+scripts/          Operational scripts required by install/build/smoke checks
 ```
 
-## First Run
-
-| Step | Command |
-| --- | --- |
-| Enable package manager | `corepack enable` |
-| Pin pnpm | `corepack prepare pnpm@9.15.0 --activate` |
-| Install dependencies | `pnpm install` |
-| Create env file | `cp .env.example .env` |
-| Start dev stack | `pnpm dev` |
-| Check API | `curl http://localhost:3000/health` |
+The repository must not include local runtime state, logs, generated builds, documentation folders, internal specs, test folders, screenshots, OpenClaude baselines, or Markdown files other than this README.
 
 ## Requirements
 
-- Node.js `>=20`
-- pnpm `>=9`
+- Node.js 22
+- pnpm 9.15.0
 - Git
-- Optional: Postgres, when using `PERSISTENCE_DRIVER=postgres`
-- Optional: Docker, once the Docker runtime from the Docker spec is implemented
+- Docker and Docker Compose for the pre-staging stack
 
-Use Corepack so the repo uses the pinned pnpm version from `package.json`:
+The repo includes `.node-version` and `packageManager` metadata. If Corepack can manage pnpm on your machine:
 
 ```bash
-corepack enable
 corepack prepare pnpm@9.15.0 --activate
 ```
 
-## Setup
+If Corepack cannot create global shims on your machine, install pnpm through your preferred Node package manager:
 
 ```bash
-pnpm install
+npm install -g pnpm@9.15.0
+```
+
+## Environment
+
+Create a local environment file:
+
+```bash
 cp .env.example .env
 ```
 
-Then edit `.env` with the provider/model you want to use. At least one provider key is needed for real LLM-backed agent generation:
+Set at least one real provider key before using LLM-backed agents:
 
 ```bash
 LLM_PROVIDER=openai
 LLM_MODEL=<provider-model>
-OPENAI_API_KEY=...
+OPENAI_API_KEY=<your-key>
 ```
 
-Never commit `.env`, `.horus/`, or `data/`.
+Never commit `.env`, `.env.*.local`, `.horus/`, `data/`, logs, generated workspaces, or build output.
 
-## Run Locally
+## Local Development
 
-Start the full development stack:
+Install dependencies:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+Run the development stack:
 
 ```bash
 pnpm dev
 ```
 
-The server defaults to `http://localhost:3000`. The Vite frontend runs on its Vite dev port and calls the API through the local development configuration.
+Default local endpoints:
+
+```text
+API: http://localhost:3001
+Web: http://localhost:5173
+```
 
 Health check:
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3001/health
 ```
-
-## Production-Like Local Run
-
-```bash
-pnpm build
-pnpm --filter @u-build/server start
-```
-
-The server entrypoint is `apps/server/dist/main.js`. It reads `PORT`, `HOST`, persistence settings, and provider settings from the environment.
-
-## Docker
-
-Docker support is planned in the local Docker runtime spec and should be implemented before presenting Docker as the primary run path. Until Docker artifacts exist and pass validation, use the pnpm workflow above.
-
-When Docker is implemented, the expected contract is:
-
-- File-mode runtime with a named volume for `HORUS_DATA_DIR`.
-- Optional Postgres profile using `PERSISTENCE_DRIVER=postgres`.
-- No API keys or local paths baked into images.
-- Browser-facing web/API access through host-mapped ports.
-
-See [docs/runbook.md](docs/runbook.md) for the operational runbook and Docker status notes.
-
-## Technical Documentation Site
-
-The polished technical documentation lives in `apps/docs`, built with Unmint-style Next.js + Fumadocs.
-
-Public URL:
-
-```text
-https://docs-three-coral.vercel.app/docs
-```
-
-```bash
-pnpm --filter @u-build/docs dev
-pnpm --filter @u-build/docs build
-```
-
-Local URL:
-
-```text
-http://localhost:3002/docs
-```
-
-## Persistence
-
-Horus supports two persistence modes:
-
-- `file`: local JSON stores under `HORUS_DATA_DIR`.
-- `postgres`: Postgres repositories and Postgres LangGraph checkpoints.
-
-Default file-mode configuration:
-
-```bash
-PERSISTENCE_DRIVER=file
-HORUS_DATA_DIR=.horus/data
-```
-
-File-mode state includes workflows, workspace artifacts, chat memory, preview sessions, frontend project registry data, project construction metadata, workflow events, generated project workspaces, and file-backed LangGraph checkpoints.
-
-Postgres mode:
-
-```bash
-PERSISTENCE_DRIVER=postgres
-DATABASE_URL=postgresql://user:password@host:5432/horus
-DATABASE_SSL=false
-```
-
-More detail is in [docs/configuration.md](docs/configuration.md) and [docs/runbook.md](docs/runbook.md).
-
-## LLM Providers
-
-Supported provider configuration is environment-driven and also exposed through the LLM settings API/UI:
-
-- OpenAI
-- OpenRouter
-- Groq
-
-Global defaults:
-
-```bash
-LLM_PROVIDER=openai
-LLM_MODEL=<provider-model>
-```
-
-Per-agent overrides are available for Spec, Front, QA, and Curator agents. See `.env.example` and [docs/configuration.md](docs/configuration.md).
 
 ## Validation
 
-Run the main validation suite:
+Run the reproducibility gate used by CI:
 
 ```bash
+pnpm verify:ci
+```
+
+That command runs:
+
+```bash
+pnpm lint
 pnpm type-check
+pnpm security:secrets
 pnpm build
-pnpm test
 ```
 
-`pnpm test` builds the workspace and runs shared/server Node test suites. The web package also has frontend regression guards:
+This public distribution does not include test folders. Internal test suites and specs stay local/private and must not be committed to this repository.
+
+## Production-Like Local Run
+
+Build all shipped packages:
 
 ```bash
-pnpm --filter @u-build/web test:guards
+pnpm build
 ```
 
-## Core Workflow
+Start the API:
 
-At a high level:
+```bash
+pnpm --filter @u-build/server start
+```
 
-1. The user creates or selects a user story.
-2. The Spec Agent generates or updates the technical specification.
-3. ODIN routes work to Front and QA agents.
-4. Front proposes code changes.
-5. QA produces validation expectations and evidence.
-6. Curator compares implementation, tests, runtime evidence, and spec.
-7. ODIN either routes a retry or completes the workflow.
-8. Approved changes are applied and surfaced through previews, files, and run-flow evidence.
+The server entrypoint is:
 
-The full architecture is documented in [docs/architecture.md](docs/architecture.md).
+```text
+apps/server/dist/main.js
+```
+
+Runtime behavior is configured through environment variables such as `PORT`, `HOST`, `PERSISTENCE_DRIVER`, `DATABASE_URL`, `HORUS_AUTH_MODE`, `HORUS_API_TOKEN`, and provider settings.
+
+## Pre-Staging With Docker
+
+The Docker Compose stack is the reproducible pre-staging path. It builds the source from scratch, starts Postgres and Redis, applies database migrations before the API starts, serves the built web app through nginx, and proxies `/api` to the API with configured Horus auth headers.
+
+Create a pre-staging env file:
+
+```bash
+cp .env.prestaging.example .env.prestaging.local
+```
+
+Edit `.env.prestaging.local` with local-only secrets, then run:
+
+```bash
+docker compose --env-file .env.prestaging.local up --build
+```
+
+Default pre-staging endpoints:
+
+```text
+Web UI: http://localhost:8080
+API through web proxy: http://localhost:8080/api
+Health: http://localhost:8080/health
+Ready: http://localhost:8080/ready
+Direct API: http://localhost:3001
+```
+
+Smoke check:
+
+```bash
+pnpm verify:prestage
+```
+
+Stop the stack:
+
+```bash
+docker compose --env-file .env.prestaging.local down
+```
+
+Reset all pre-staging database state:
+
+```bash
+docker compose --env-file .env.prestaging.local down -v
+```
+
+## Clean-Machine Reproduction
+
+Use this sequence on a fresh machine:
+
+```bash
+git clone https://github.com/Gabriel-Wamat/horus.git
+cd horus
+corepack prepare pnpm@9.15.0 --activate || npm install -g pnpm@9.15.0
+pnpm install --frozen-lockfile
+pnpm verify:ci
+cp .env.prestaging.example .env.prestaging.local
+docker compose --env-file .env.prestaging.local up --build
+pnpm verify:prestage
+```
+
+Expected result:
+
+- dependencies install from `pnpm-lock.yaml`
+- TypeScript validation passes
+- secret scan passes
+- production build passes
+- Docker pre-staging stack becomes healthy
+- `pnpm verify:prestage` succeeds against `http://localhost:8080`
 
 ## Troubleshooting
 
-- Missing provider key: configure `.env` or save a provider profile in the UI.
-- Port conflict: set `PORT` and, if needed, `HOST`.
+- Missing provider key: configure `.env` or a provider profile in the UI.
+- Port conflict: set `PORT`, `HOST`, or Compose port mappings.
 - CORS issue: set `CORS_ORIGIN` for split frontend/API origins.
-- Lost local state: verify `HORUS_DATA_DIR` and whether you are using `file` or `postgres`.
-- Preview cannot start: verify the project command catalog and preview port settings.
+- Lost local state: verify `HORUS_DATA_DIR` and `PERSISTENCE_DRIVER`.
 - Postgres startup failure: verify `DATABASE_URL`, `DATABASE_SSL`, and migration logs.
-
-More operational detail is in [docs/runbook.md](docs/runbook.md).
-
-## Further Documentation
-
-- [Visual Documentation Index](docs/index.md)
-- [Architecture](docs/architecture.md)
-- [Runbook](docs/runbook.md)
-- [Configuration](docs/configuration.md)
-- [Chronology](docs/chronology.md)
-- [Contributing](docs/contributing.md)
-- [Project-local agent skills](skills/README.md)
-- [Tools workspace](tools/README.md)
+- Docker hangs or fails with `input/output error`: inspect Docker Desktop logs for `EXT4-fs` or `vda1` read-only errors. That is a local Docker VM disk problem. Restart Docker Desktop first; if it remains read-only, repair or reset Docker Desktop data before rerunning pre-staging.
 
 ## License
 
-This project is **not** licensed for commercial use.
+This project is not licensed for commercial use.
 
-Horus.AI is distributed under the [Horus.AI Restricted Non-Commercial License](LICENSE). The license permits only limited personal, non-commercial learning, private study, academic review, and technical evaluation.
-
-Companies, startups, agencies, consultancies, contractors, employees acting for a company, and any commercial organization may not use, host, resell, integrate, monetize, benchmark commercially, train models with, or build products or services from this project without a separate written commercial license signed by the licensor.
+Horus.AI is distributed under the Horus.AI Restricted Non-Commercial License in `LICENSE`.

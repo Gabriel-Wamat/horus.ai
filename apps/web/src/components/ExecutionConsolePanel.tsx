@@ -65,6 +65,7 @@ export function ExecutionConsolePanel({
   const [retriedTasks, setRetriedTasks] = useState<
     Map<string, ExecutionTaskRouteTask>
   >(() => new Map());
+  const executionProjectId = selectedProject?.projectWorkspaceId ?? null;
   const effectiveTerminalRows = useMemo(
     () =>
       terminalRows.map((row) => {
@@ -81,11 +82,11 @@ export function ExecutionConsolePanel({
     [retriedTasks, terminalRows]
   );
   const canonicalTerminalRows = useExecutionTaskRows(
-    selectedProject?.id ?? null,
+    executionProjectId,
     effectiveTerminalRows
   );
   const followedTasks = useExecutionTaskOutputs(
-    selectedProject?.id ?? null,
+    executionProjectId,
     canonicalTerminalRows
   );
   const [killingTaskIds, setKillingTaskIds] = useState<Set<string>>(
@@ -93,8 +94,8 @@ export function ExecutionConsolePanel({
   );
   const stopExecutionTask = useCallback(
     async (row: TerminalRow) => {
-      if (!row.taskId || !selectedProject?.id) return;
-      const projectId = row.projectId ?? selectedProject.id;
+      if (!row.taskId || !executionProjectId) return;
+      const projectId = executionProjectId;
       const taskId = row.taskId;
       setKillingTaskIds((current) => new Set(current).add(taskId));
       try {
@@ -109,7 +110,7 @@ export function ExecutionConsolePanel({
         });
       }
     },
-    [selectedProject?.id]
+    [executionProjectId]
   );
   const [retryingTaskIds, setRetryingTaskIds] = useState<Set<string>>(
     () => new Set()
@@ -119,8 +120,8 @@ export function ExecutionConsolePanel({
   );
   const retryExecutionTask = useCallback(
     async (row: TerminalRow) => {
-      if (!row.taskId || !selectedProject?.id) return;
-      const projectId = row.projectId ?? selectedProject.id;
+      if (!row.taskId || !executionProjectId) return;
+      const projectId = executionProjectId;
       const taskId = row.taskId;
       setRetryingTaskIds((current) => new Set(current).add(taskId));
       try {
@@ -136,12 +137,12 @@ export function ExecutionConsolePanel({
         });
       }
     },
-    [selectedProject?.id]
+    [executionProjectId]
   );
   const approveExecutionTask = useCallback(
     async (row: TerminalRow) => {
-      if (!row.taskId || !selectedProject?.id) return;
-      const projectId = row.projectId ?? selectedProject.id;
+      if (!row.taskId || !executionProjectId) return;
+      const projectId = executionProjectId;
       const taskId = row.taskId;
       setApprovingTaskIds((current) => new Set(current).add(taskId));
       try {
@@ -157,7 +158,7 @@ export function ExecutionConsolePanel({
         });
       }
     },
-    [selectedProject?.id]
+    [executionProjectId]
   );
   const diffRows = useMemo(
     () => latestFiles.filter(hasDiffEvidence).slice(0, 4),
@@ -195,7 +196,7 @@ export function ExecutionConsolePanel({
           rows={canonicalTerminalRows}
           commandCount={canonicalTerminalRows.length}
           followedTasks={followedTasks}
-          selectedProjectId={selectedProject?.id ?? null}
+          selectedProjectId={executionProjectId}
           killingTaskIds={killingTaskIds}
           retryingTaskIds={retryingTaskIds}
           approvingTaskIds={approvingTaskIds}

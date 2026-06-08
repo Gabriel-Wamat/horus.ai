@@ -54,6 +54,7 @@ export function deriveHorusRunSnapshot(
     agentExecutions,
     events: normalizedEvents,
     evidenceSummaries: [],
+    operationTimeline: [],
     runbookEntries: [],
     validationSummary: {
       finalStatus: state.status === "completed" ? "completed" : "completed_unverified",

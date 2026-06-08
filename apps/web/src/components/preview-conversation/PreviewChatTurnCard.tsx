@@ -173,6 +173,155 @@ function parseMessageBlocks(
   return blocks.length > 0 ? blocks : [{ type: "text", text: body }];
 }
 
+type MessageTextSegment =
+  | { type: "paragraph"; text: string }
+  | { type: "heading"; level: 2 | 3; text: string }
+  | { type: "list"; ordered: boolean; items: string[] };
+
+type InlineTextSegment =
+  | { type: "text"; text: string }
+  | { type: "code"; text: string };
+
+function parseTextSegments(text: string): MessageTextSegment[] {
+  const segments: MessageTextSegment[] = [];
+  let paragraphLines: string[] = [];
+  let activeList: { ordered: boolean; items: string[] } | null = null;
+
+  const pushParagraph = () => {
+    const paragraph = paragraphLines.join("\n").trim();
+    paragraphLines = [];
+    if (paragraph) segments.push({ type: "paragraph", text: paragraph });
+  };
+
+  const pushList = () => {
+    if (activeList && activeList.items.length > 0) {
+      segments.push({
+        type: "list",
+        ordered: activeList.ordered,
+        items: activeList.items,
+      });
+    }
+    activeList = null;
+  };
+
+  const closeTextGroup = () => {
+    pushParagraph();
+    pushList();
+  };
+
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeTextGroup();
+      continue;
+    }
+
+    const heading = parseHeadingLine(line);
+    if (heading) {
+      closeTextGroup();
+      segments.push(heading);
+      continue;
+    }
+
+    const listItem = parseListItemLine(line);
+    if (listItem) {
+      pushParagraph();
+      if (!activeList || activeList.ordered !== listItem.ordered) {
+        pushList();
+        activeList = { ordered: listItem.ordered, items: [] };
+      }
+      activeList.items.push(listItem.text);
+      continue;
+    }
+
+    if (activeList) {
+      const lastIndex = activeList.items.length - 1;
+      if (lastIndex >= 0) {
+        activeList.items[lastIndex] = `${activeList.items[lastIndex]} ${line}`;
+        continue;
+      }
+    }
+
+    paragraphLines.push(line);
+  }
+
+  closeTextGroup();
+  return segments;
+}
+
+function parseHeadingLine(line: string): MessageTextSegment | null {
+  let index = 0;
+  while (index < line.length && line[index] === "#") {
+    index += 1;
+  }
+  if (index < 2 || index > 3) return null;
+  if (line[index] !== " ") return null;
+  const text = line.slice(index + 1).trim();
+  if (!text) return null;
+  return { type: "heading", level: index === 2 ? 2 : 3, text };
+}
+
+function parseListItemLine(
+  line: string
+): { ordered: boolean; text: string } | null {
+  if (line.startsWith("- ") || line.startsWith("* ")) {
+    const text = line.slice(2).trim();
+    return text ? { ordered: false, text } : null;
+  }
+
+  let index = 0;
+  while (index < line.length && isDigit(line[index] ?? "")) {
+    index += 1;
+  }
+  if (index === 0 || line[index] !== "." || line[index + 1] !== " ") {
+    return null;
+  }
+  const text = line.slice(index + 2).trim();
+  return text ? { ordered: true, text } : null;
+}
+
+function splitInlineCode(text: string): InlineTextSegment[] {
+  const segments: InlineTextSegment[] = [];
+  let current = "";
+  let code = "";
+  let insideCode = false;
+
+  const pushCurrent = () => {
+    if (current) {
+      segments.push({ type: "text", text: current });
+      current = "";
+    }
+  };
+
+  for (const char of text) {
+    if (char !== "`") {
+      if (insideCode) code += char;
+      else current += char;
+      continue;
+    }
+
+    if (insideCode) {
+      if (code) {
+        pushCurrent();
+        segments.push({ type: "code", text: code });
+      } else {
+        current += "``";
+      }
+      code = "";
+      insideCode = false;
+      continue;
+    }
+
+    insideCode = true;
+  }
+
+  if (insideCode) {
+    current += `\`${code}`;
+  }
+  pushCurrent();
+  return segments.length > 0 ? segments : [{ type: "text", text }];
+}
+
 function formatSourceLocation(source: HorusChatEvidenceSource): string {
   if (!source.path) return source.label;
   if (source.startLine && source.endLine) {
@@ -392,9 +541,11 @@ function MessageContent({
             </pre>
           </div>
         ) : (
-          splitParagraphs(block.text).map((paragraph, paragraphIndex) => (
-            <p key={`text:${index}:${paragraphIndex}`}>{paragraph}</p>
-          ))
+          <MessageTextBlock
+            key={`text:${index}`}
+            blockKey={`text:${index}`}
+            text={block.text}
+          />
         )
       )}
       {referencedFiles.length > 0 ? (
@@ -406,6 +557,72 @@ function MessageContent({
       ) : null}
       {isStreaming ? <span className="preview-chat-stream-caret" aria-hidden="true" /> : null}
     </div>
+  );
+}
+
+function MessageTextBlock({
+  blockKey,
+  text,
+}: {
+  readonly blockKey: string;
+  readonly text: string;
+}): JSX.Element {
+  const segments = useMemo(() => parseTextSegments(text), [text]);
+
+  return (
+    <>
+      {segments.map((segment, index) => {
+        if (segment.type === "heading") {
+          const HeadingTag = segment.level === 2 ? "h3" : "h4";
+          return (
+            <HeadingTag
+              className="preview-chat-rich-heading"
+              key={`${blockKey}:heading:${index}`}
+            >
+              <InlineText text={segment.text} />
+            </HeadingTag>
+          );
+        }
+
+        if (segment.type === "list") {
+          const ListTag = segment.ordered ? "ol" : "ul";
+          return (
+            <ListTag
+              className="preview-chat-rich-list"
+              key={`${blockKey}:list:${index}`}
+            >
+              {segment.items.map((item, itemIndex) => (
+                <li key={`${blockKey}:list:${index}:${itemIndex}`}>
+                  <InlineText text={item} />
+                </li>
+              ))}
+            </ListTag>
+          );
+        }
+
+        return (
+          <p key={`${blockKey}:paragraph:${index}`}>
+            <InlineText text={segment.text} />
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
+function InlineText({ text }: { readonly text: string }): JSX.Element {
+  const segments = useMemo(() => splitInlineCode(text), [text]);
+
+  return (
+    <>
+      {segments.map((segment, index) =>
+        segment.type === "code" ? (
+          <code key={`code:${index}`}>{segment.text}</code>
+        ) : (
+          <span key={`text:${index}`}>{segment.text}</span>
+        )
+      )}
+    </>
   );
 }
 
@@ -621,26 +838,6 @@ function isKnownFileReference(candidate: string): boolean {
     if (!suffix.startsWith(":")) return false;
     return suffix.slice(1).split("-").every(isPositiveIntegerText);
   });
-}
-
-function splitParagraphs(text: string): string[] {
-  const paragraphs: string[] = [];
-  let current: string[] = [];
-  const pushParagraph = () => {
-    const paragraph = current.join("\n").trim();
-    current = [];
-    if (paragraph) paragraphs.push(paragraph);
-  };
-
-  for (const line of text.split("\n")) {
-    if (line.trim().length === 0) {
-      pushParagraph();
-      continue;
-    }
-    current.push(line);
-  }
-  pushParagraph();
-  return paragraphs;
 }
 
 function readFenceLanguage(line: string): string | null {

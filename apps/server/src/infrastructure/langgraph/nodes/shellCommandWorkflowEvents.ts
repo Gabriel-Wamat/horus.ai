@@ -30,6 +30,9 @@ export function buildShellCommandCompletionWorkflowEvent(input: {
         : {}),
       ...(input.result.toolCallId ? { toolCallId: input.result.toolCallId } : {}),
       ...(input.result.runId ? { runId: input.result.runId } : {}),
+      ...(input.result.operationalSessionId
+        ? { operationalSessionId: input.result.operationalSessionId }
+        : {}),
       ...(input.result.projectId ? { projectId: input.result.projectId } : {}),
       ...(input.result.agentId ? { agentId: input.result.agentId } : {}),
       ...(input.result.filePath ? { filePath: input.result.filePath } : {}),
@@ -56,6 +59,9 @@ export function buildShellCommandCompletionWorkflowEvent(input: {
       : {}),
     ...(input.result.toolCallId ? { toolCallId: input.result.toolCallId } : {}),
     ...(input.result.runId ? { runId: input.result.runId } : {}),
+    ...(input.result.operationalSessionId
+      ? { operationalSessionId: input.result.operationalSessionId }
+      : {}),
     ...(input.result.projectId ? { projectId: input.result.projectId } : {}),
     ...(input.result.agentId ? { agentId: input.result.agentId } : {}),
     ...(input.result.filePath ? { filePath: input.result.filePath } : {}),

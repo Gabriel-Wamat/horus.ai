@@ -1,4 +1,5 @@
 import type { UBuildState, UBuildUpdate, CuratorFeedback } from "../state.js";
+import { randomUUID } from "node:crypto";
 import { selectCuratorInputs } from "../curatorInputs.js";
 import type { LangGraphDependencies } from "../dependencies.js";
 import { defaultLangGraphDependencies } from "../dependencies.js";
@@ -66,6 +67,7 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
             projectRootPath: state.frontendProjectRootPath,
           })
         : undefined;
+    const curatorPreflightOperationalSessionId = randomUUID();
     const preflight =
       codeChangeSet && state.frontendProjectRootPath && deps.preflightCodeChangeSet
         ? await deps.preflightCodeChangeSet({
@@ -79,6 +81,7 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
               state,
               codeChangeSet,
               constructionRunId: artifactContext?.constructionRunId ?? null,
+              operationalSessionId: curatorPreflightOperationalSessionId,
             }),
             onCommandOutput: (output) => {
               deps.emitWorkflowEvent?.({
@@ -96,6 +99,8 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
                   : {}),
                 ...(output.toolCallId ? { toolCallId: output.toolCallId } : {}),
                 ...(output.runId ? { runId: output.runId } : {}),
+                operationalSessionId:
+                  output.operationalSessionId ?? curatorPreflightOperationalSessionId,
                 ...(output.projectId ? { projectId: output.projectId } : {}),
                 ...(output.agentId ? { agentId: output.agentId } : {}),
                 ...(output.filePath ? { filePath: output.filePath } : {}),
@@ -491,6 +496,7 @@ function buildCuratorPreflightTraceContext(input: {
     operations: readonly { targetPath: string }[];
   };
   constructionRunId?: string | null;
+  operationalSessionId: string;
 }) {
   const firstTouchedFile = input.codeChangeSet.operations[0]?.targetPath ?? null;
   const runId = input.constructionRunId ?? input.state.threadId;
@@ -502,6 +508,7 @@ function buildCuratorPreflightTraceContext(input: {
     parentSpanId: null,
     toolCallId: spanId,
     runId,
+    operationalSessionId: input.operationalSessionId,
     projectId: input.state.frontendProjectId ?? null,
     agentId: "curator_agent",
     filePath: firstTouchedFile,

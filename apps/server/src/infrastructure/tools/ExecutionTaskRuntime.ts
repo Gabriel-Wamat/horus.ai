@@ -32,6 +32,7 @@ export interface ExecutionTaskRecord {
   parentSpanId: string | null;
   toolCallId: string | null;
   runId: string | null;
+  operationalSessionId: string | null;
   projectId: string | null;
   agentId: string | null;
   filePath: string | null;
@@ -84,6 +85,7 @@ export interface ExecutionTaskOutputChunk {
   parentSpanId: string | null;
   toolCallId: string | null;
   runId: string | null;
+  operationalSessionId: string | null;
   projectId: string | null;
   agentId: string | null;
   filePath: string | null;
@@ -125,6 +127,7 @@ interface ExecutionTaskTraceContext {
   parentSpanId: string | null;
   toolCallId: string | null;
   runId: string | null;
+  operationalSessionId: string | null;
   projectId: string | null;
   agentId: string | null;
   filePath: string | null;
@@ -188,6 +191,7 @@ function emitOutputChunk(
       parentSpanId: task.parentSpanId,
       toolCallId: task.toolCallId,
       runId: task.runId,
+      operationalSessionId: task.operationalSessionId,
       projectId: task.projectId,
       agentId: task.agentId,
       filePath: task.filePath,
@@ -376,6 +380,7 @@ export class ExecutionTaskRuntime {
         parentSpanId: task.spanId ?? task.parentSpanId,
         toolCallId: task.toolCallId,
         runId: task.runId,
+        operationalSessionId: task.operationalSessionId,
         projectId: task.projectId,
         agentId: task.agentId,
         filePath: task.filePath,
@@ -416,6 +421,7 @@ export class ExecutionTaskRuntime {
         parentSpanId: task.spanId ?? task.parentSpanId,
         toolCallId: task.toolCallId,
         runId: task.runId,
+        operationalSessionId: task.operationalSessionId,
         projectId: task.projectId,
         agentId: task.agentId,
         filePath: task.filePath,
@@ -831,6 +837,7 @@ function traceContext(spec: {
   parentSpanId?: string | null;
   toolCallId?: string | null;
   runId?: string | null;
+  operationalSessionId?: string | null;
   projectId?: string | null;
   agentId?: string | null;
   filePath?: string | null;
@@ -842,6 +849,7 @@ function traceContext(spec: {
     parentSpanId: spec.parentSpanId ?? null,
     toolCallId: spec.toolCallId ?? null,
     runId: spec.runId ?? null,
+    operationalSessionId: spec.operationalSessionId ?? null,
     projectId: spec.projectId ?? null,
     agentId: spec.agentId ?? null,
     filePath: spec.filePath ?? null,

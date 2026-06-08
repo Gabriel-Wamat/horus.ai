@@ -228,7 +228,7 @@ export async function buildHorusChatOutcome({
         action: "spec_requested",
         status: "accepted",
         summary:
-          "Vou montar a spec desta user story e trazer o resultado para revisão.",
+          "Spec em andamento. Vou estruturar requisitos, componentes, estados e critérios de validação para revisão.",
       };
     }
     case "unsupported":
@@ -237,7 +237,7 @@ export async function buildHorusChatOutcome({
         action: "error",
         status: "blocked",
         summary:
-          "Não executo comandos arbitrários pelo chat. Posso iniciar o preview registrado, gerar spec ou pedir uma alteração no projeto selecionado.",
+          "Isso não é uma ação permitida neste chat. Aqui eu consigo iniciar preview registrado, gerar spec ou executar alterações controladas no projeto selecionado.",
       };
     case "clarify":
       return {
@@ -250,7 +250,7 @@ export async function buildHorusChatOutcome({
             context,
             ...(llmSettings ? { llmSettings } : {}),
           }) ??
-          "Preciso de um detalhe: você quer uma resposta, uma mudança no código, uma spec ou uma ação no preview?",
+          "Preciso confirmar o alvo: você quer uma resposta, uma mudança no código, uma spec ou uma ação no preview?",
       };
   }
 }

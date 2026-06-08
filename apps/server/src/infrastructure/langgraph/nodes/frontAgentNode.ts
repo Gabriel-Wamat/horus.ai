@@ -482,6 +482,7 @@ async function executeChangeSetThroughToolLoop(input: {
         parentSpanId?: string | null;
         toolCallId?: string | null;
         runId?: string | null;
+        operationalSessionId?: string | null;
         projectId?: string | null;
         agentId?: string | null;
         filePath?: string | null;
@@ -500,6 +501,9 @@ async function executeChangeSetThroughToolLoop(input: {
         ...(tracedOutput.parentSpanId ? { parentSpanId: tracedOutput.parentSpanId } : {}),
         ...(tracedOutput.toolCallId ? { toolCallId: tracedOutput.toolCallId } : {}),
         ...(tracedOutput.runId ? { runId: tracedOutput.runId } : {}),
+        ...(tracedOutput.operationalSessionId
+          ? { operationalSessionId: tracedOutput.operationalSessionId }
+          : {}),
         ...(tracedOutput.projectId ? { projectId: tracedOutput.projectId } : {}),
         ...(tracedOutput.agentId ? { agentId: tracedOutput.agentId } : {}),
         ...(tracedOutput.filePath ? { filePath: tracedOutput.filePath } : {}),

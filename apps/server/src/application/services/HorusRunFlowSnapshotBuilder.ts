@@ -3,9 +3,13 @@ import {
   HorusRunLocatorSchema,
   HorusRunSnapshotSchema,
   AgentToolNameSchema,
+  AgentOperationTimelineGroupSchema,
   type AgentRunbookEntry,
   type AgentFileOperationTelemetry,
   type AgentFileOperationType,
+  type AgentOperationTimelineGroup,
+  type AgentOperationTimelineItem,
+  type AgentOperationTimelineStatus,
   type AgentRunPhase,
   type HorusAgentEvidenceSummary,
   type HorusRunEventSnapshot,
@@ -65,11 +69,7 @@ export class HorusRunFlowSnapshotBuilder {
           currentNode,
         });
       })
-      .sort((left, right) =>
-        (right.completedAt ?? right.startedAt).localeCompare(
-          left.completedAt ?? left.startedAt
-        )
-      );
+      .sort(compareRunLocatorsForHistory);
     const projectRuns = options.projectId
       ? runs.filter((run) => runBelongsToProject(run, options.projectId!))
       : runs;
@@ -86,8 +86,11 @@ export class HorusRunFlowSnapshotBuilder {
     const state = await this.storage.load(threadId);
     if (!state) return null;
     const events = await this.events.list(threadId);
-    const runbookEntries = await this.buildRunbook(state, events);
-    return this.buildSnapshot(state, events, runbookEntries);
+    const [runbookEntries, fileOperations] = await Promise.all([
+      this.buildRunbook(state, events),
+      this.buildFileOperations(state, events),
+    ]);
+    return this.buildSnapshot(state, events, runbookEntries, fileOperations);
   }
 
   async listEvents(threadId: string): Promise<HorusRunEventSnapshot[]> {
@@ -120,7 +123,8 @@ export class HorusRunFlowSnapshotBuilder {
   private buildSnapshot(
     state: WorkflowState,
     events: HorusRunEventSnapshot[],
-    runbookEntries: AgentRunbookEntry[] = []
+    runbookEntries: AgentRunbookEntry[] = [],
+    fileOperations: AgentFileOperationTelemetry[] = []
   ): HorusRunSnapshot {
     const agentExecutions = deriveAgentExecutions(state);
     const currentStory = state.userStories[state.currentUSIndex] ?? null;
@@ -148,6 +152,10 @@ export class HorusRunFlowSnapshotBuilder {
       agentExecutions,
       events,
       evidenceSummaries: deriveEvidenceSummaries(state, events, agentExecutions),
+      operationTimeline: buildAgentOperationTimeline({
+        events,
+        fileOperations,
+      }),
       runbookEntries,
       validationSummary,
       sourceState: state,
@@ -245,8 +253,263 @@ function fileOperationsFromRunEvent(
   );
 }
 
+function buildAgentOperationTimeline(input: {
+  events: HorusRunEventSnapshot[];
+  fileOperations: AgentFileOperationTelemetry[];
+}): AgentOperationTimelineGroup[] {
+  const groups = new Map<string, AgentOperationTimelineGroupDraft>();
+  const ensureGroup = (seed: AgentOperationTimelineSeed) => {
+    const groupKey = seed.operationalSessionId ?? seed.taskId ?? seed.toolCallId ?? seed.id;
+    const existing = groups.get(groupKey);
+    if (existing) {
+      existing.startedAt =
+        seed.timestamp < existing.startedAt ? seed.timestamp : existing.startedAt;
+      existing.finishedAt =
+        !existing.finishedAt || seed.timestamp > existing.finishedAt
+          ? seed.timestamp
+          : existing.finishedAt;
+      existing.status = mergeTimelineStatus(existing.status, seed.status);
+      return existing;
+    }
+    const draft: AgentOperationTimelineGroupDraft = {
+      id: `operation:${encodeURIComponent(groupKey)}`,
+      threadId: seed.threadId,
+      groupKey,
+      operationalSessionId: seed.operationalSessionId,
+      taskId: seed.taskId,
+      agentName: seed.agentName,
+      agentProfileId: seed.agentProfileId,
+      nodeId: seed.nodeId,
+      toolName: seed.toolName,
+      title: seed.title,
+      status: seed.status,
+      startedAt: seed.timestamp,
+      finishedAt: seed.status === "running" ? null : seed.timestamp,
+      items: [],
+    };
+    groups.set(groupKey, draft);
+    return draft;
+  };
+
+  for (const event of input.events) {
+    const status = timelineStatusFromEvent(event);
+    const toolName = toolNameFromRunEvent(event);
+    const group = ensureGroup({
+      id: event.id,
+      threadId: event.threadId,
+      timestamp: event.timestamp,
+      status,
+      title: event.agentName
+        ? `${formatAgentName(event.agentName)} · ${toolName ?? event.title}`
+        : event.title,
+      operationalSessionId: stringMetadata(event, "operationalSessionId"),
+      taskId: event.taskId ?? stringMetadata(event, "taskId"),
+      toolCallId: event.toolCallId ?? stringMetadata(event, "toolCallId"),
+      agentName: event.agentName ?? null,
+      agentProfileId: event.agentProfileId ?? null,
+      nodeId: event.nodeId ?? null,
+      toolName,
+    });
+    const item = timelineItemFromEvent(event, status);
+    if (item) group.items.push(item);
+  }
+
+  for (const operation of input.fileOperations) {
+    const group = ensureGroup({
+      id: operation.id,
+      threadId: operation.threadId,
+      timestamp: operation.timestamp,
+      status: timelineStatusFromFileOperation(operation),
+      title: operation.agentName
+        ? `${formatAgentName(operation.agentName)} · arquivos`
+        : "Arquivos",
+      operationalSessionId: operation.operationalSessionId,
+      taskId: null,
+      toolCallId: null,
+      agentName: operation.agentName,
+      agentProfileId: operation.agentProfileId,
+      nodeId: operation.nodeId,
+      toolName: operation.toolName,
+    });
+    group.items.push({
+      id: `timeline-file:${operation.id}`,
+      kind: operation.operationType === "diff" ? "diff" : "file",
+      status: timelineStatusFromFileOperation(operation),
+      title: operation.path,
+      detail: operation.summary ?? operation.errorMessage,
+      timestamp: operation.timestamp,
+      sourceEventId: operation.sourceEventId,
+      operationId: operation.id,
+      commandId: operation.commandIds[0] ?? null,
+      taskId: null,
+      filePath: operation.path,
+      diffId: operation.diffPreview ? operation.id : null,
+    });
+  }
+
+  return [...groups.values()]
+    .map((group) =>
+      AgentOperationTimelineGroupSchema.parse({
+        ...group,
+        items: group.items
+          .sort((left, right) =>
+            left.timestamp.localeCompare(right.timestamp) || left.id.localeCompare(right.id)
+          )
+          .slice(-80),
+      })
+    )
+    .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+}
+
+interface AgentOperationTimelineGroupDraft
+  extends Omit<AgentOperationTimelineGroup, "items"> {
+  items: AgentOperationTimelineItem[];
+}
+
+interface AgentOperationTimelineSeed {
+  id: string;
+  threadId: string;
+  timestamp: string;
+  status: AgentOperationTimelineStatus;
+  title: string;
+  operationalSessionId: string | null;
+  taskId: string | null;
+  toolCallId: string | null;
+  agentName: AgentOperationTimelineGroup["agentName"];
+  agentProfileId: AgentOperationTimelineGroup["agentProfileId"];
+  nodeId: AgentOperationTimelineGroup["nodeId"];
+  toolName: AgentOperationTimelineGroup["toolName"];
+}
+
+function timelineItemFromEvent(
+  event: HorusRunEventSnapshot,
+  status: AgentOperationTimelineStatus
+): AgentOperationTimelineItem | null {
+  const commandChunk = event.type === "command_output" ? event.chunk ?? "" : "";
+  if (event.type === "command_output" && !commandChunk.trim()) return null;
+  const kind = timelineItemKindFromEvent(event);
+  return {
+    id: `timeline-event:${event.id}`,
+    kind,
+    status,
+    title: timelineItemTitle(event),
+    detail:
+      event.type === "command_output"
+        ? commandChunk
+        : event.errorMessage ?? event.summary ?? null,
+    timestamp: event.timestamp,
+    sourceEventId: event.id,
+    operationId: null,
+    commandId: event.commandId ?? event.commandIds?.[0] ?? null,
+    taskId: event.taskId ?? stringMetadata(event, "taskId"),
+    filePath: event.filePath ?? event.filePaths?.[0] ?? null,
+    diffId: event.diffId ?? stringMetadata(event, "changeSetId"),
+  };
+}
+
+function timelineItemKindFromEvent(
+  event: HorusRunEventSnapshot
+): AgentOperationTimelineItem["kind"] {
+  if (event.type === "command_output" || event.commandId || event.commandIds?.length) {
+    return "command";
+  }
+  if (event.type === "validation_evidence") return "validation";
+  if (event.type === "retry_started" || event.type === "awaiting_retry_approval") {
+    return "retry";
+  }
+  if (event.type === "patch_proposed" || event.type === "patch_applied") return "diff";
+  if (event.type === "error") return "failure";
+  if (event.filePaths?.length || event.filePath) return "file";
+  return "event";
+}
+
+function timelineItemTitle(event: HorusRunEventSnapshot): string {
+  if (event.type === "command_output") {
+    const stream = event.stream ?? "stdout";
+    return `${event.commandId ?? "command"} · ${stream}`;
+  }
+  if (event.commandId) return event.commandId;
+  if (event.commandIds?.length) return event.commandIds.join(", ");
+  return event.title;
+}
+
+function timelineStatusFromEvent(event: HorusRunEventSnapshot): AgentOperationTimelineStatus {
+  if (event.type === "command_approval_requested" || event.eventType === "awaiting_approval") {
+    return "awaiting_approval";
+  }
+  if (event.type === "tool_call_started") return "running";
+  if (event.type === "tool_call_blocked") return "blocked";
+  if (event.type === "error") return "failed";
+  if (event.type === "tool_call_finished") {
+    return event.errorMessage || event.eventType === "failed" ? "failed" : "succeeded";
+  }
+  if (event.eventType === "validation_failed" || event.eventType === "review_failed") {
+    return "failed";
+  }
+  if (event.eventType === "validation_passed" || event.eventType === "review_passed") {
+    return "succeeded";
+  }
+  return "info";
+}
+
+function timelineStatusFromFileOperation(
+  operation: AgentFileOperationTelemetry
+): AgentOperationTimelineStatus {
+  if (operation.status === "running") return "running";
+  if (operation.status === "failed") return "failed";
+  if (operation.status === "blocked") return "blocked";
+  if (
+    operation.status === "changed" ||
+    operation.status === "applied" ||
+    operation.status === "validated" ||
+    operation.status === "read" ||
+    operation.status === "proposed"
+  ) {
+    return "succeeded";
+  }
+  return "info";
+}
+
+function mergeTimelineStatus(
+  current: AgentOperationTimelineStatus,
+  next: AgentOperationTimelineStatus
+): AgentOperationTimelineStatus {
+  const priority: AgentOperationTimelineStatus[] = [
+    "failed",
+    "blocked",
+    "awaiting_approval",
+    "running",
+    "succeeded",
+    "info",
+  ];
+  return priority.indexOf(next) < priority.indexOf(current) ? next : current;
+}
+
+function formatAgentName(agentName: NonNullable<AgentOperationTimelineGroup["agentName"]>): string {
+  if (agentName === "qa") return "QA";
+  if (agentName === "odin") return "ODIN";
+  return `${agentName.charAt(0).toUpperCase()}${agentName.slice(1)}`;
+}
+
 function runBelongsToProject(run: HorusRunLocator, projectId: string): boolean {
   return run.frontendProjectId === projectId || run.workspaceFolderId === projectId;
+}
+
+function compareRunLocatorsForHistory(
+  left: HorusRunLocator,
+  right: HorusRunLocator
+): number {
+  const byStatus = runHistoryStatusPriority(left.status) - runHistoryStatusPriority(right.status);
+  if (byStatus !== 0) return byStatus;
+  return (right.completedAt ?? right.startedAt).localeCompare(
+    left.completedAt ?? left.startedAt
+  );
+}
+
+function runHistoryStatusPriority(status: HorusRunLocator["status"]): number {
+  if (status === "running") return 0;
+  if (status === "awaiting_human") return 1;
+  return 3;
 }
 
 function runMatchesQuery(run: HorusRunLocator, query: string): boolean {

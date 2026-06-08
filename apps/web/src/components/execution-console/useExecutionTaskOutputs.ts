@@ -43,6 +43,8 @@ interface ExecutionTaskSnapshot {
   policyReason?: string | null;
 }
 
+class ExecutionTaskEndpointUnavailableError extends Error {}
+
 export function useExecutionTaskRows(
   selectedProjectId: string | null,
   rows: readonly TerminalRow[]
@@ -70,7 +72,7 @@ export function useExecutionTaskRows(
         }
       } catch {
         if (!controller.signal.aborted) {
-          timer = window.setTimeout(poll, 2_000);
+          setTasks((current) => (current.length === 0 ? current : []));
         }
       }
     };
@@ -93,16 +95,22 @@ export function useExecutionTaskOutputs(
   const [outputs, setOutputs] = useState<Map<string, FollowedTaskOutput>>(
     () => new Map()
   );
+  const taskRowsSignature = rows
+    .map(
+      (row) =>
+        `${row.id}:${row.projectId ?? ""}:${row.taskId ?? ""}:${row.timestamp}`
+    )
+    .join("|");
 
   useEffect(() => {
     if (!selectedProjectId) {
-      setOutputs(new Map());
+      setOutputs((current) => (current.size === 0 ? current : new Map()));
       return;
     }
 
     const rowsWithTasks = uniqueTaskRows(rows).slice(0, 6);
     if (rowsWithTasks.length === 0) {
-      setOutputs(new Map());
+      setOutputs((current) => (current.size === 0 ? current : new Map()));
       return;
     }
 
@@ -111,47 +119,55 @@ export function useExecutionTaskOutputs(
 
     const poll = async () => {
       try {
-        const entries = await Promise.all(
-          rowsWithTasks.map(async (row) => {
-            const projectId = row.projectId ?? selectedProjectId;
-            const taskId = row.taskId!;
-            const task = await fetchTaskSnapshot(projectId, taskId, controller.signal);
-            const [stdout, stderr] = await Promise.all([
-              fetchTaskOutputTail({
+        const entries = (
+          await Promise.all(
+            rowsWithTasks.map(async (row) => {
+              const projectId = selectedProjectId;
+              const taskId = row.taskId!;
+              const task = await fetchTaskSnapshot(
                 projectId,
                 taskId,
-                stream: "stdout",
-                byteCount: task.stdoutBytes,
-                signal: controller.signal,
-              }),
-              fetchTaskOutputTail({
-                projectId,
-                taskId,
-                stream: "stderr",
-                byteCount: task.stderrBytes,
-                signal: controller.signal,
-              }),
-            ]);
-            const fallbackOutput = [task.stdoutTail, task.stderrTail]
-              .filter(Boolean)
-              .join("\n");
-            const output = [stdout, stderr].filter(Boolean).join("\n") || fallbackOutput;
-            const promptOutput =
-              task.interactivePromptDetected && task.interactivePromptText
-                ? `${output}${output ? "\n" : ""}[prompt interativo] ${task.interactivePromptText}`
-                : output;
-            return [
-              row.id,
-              {
-                output: promptOutput,
-                status: task.interactivePromptDetected
-                  ? "aguardando input"
-                  : executionTaskStatusLabel(task.status),
-              },
-              isTaskActive(task.status),
-            ] as const;
-          })
-        );
+                controller.signal
+              );
+              if (!task) return null;
+              const [stdout, stderr] = await Promise.all([
+                fetchTaskOutputTail({
+                  projectId,
+                  taskId,
+                  stream: "stdout",
+                  byteCount: task.stdoutBytes,
+                  signal: controller.signal,
+                }),
+                fetchTaskOutputTail({
+                  projectId,
+                  taskId,
+                  stream: "stderr",
+                  byteCount: task.stderrBytes,
+                  signal: controller.signal,
+                }),
+              ]);
+              const fallbackOutput = [task.stdoutTail, task.stderrTail]
+                .filter(Boolean)
+                .join("\n");
+              const output =
+                [stdout, stderr].filter(Boolean).join("\n") || fallbackOutput;
+              const promptOutput =
+                task.interactivePromptDetected && task.interactivePromptText
+                  ? `${output}${output ? "\n" : ""}[prompt interativo] ${task.interactivePromptText}`
+                  : output;
+              return [
+                row.id,
+                {
+                  output: promptOutput,
+                  status: task.interactivePromptDetected
+                    ? "aguardando input"
+                    : executionTaskStatusLabel(task.status),
+                },
+                isTaskActive(task.status),
+              ] as const;
+            })
+          )
+        ).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
         if (controller.signal.aborted) return;
         const next = new Map<string, FollowedTaskOutput>();
         for (const [id, value] of entries) {
@@ -174,7 +190,7 @@ export function useExecutionTaskOutputs(
       controller.abort();
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [rows, selectedProjectId]);
+  }, [taskRowsSignature, selectedProjectId]);
 
   return outputs;
 }
@@ -231,6 +247,9 @@ async function fetchTaskList(
     `/api/projects/${encodeURIComponent(projectId)}/execution-tasks?limit=20`,
     { cache: "no-store", signal }
   );
+  if (response.status === 404) {
+    throw new ExecutionTaskEndpointUnavailableError("Execution task endpoint unavailable");
+  }
   if (!response.ok) return [];
   const body = (await response.json()) as { tasks?: ExecutionTaskSnapshot[] };
   return body.tasks ?? [];
@@ -240,16 +259,15 @@ async function fetchTaskSnapshot(
   projectId: string,
   taskId: string,
   signal: AbortSignal
-): Promise<ExecutionTaskSnapshot> {
+): Promise<ExecutionTaskSnapshot | null> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/execution-tasks/${encodeURIComponent(
       taskId
     )}`,
     { cache: "no-store", signal }
   );
-  if (!response.ok) {
-    throw new Error(`Execution task not available: ${taskId}`);
-  }
+  if (response.status === 404) return null;
+  if (!response.ok) return null;
   return response.json() as Promise<ExecutionTaskSnapshot>;
 }
 
