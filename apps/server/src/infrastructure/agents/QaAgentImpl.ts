@@ -33,6 +33,10 @@ const QaOutputSchema = z.object({
   previewSmoke: QaPreviewSmokeResultSchema.optional(),
 });
 
+const QaLlmOutputSchema = z.object({
+  testCases: z.array(TestCaseSchema),
+});
+
 export type QaOutput = z.infer<typeof QaOutputSchema> & {
   runtimeValidation?: RuntimeValidationEvidence | undefined;
 };
@@ -262,11 +266,18 @@ IDs devem ser TC-01, TC-02, etc.`;
 
   const model = createChatModel("qa", {
     temperature: 1,
-  }, llmSettings).withStructuredOutput(QaOutputSchema);
+  }, llmSettings).withStructuredOutput(QaLlmOutputSchema);
+  const timeoutMs = resolveQaAgentLlmTimeoutMs();
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return QaOutputSchema.parse(await invokeChatModel(model, prompt));
+      return QaOutputSchema.parse(
+        await withQaTimeout(
+          invokeChatModel(model, prompt),
+          timeoutMs,
+          `QaAgent timed out after ${timeoutMs / 1000}s while generating test cases.`
+        )
+      );
     } catch (err) {
       console.warn(`[QaAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {
@@ -276,4 +287,33 @@ IDs devem ser TC-01, TC-02, etc.`;
   }
 
   return buildFallbackQaOutput(spec, executionBrief);
+}
+
+function resolveQaAgentLlmTimeoutMs(
+  env: Record<string, string | undefined> = process.env
+): number {
+  const raw = env["QA_AGENT_LLM_TIMEOUT_MS"]?.trim();
+  if (!raw) return 45_000;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error("QA_AGENT_LLM_TIMEOUT_MS must be a positive finite number.");
+  }
+  return parsed;
+}
+
+async function withQaTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }

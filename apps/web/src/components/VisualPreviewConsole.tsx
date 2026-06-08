@@ -6,6 +6,7 @@ import type {
   PreviewSession,
 } from "@u-build/shared";
 import { previewApi } from "../api/previewApi.js";
+import type { ActiveProjectConstruction } from "../app/activeProjectConstruction.js";
 import { usePreviewEvents } from "../hooks/usePreviewEvents.js";
 import { ExecutionConsolePanel } from "./ExecutionConsolePanel.js";
 import { PreviewCanvas } from "./PreviewCanvas.js";
@@ -19,15 +20,18 @@ import {
   canShowInDefaultPreviewList,
   selectDefaultProject,
   selectNewestProject,
+  upsertPreviewProject,
 } from "../features/visual-preview/projectSelection.js";
 import { usePreviewChatRuntime } from "../features/visual-preview/usePreviewChatRuntime.js";
 
 export function VisualPreviewConsole({
   workspaceFolderId,
   userStoryId,
+  activeConstruction,
 }: {
   readonly workspaceFolderId: string | undefined;
   readonly userStoryId: string | null;
+  readonly activeConstruction: ActiveProjectConstruction | null;
 }): JSX.Element {
   const [projects, setProjects] = useState<FrontendProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -40,6 +44,7 @@ export function VisualPreviewConsole({
     useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasUserSelectedProjectRef = useRef(false);
+  const autoStartedConstructionRunRef = useRef<string | null>(null);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -63,6 +68,7 @@ export function VisualPreviewConsole({
     workspaceFolderId,
     userStoryId,
     previewSession: session,
+    workflowThreadId: activeConstruction?.workflowThreadId ?? null,
     onPreviewSessionResolved: handlePreviewSessionResolved,
     onError: setError,
   });
@@ -96,6 +102,54 @@ export function VisualPreviewConsole({
   }, []);
 
   useEffect(() => {
+    if (!activeConstruction) return;
+    let cancelled = false;
+    const activeProject = activeConstruction.frontendProject;
+
+    if (activeProject) {
+      setProjects((current) => upsertPreviewProject(current, activeProject));
+      setSelectedProjectId(activeProject.id);
+      setRoute(activeProject.defaultRoute);
+      setSession(null);
+      setTimeline([]);
+      setError(null);
+    }
+
+    setIsLoadingProjects(true);
+    void previewApi
+      .listProjects({ visibility: "visible" })
+      .then((items) => {
+        if (cancelled) return;
+        const mergedProjects = activeProject
+          ? upsertPreviewProject(items, activeProject)
+          : items;
+        const selected =
+          activeConstruction.frontendProjectId
+            ? mergedProjects.find(
+                (project) => project.id === activeConstruction.frontendProjectId
+              ) ?? null
+            : selectNewestProject(mergedProjects);
+        setProjects(mergedProjects);
+        if (selected) {
+          setSelectedProjectId(selected.id);
+          setRoute(selected.defaultRoute);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Falha ao listar projetos.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProjects(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConstruction]);
+
+  useEffect(() => {
     if (!selectedProject) return;
     setRoute(selectedProject.defaultRoute);
     setSession(null);
@@ -126,11 +180,11 @@ export function VisualPreviewConsole({
       .catch(() => undefined);
   }, [latestEvent, session?.id]);
 
-  const appendEvent = (event: PreviewEvent): void => {
+  const appendEvent = useCallback((event: PreviewEvent): void => {
     setTimeline((current) => mergeEvents(current, [event]));
-  };
+  }, []);
 
-  const ensureSession = async (): Promise<PreviewSession> => {
+  const ensureSession = useCallback(async (): Promise<PreviewSession> => {
     if (!selectedProject) {
       throw new Error("Selecione um projeto de frontend.");
     }
@@ -149,9 +203,9 @@ export function VisualPreviewConsole({
     const events = await previewApi.listTimeline(result.session.id);
     setTimeline((current) => mergeEvents(current, events));
     return result.session;
-  };
+  }, [appendEvent, route, selectedProject, session]);
 
-  const runAction = async (action: () => Promise<void>): Promise<void> => {
+  const runAction = useCallback(async (action: () => Promise<void>): Promise<void> => {
     setIsActing(true);
     setError(null);
     try {
@@ -161,7 +215,38 @@ export function VisualPreviewConsole({
     } finally {
       setIsActing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!activeConstruction?.frontendProjectId || !selectedProject) return;
+    if (selectedProject.id !== activeConstruction.frontendProjectId) return;
+    if (autoStartedConstructionRunRef.current === activeConstruction.constructionRunId) {
+      return;
+    }
+    if (
+      session?.projectId === selectedProject.id &&
+      (session.status === "running" || session.status === "starting")
+    ) {
+      return;
+    }
+
+    autoStartedConstructionRunRef.current = activeConstruction.constructionRunId;
+    void runAction(async () => {
+      const activeSession = await ensureSession();
+      const result = await previewApi.startSession(activeSession.id);
+      setSession(result.session);
+      appendEvent(result.event);
+    });
+  }, [
+    activeConstruction?.constructionRunId,
+    activeConstruction?.frontendProjectId,
+    appendEvent,
+    ensureSession,
+    runAction,
+    selectedProject,
+    session?.projectId,
+    session?.status,
+  ]);
 
   const handleStart = (): void => {
     void runAction(async () => {

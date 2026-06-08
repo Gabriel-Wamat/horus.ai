@@ -23,6 +23,7 @@ import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.j
 import {
   CodeAwareFrontendOutputSchema,
   ProjectExecutionPlanLlmSchema,
+  normalizeFrontendStructuralPatchIntent,
   type CodeAwareFrontendOutput,
   type ProjectExecutionPlanLlm,
 } from "./front/frontAgentOutputSchemas.js";
@@ -36,6 +37,14 @@ export interface FrontendOutput {
   operations?: FrontendFileOperationPlan[];
   structuralPatchIntents?: StructuralPatchIntent[];
   inspectedFiles?: string[];
+}
+
+interface HtmlChatResponse {
+  content:
+    | string
+    | Array<{
+        text?: string;
+      }>;
 }
 
 export async function generateFrontend(
@@ -169,7 +178,7 @@ ${filesBlock}
 - Use operações completas apenas para criar arquivos novos, deletar arquivos obsoletos, ou quando a mudança for ampla demais para AST.
 - Cada operação completa deve ter operation="write" para criar/atualizar arquivo ou operation="delete" para remover arquivo obsoleto.
 - Operações write devem conter o conteúdo completo final do arquivo em afterContent.
-- Operações delete devem omitir afterContent ou usar afterContent=null.
+- Operações delete devem usar afterContent=null.
 - Preserve arquitetura, imports, componentes, estilos e padrões existentes.
 - Não use CDNs externos, chamadas de rede inventadas, mock/fake adapters, Math.random, fixtures ou dados simulados em runtime.
 - Não crie HTML standalone em generated/horus quando houver projeto real com package.json, src/main.tsx, src/App.tsx, rotas ou componentes existentes.
@@ -236,10 +245,7 @@ ${filesBlock}
             }
       ),
       structuralPatchIntents: result.structuralPatchIntents.map(
-        (intent, index) => ({
-          ...intent,
-          id: intent.id ?? `front-structural-${index + 1}`,
-        })
+        normalizeFrontendStructuralPatchIntent
       ),
       inspectedFiles: codeContext.inspectedFiles,
     };
@@ -297,11 +303,25 @@ ${criteria}
     temperature: 0.2,
     maxTokens: 8192,
   }, llmSettings);
-  const response = await withTimeout(
-    invokeChatModel(model, prompt),
-    timeoutMs,
-    `FrontAgent timed out after ${timeoutMs / 1000}s while generating HTML.`
-  );
+  let response: HtmlChatResponse;
+  try {
+    response = (await withTimeout(
+      invokeChatModel(model, prompt),
+      timeoutMs,
+      `FrontAgent timed out after ${timeoutMs / 1000}s while generating HTML.`
+    )) as HtmlChatResponse;
+  } catch (err) {
+    return {
+      html: buildStandaloneHtmlFallback({
+        userStory,
+        spec,
+        reason:
+          err instanceof Error
+            ? err.message
+            : "FrontAgent standalone HTML generation failed.",
+      }),
+    };
+  }
   const content =
     typeof response.content === "string"
       ? response.content
@@ -314,7 +334,439 @@ ${criteria}
     .replace(/\s*```\s*$/, "")
     .trim();
 
-  return { html };
+  return {
+    html:
+      html.length > 0
+        ? html
+        : buildStandaloneHtmlFallback({
+            userStory,
+            spec,
+            reason: "FrontAgent returned empty HTML content.",
+          }),
+  };
+}
+
+function buildStandaloneHtmlFallback(input: {
+  userStory: UserStory;
+  spec: Spec;
+  reason: string;
+}): string {
+  const title = escapeHtml(input.userStory.title);
+  const summary = escapeHtml(input.spec.summary);
+  const criteriaItems = input.spec.acceptanceCriteria
+    .map((criterion) => `<li>${escapeHtml(criterion)}</li>`)
+    .join("");
+  const apiItems = input.spec.apiEndpoints
+    .map(
+      (endpoint) =>
+        `<li><code>${escapeHtml(endpoint.method)} ${escapeHtml(endpoint.path)}</code> - ${escapeHtml(endpoint.description)}</li>`
+    )
+    .join("");
+  const colorPolicy = input.spec.visualContract?.colorPolicy;
+  const backgroundColor = escapeHtml(colorPolicy?.background[0] ?? "#f6f8fb");
+  const layerColor = escapeHtml(colorPolicy?.surface[0] ?? "#ffffff");
+  const layerStrongColor = escapeHtml(
+    colorPolicy?.surface[1] ?? colorPolicy?.surface[0] ?? "#eef3f8"
+  );
+  const textColor = escapeHtml(colorPolicy?.text[0] ?? "#102033");
+  const mutedColor = escapeHtml(colorPolicy?.text[1] ?? "#607087");
+  const accentColor = escapeHtml(colorPolicy?.accent[0] ?? "#2563EB");
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: ${backgroundColor};
+      --layer: ${layerColor};
+      --layer-strong: ${layerStrongColor};
+      --text: ${textColor};
+      --muted: ${mutedColor};
+      --accent: ${accentColor};
+      --accent-strong: ${accentColor};
+      --border: #d9e1ea;
+      --danger: #7a4b4b;
+      --success: #4d6f5c;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main {
+      width: min(1120px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.05; }
+    p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(280px, 340px);
+      gap: 16px;
+      align-items: start;
+    }
+    section {
+      background: var(--layer);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    h2 { margin: 0 0 14px; font-size: 18px; }
+    label {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .modal-shell {
+      width: min(560px, calc(100vw - 32px));
+      padding: 0;
+      background: var(--layer);
+      border-radius: 12px;
+    }
+    .modal-shell::backdrop { background: rgba(16, 32, 51, 0.28); }
+    .modal-body { padding: 18px; }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .secondary {
+      color: var(--text);
+      background: var(--layer-strong);
+    }
+    input, textarea, select {
+      width: 100%;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 88px; }
+    button {
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-weight: 800;
+      color: white;
+      background: var(--accent);
+      cursor: pointer;
+    }
+    button:disabled { cursor: not-allowed; opacity: 0.62; }
+    button:hover { background: var(--accent-strong); }
+    .error { color: var(--danger); min-height: 20px; font-size: 13px; font-weight: 700; }
+    .status-banner {
+      min-height: 38px;
+      margin-bottom: 12px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: var(--layer-strong);
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .status-banner.error { background: #fff7f6; color: var(--danger); }
+    .status-banner.success { color: var(--success); }
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric {
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--layer-strong);
+    }
+    .metric strong { display: block; font-size: 24px; }
+    .tasks { display: grid; gap: 10px; }
+    .task {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: start;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+    .empty-state {
+      border-radius: 10px;
+      padding: 20px;
+      background: #fff;
+      color: var(--muted);
+      text-align: center;
+    }
+    .task.done { opacity: 0.7; }
+    .task.overdue { background: #fff7f6; }
+    .task-title { font-weight: 800; overflow-wrap: anywhere; }
+    .task-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--layer-strong);
+    }
+    .criteria {
+      margin-top: 16px;
+      padding-top: 16px;
+    }
+    .criteria ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+    @media (max-width: 820px) {
+      header, .layout, .toolbar, .summary { display: grid; grid-template-columns: 1fr; }
+      main { width: min(100vw - 20px, 1120px); padding: 20px 0; }
+    }
+    @media (max-width: 480px) {
+      .modal-shell {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+      }
+      .modal-body { min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Tarefas pessoais</h1>
+        <p>${summary}</p>
+      </div>
+      <button id="open-create" type="button">Nova tarefa</button>
+    </header>
+    <div class="layout">
+      <section aria-labelledby="list-title">
+        <h2 id="list-title">Lista principal</h2>
+        <div id="status" class="status-banner" aria-live="polite">Pronto para registrar novas pendências.</div>
+        <div class="summary" aria-label="Resumo das tarefas">
+          <div class="metric"><span>Pendentes</span><strong id="pending-count">0</strong></div>
+          <div class="metric"><span>Concluídas</span><strong id="done-count">0</strong></div>
+          <div class="metric"><span>Vencidas</span><strong id="overdue-count">0</strong></div>
+        </div>
+        <div class="toolbar">
+          <select id="status-filter" aria-label="Filtrar status"><option value="todas">Todas</option><option value="pending">Pendentes</option><option value="done">Concluídas</option></select>
+          <select id="priority-filter" aria-label="Filtrar prioridade"><option value="todas">Todas prioridades</option><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select>
+          <select id="sort-by" aria-label="Ordenar"><option value="due">Vencimento</option><option value="priority">Prioridade</option></select>
+        </div>
+        <div id="tasks" class="tasks" aria-live="polite"></div>
+      </section>
+      <section aria-labelledby="contract-title">
+        <h2 id="contract-title">Contrato do protótipo</h2>
+        <p>Artefato standalone com adapters em memória para demonstrar o fluxo futuro sem assumir backend real.</p>
+        <div class="criteria">
+          <strong>Critérios cobertos</strong>
+          <ul>${criteriaItems}</ul>
+        </div>
+        <div class="criteria">
+          <strong>APIs futuras</strong>
+          <ul>${apiItems || "<li>Sem rotas futuras declaradas.</li>"}</ul>
+        </div>
+      </section>
+    </div>
+    <dialog id="task-dialog" class="modal-shell" aria-labelledby="form-title">
+      <div class="modal-body">
+        <div class="modal-head">
+          <h2 id="form-title">Nova tarefa</h2>
+          <button id="close-create" class="secondary" type="button">Fechar</button>
+        </div>
+        <form id="task-form" role="form" novalidate>
+          <label for="title">Título <input id="title" name="title" maxlength="80" autocomplete="off" aria-required="true" /></label>
+          <label for="description">Descrição <textarea id="description" name="description" maxlength="240"></textarea></label>
+          <label for="dueAt">Vencimento <input id="dueAt" name="dueAt" type="datetime-local" /></label>
+          <label for="category">Categoria <input id="category" name="category" list="categories" maxlength="32" /></label>
+          <datalist id="categories"></datalist>
+          <label for="priority">Prioridade <select id="priority" name="priority"><option value="baixa">Baixa</option><option value="media" selected>Média</option><option value="alta">Alta</option></select></label>
+          <p id="error" class="error" role="alert" aria-live="polite"></p>
+          <button id="submit-task" type="submit">Salvar tarefa</button>
+        </form>
+      </div>
+    </dialog>
+  </main>
+  <script>
+    const categories = [
+      { id: "cat-work", name: "Trabalho", createdAt: new Date().toISOString() },
+      { id: "cat-home", name: "Casa", createdAt: new Date().toISOString() }
+    ];
+    const tasks = [
+      { id: "task-1", title: "Revisar agenda", description: "Separar prioridades do dia", dueAt: new Date(Date.now() + 3600000).toISOString(), categoryId: "cat-work", priority: "alta", status: "pending", createdAt: new Date().toISOString(), completedAt: null },
+      { id: "task-2", title: "Comprar itens de casa", description: "", dueAt: "", categoryId: "cat-home", priority: "media", status: "pending", createdAt: new Date().toISOString(), completedAt: null }
+    ];
+    const categoryService = {
+      async listCategories() { return categories; },
+      async createCategory(payload) {
+        const category = { id: "cat-" + Date.now(), name: payload.name, createdAt: new Date().toISOString() };
+        categories.push(category);
+        return category;
+      }
+    };
+    const taskService = {
+      async listTasks() { return tasks; },
+      async createTask(payload) {
+        const task = { id: "task-" + Date.now(), title: payload.title, description: payload.description || "", dueAt: payload.dueAt || "", categoryId: payload.categoryId || "", priority: payload.priority || "media", status: "pending", createdAt: new Date().toISOString(), completedAt: null };
+        tasks.unshift(task);
+        return task;
+      }
+    };
+    const priorityRank = { alta: 3, media: 2, baixa: 1 };
+    const dialog = document.querySelector("#task-dialog");
+    const openButton = document.querySelector("#open-create");
+    const closeButton = document.querySelector("#close-create");
+    const form = document.querySelector("#task-form");
+    const list = document.querySelector("#tasks");
+    const error = document.querySelector("#error");
+    const statusBanner = document.querySelector("#status");
+    const submitButton = document.querySelector("#submit-task");
+    let loading = false;
+
+    function setStatus(message, kind) {
+      statusBanner.textContent = message;
+      statusBanner.className = "status-banner" + (kind ? " " + kind : "");
+    }
+    function formatDate(value) {
+      if (!value) return "Sem vencimento";
+      return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+    }
+    function categoryName(categoryId) {
+      return categories.find((category) => category.id === categoryId)?.name || "Sem categoria";
+    }
+    function isOverdue(task) {
+      return task.status === "pending" && task.dueAt && new Date(task.dueAt).getTime() < Date.now();
+    }
+    function renderCategories() {
+      document.querySelector("#categories").innerHTML = categories.map((category) => '<option value="' + category.name + '"></option>').join("");
+    }
+    function render() {
+      const status = document.querySelector("#status-filter").value;
+      const priority = document.querySelector("#priority-filter").value;
+      const sortBy = document.querySelector("#sort-by").value;
+      let visible = tasks.filter((task) => (status === "todas" || task.status === status) && (priority === "todas" || task.priority === priority));
+      visible = visible.sort((a, b) => {
+        if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
+        if (sortBy === "priority") return priorityRank[b.priority] - priorityRank[a.priority];
+        if (!a.dueAt && b.dueAt) return 1;
+        if (a.dueAt && !b.dueAt) return -1;
+        return new Date(a.dueAt || 8640000000000000).getTime() - new Date(b.dueAt || 8640000000000000).getTime();
+      });
+      document.querySelector("#pending-count").textContent = String(tasks.filter((task) => task.status === "pending").length);
+      document.querySelector("#done-count").textContent = String(tasks.filter((task) => task.status === "done").length);
+      document.querySelector("#overdue-count").textContent = String(tasks.filter(isOverdue).length);
+      list.innerHTML = visible.length ? visible.map((task) => '<article class="task ' + (task.status === "done" ? "done " : "") + (isOverdue(task) ? "overdue" : "") + '"><input type="checkbox" data-id="' + task.id + '" ' + (task.status === "done" ? "checked" : "") + ' aria-label="Concluir tarefa ' + task.title + '" /><div><div class="task-title">' + task.title + '</div><p>' + (task.description || "Sem descrição") + '</p><div class="task-meta"><span class="pill">' + task.priority + '</span><span class="pill">' + categoryName(task.categoryId) + '</span><span class="pill">' + formatDate(task.dueAt) + '</span>' + (task.completedAt ? '<span class="pill">Concluída em ' + formatDate(task.completedAt) + '</span>' : '') + '</div></div><span class="pill">' + (task.status === "done" ? "concluída" : "pendente") + '</span></article>').join("") : '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
+    }
+    function setLoading(nextLoading) {
+      loading = nextLoading;
+      submitButton.disabled = loading;
+      submitButton.textContent = loading ? "Salvando..." : "Salvar tarefa";
+    }
+    function openDialog() {
+      error.textContent = "";
+      dialog.showModal();
+      document.querySelector("#title").focus();
+    }
+    function closeDialog() {
+      dialog.close();
+    }
+    async function resolveCategoryId(categoryNameValue) {
+      const normalized = categoryNameValue.trim();
+      if (!normalized) return "";
+      const existing = categories.find((category) => category.name.toLowerCase() === normalized.toLowerCase());
+      if (existing) return existing.id;
+      const created = await categoryService.createCategory({ name: normalized });
+      renderCategories();
+      return created.id;
+    }
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (loading) return;
+      const data = new FormData(form);
+      const title = String(data.get("title") || "").trim();
+      if (!title) {
+        error.textContent = "Título é obrigatório";
+        return;
+      }
+      error.textContent = "";
+      setLoading(true);
+      try {
+        const categoryId = await resolveCategoryId(String(data.get("category") || ""));
+        await taskService.createTask({ title, description: String(data.get("description") || "").trim(), dueAt: data.get("dueAt") ? new Date(String(data.get("dueAt"))).toISOString() : "", categoryId, priority: String(data.get("priority") || "media") });
+        form.reset();
+        closeDialog();
+        setStatus("Tarefa criada com status pendente.", "success");
+        render();
+      } catch {
+        error.textContent = "Não foi possível salvar. Tente novamente.";
+        setStatus("Falha ao criar tarefa; o formulário permanece aberto.", "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+    openButton.addEventListener("click", openDialog);
+    closeButton.addEventListener("click", closeDialog);
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab") return;
+      const focusable = [...dialog.querySelectorAll("button, input, textarea, select")].filter((element) => !element.disabled);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    list.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      const task = tasks.find((item) => item.id === target.dataset.id);
+      if (!task) return;
+      task.status = target.checked ? "done" : "pending";
+      task.completedAt = target.checked ? new Date().toISOString() : null;
+      render();
+    });
+    document.querySelector("#status-filter").addEventListener("change", render);
+    document.querySelector("#priority-filter").addEventListener("change", render);
+    document.querySelector("#sort-by").addEventListener("change", render);
+    renderCategories();
+    render();
+  </script>
+</body>
+</html>
+<!-- Fallback acionado: ${escapeHtml(input.reason)} -->`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function buildExactTextEditFrontendOutput(

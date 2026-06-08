@@ -29,6 +29,9 @@ export function ProjectFilesToolbar({
   onDownloadProject,
 }: ProjectFilesToolbarProps): JSX.Element {
   const fileCount = tree?.entries.filter((entry) => entry.kind === "file").length;
+  const selectedProjectIsListed = projects.some(
+    (project) => project.id === selectedProjectId
+  );
 
   return (
     <header className="project-files-toolbar">
@@ -43,6 +46,9 @@ export function ProjectFilesToolbar({
             >
               {projects.length === 0 ? (
                 <option value="">Nenhum projeto</option>
+              ) : null}
+              {selectedProjectId && !selectedProjectIsListed ? (
+                <option value={selectedProjectId}>Projeto em execução</option>
               ) : null}
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>

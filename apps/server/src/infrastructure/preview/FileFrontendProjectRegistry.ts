@@ -188,14 +188,29 @@ export class FileFrontendProjectRegistry {
       healthStatus: input.healthStatus ?? existing?.healthStatus ?? "unknown",
       healthReasons: input.healthReasons ?? existing?.healthReasons ?? [],
       canonicalProjectId:
-        input.canonicalProjectId ?? existing?.canonicalProjectId ?? null,
+        input.canonicalProjectId === undefined
+          ? existing?.canonicalProjectId ?? null
+          : input.canonicalProjectId,
       projectWorkspaceId:
-        input.projectWorkspaceId ?? existing?.projectWorkspaceId ?? null,
-      appFingerprint: input.appFingerprint ?? existing?.appFingerprint ?? null,
+        input.projectWorkspaceId === undefined
+          ? existing?.projectWorkspaceId ?? null
+          : input.projectWorkspaceId,
+      appFingerprint:
+        input.appFingerprint === undefined
+          ? existing?.appFingerprint ?? null
+          : input.appFingerprint,
       lastHealthCheckedAt:
-        input.lastHealthCheckedAt ?? existing?.lastHealthCheckedAt ?? null,
-      archivedAt: input.archivedAt ?? existing?.archivedAt ?? null,
-      archivedReason: input.archivedReason ?? existing?.archivedReason ?? null,
+        input.lastHealthCheckedAt === undefined
+          ? existing?.lastHealthCheckedAt ?? null
+          : input.lastHealthCheckedAt,
+      archivedAt:
+        input.archivedAt === undefined
+          ? existing?.archivedAt ?? null
+          : input.archivedAt,
+      archivedReason:
+        input.archivedReason === undefined
+          ? existing?.archivedReason ?? null
+          : input.archivedReason,
     });
 
     await this.writeProjects([

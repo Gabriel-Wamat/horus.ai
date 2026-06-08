@@ -34,6 +34,7 @@ function routeToParallelAgents(
   if (
     state.status === "completed" ||
     state.status === "cancelled" ||
+    state.status === "awaiting_human" ||
     state.status === "blocked" ||
     state.status === "failed_validation" ||
     state.status === "error" ||

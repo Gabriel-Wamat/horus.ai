@@ -1,4 +1,6 @@
 import { MemorySaver } from "@langchain/langgraph";
+import { promises as fs } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import {
   readJsonFileRaw,
   writeJsonFileAtomic,
@@ -13,6 +15,8 @@ interface MemorySaverInternals {
   storage: unknown;
   writes: unknown;
 }
+
+const MAX_CHECKPOINT_SNAPSHOT_BYTES = 128 * 1024 * 1024;
 
 interface EncodedBytes {
   __horusEncodedBytes: string;
@@ -58,9 +62,13 @@ export class FileMemorySaver extends MemorySaver {
 
   static async create(path: string): Promise<FileMemorySaver> {
     const saver = new FileMemorySaver(path);
-    const snapshot = (await readJsonFileRaw(path, {
-      defaultValue: null,
-    })) as MemorySaverSnapshot | null;
+    await cleanupOrphanedTempFiles(path);
+    const snapshotAvailable = await quarantineOversizedSnapshot(path);
+    const snapshot = snapshotAvailable
+      ? ((await readJsonFileRaw(path, {
+          defaultValue: null,
+        })) as MemorySaverSnapshot | null)
+      : null;
 
     if (snapshot && typeof snapshot === "object") {
       const internals = saver as unknown as MemorySaverInternals;
@@ -106,4 +114,45 @@ export class FileMemorySaver extends MemorySaver {
       { trailingNewline: true }
     );
   }
+}
+
+async function cleanupOrphanedTempFiles(path: string): Promise<void> {
+  const directory = dirname(path);
+  const tempPrefix = `.${basename(path)}.`;
+
+  let entries: string[];
+  try {
+    entries = await fs.readdir(directory);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw err;
+  }
+
+  await Promise.all(
+    entries
+      .filter((entry) => entry.startsWith(tempPrefix) && entry.endsWith(".tmp"))
+      .map((entry) => fs.rm(join(directory, entry), { force: true }))
+  );
+}
+
+async function quarantineOversizedSnapshot(path: string): Promise<boolean> {
+  let size = 0;
+  try {
+    const current = await fs.stat(path);
+    size = current.size;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return true;
+    throw err;
+  }
+
+  if (size <= MAX_CHECKPOINT_SNAPSHOT_BYTES) {
+    return true;
+  }
+
+  const backupPath = `${path}.${Date.now()}.oversized.bak`;
+  await fs.rename(path, backupPath);
+  console.warn(
+    `[FileMemorySaver] Quarantined oversized checkpoint snapshot (${size} bytes): ${backupPath}`
+  );
+  return false;
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Spec, UserStory, WorkspaceFolder } from "@u-build/shared";
 import { workflowApi } from "../api/workflowApi.js";
 import { emitProjectFilesChanged } from "../features/project-files/utils/projectFilesEvents.js";
+import type { ActiveProjectConstruction } from "./activeProjectConstruction.js";
 
 export interface ProjectConstructionNotification {
   kind: "progress" | "success" | "error";
@@ -15,12 +16,14 @@ export function useProjectConstructionAction({
   submittedStories,
   persistedSpecsByStoryId,
   setWorkspaceFolderError,
+  onConstructionStarted,
 }: {
   selectedWorkspaceFolderId: string;
   workspaceFolders: WorkspaceFolder[];
   submittedStories: UserStory[];
   persistedSpecsByStoryId: Record<string, Spec>;
   setWorkspaceFolderError: (error: string | null) => void;
+  onConstructionStarted?: (construction: ActiveProjectConstruction) => void;
 }): {
   projectConstructionNotification: ProjectConstructionNotification | null;
   startProjectConstruction: () => Promise<void>;
@@ -61,6 +64,16 @@ export function useProjectConstructionAction({
         userStoryIds: submittedStories.map((story) => story.id),
         specIds,
       });
+      const activeConstruction: ActiveProjectConstruction = {
+        projectWorkspaceId: result.projectWorkspace.id,
+        constructionRunId: result.constructionRun.id,
+        workflowThreadId: result.constructionRun.workflowRunId,
+        frontendProjectId: result.frontendProject?.id ?? null,
+        frontendProject: result.frontendProject,
+        projectName: result.projectWorkspace.name,
+        startedAt: result.constructionRun.startedAt,
+      };
+      onConstructionStarted?.(activeConstruction);
       emitProjectFilesChanged({
         projectId: result.projectWorkspace.id,
         runId: result.constructionRun.id,

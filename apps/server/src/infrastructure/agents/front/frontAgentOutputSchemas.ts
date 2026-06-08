@@ -1,4 +1,10 @@
-import { StructuralPatchIntentSchema } from "@u-build/shared";
+import {
+  AstSymbolKindSchema,
+  StructuralPatchInsertionPositionSchema,
+  StructuralPatchIntentSchema,
+  StructuralPatchOperationKindSchema,
+  type StructuralPatchIntent,
+} from "@u-build/shared";
 import { z } from "zod";
 
 const FrontendWriteOperationPlanSchema = z.object({
@@ -11,7 +17,7 @@ const FrontendWriteOperationPlanSchema = z.object({
 const FrontendDeleteOperationPlanSchema = z.object({
   operation: z.literal("delete"),
   targetPath: z.string().trim().min(1),
-  afterContent: z.null().optional(),
+  afterContent: z.null(),
   rationale: z.string().trim().min(1),
 });
 
@@ -20,20 +26,31 @@ const FrontendOperationPlanSchema = z.union([
   FrontendDeleteOperationPlanSchema,
 ]);
 
-const FrontendStructuralPatchIntentSchema = StructuralPatchIntentSchema.omit({
-  id: true,
-}).extend({
-  id: z.string().trim().min(1).optional(),
+const nullableText = z.string().trim().min(1).nullable();
+
+const FrontendStructuralPatchIntentSchema = z.object({
+  id: nullableText,
+  kind: StructuralPatchOperationKindSchema,
+  targetPath: z.string().trim().min(1),
+  targetSymbolId: nullableText,
+  targetSymbolName: nullableText,
+  targetSymbolKind: AstSymbolKindSchema.nullable(),
+  position: StructuralPatchInsertionPositionSchema.nullable(),
+  content: z.string().nullable(),
+  newName: nullableText,
+  importSource: nullableText,
+  namedImports: z.array(z.string().trim().min(1)),
+  defaultImport: nullableText,
+  namespaceImport: nullableText,
+  rationale: nullableText,
 });
 
 export const CodeAwareFrontendOutputSchema = z
   .object({
     summary: z.string().trim().min(1),
     previewHtml: z.string().nullable(),
-    operations: z.array(FrontendOperationPlanSchema).default([]),
-    structuralPatchIntents: z
-      .array(FrontendStructuralPatchIntentSchema)
-      .default([]),
+    operations: z.array(FrontendOperationPlanSchema),
+    structuralPatchIntents: z.array(FrontendStructuralPatchIntentSchema),
   })
   .superRefine((output, ctx) => {
     if (
@@ -52,6 +69,31 @@ export const CodeAwareFrontendOutputSchema = z
 export type CodeAwareFrontendOutput = z.infer<
   typeof CodeAwareFrontendOutputSchema
 >;
+
+export function normalizeFrontendStructuralPatchIntent(
+  intent: z.infer<typeof FrontendStructuralPatchIntentSchema>,
+  index: number
+): StructuralPatchIntent {
+  const normalized: Record<string, unknown> = {
+    id: intent.id ?? `front-structural-${index + 1}`,
+    kind: intent.kind,
+    targetPath: intent.targetPath,
+    namedImports: intent.namedImports,
+  };
+
+  if (intent.targetSymbolId) normalized.targetSymbolId = intent.targetSymbolId;
+  if (intent.targetSymbolName) normalized.targetSymbolName = intent.targetSymbolName;
+  if (intent.targetSymbolKind) normalized.targetSymbolKind = intent.targetSymbolKind;
+  if (intent.position) normalized.position = intent.position;
+  if (intent.content !== null) normalized.content = intent.content;
+  if (intent.newName) normalized.newName = intent.newName;
+  if (intent.importSource) normalized.importSource = intent.importSource;
+  if (intent.defaultImport) normalized.defaultImport = intent.defaultImport;
+  if (intent.namespaceImport) normalized.namespaceImport = intent.namespaceImport;
+  if (intent.rationale) normalized.rationale = intent.rationale;
+
+  return StructuralPatchIntentSchema.parse(normalized);
+}
 
 const ProjectFileOperationPlanSchema = z.object({
   operation: z.enum(["write", "delete"]),

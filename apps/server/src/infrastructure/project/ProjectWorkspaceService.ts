@@ -14,6 +14,7 @@ import { ProjectManifestService } from "./ProjectManifestService.js";
 import { resolveFrontendStackAdapter } from "./FrontendStackAdapters.js";
 import { isInsideRoot } from "./ProjectPathSafety.js";
 import { loadRuntimeConfig } from "../config/runtimeConfig.js";
+import { findFirstProjectSourceSyntaxIssue } from "../code/SourceSyntaxGuard.js";
 
 export class ProjectWorkspaceError extends Error {
   constructor(message: string) {
@@ -192,6 +193,7 @@ export class ProjectWorkspaceService {
     project: ProjectWorkspace;
   }): Promise<PreparedProjectWorkspace> {
     if (input.project.targetMode === "new_project") {
+      await this.restoreGeneratedWorkspaceIfInvalid(input.project.rootPath);
       return {
         project: input.project,
         workspacePath: input.project.rootPath,
@@ -216,6 +218,31 @@ export class ProjectWorkspaceService {
       input.project.baseRef ?? "HEAD",
     ]);
     return { project: input.project, workspacePath, branchName, created: true };
+  }
+
+  private async restoreGeneratedWorkspaceIfInvalid(rootPath: string): Promise<void> {
+    const issue = await findFirstProjectSourceSyntaxIssue(rootPath);
+    if (!issue) return;
+
+    const status = await this.git.run(rootPath, ["status", "--porcelain"]);
+    if (!status.stdout.trim()) {
+      throw new ProjectWorkspaceError(
+        `Generated project contains invalid committed source syntax in ${issue.path}: ${issue.message}`
+      );
+    }
+
+    console.warn(
+      `[ProjectWorkspaceService] Restoring generated workspace ${rootPath} because ${issue.path} has invalid source syntax: ${issue.message}`
+    );
+    await this.git.run(rootPath, ["reset", "--hard", "HEAD"]);
+    await this.git.run(rootPath, ["clean", "-fd"]);
+
+    const remainingIssue = await findFirstProjectSourceSyntaxIssue(rootPath);
+    if (remainingIssue) {
+      throw new ProjectWorkspaceError(
+        `Generated project restore did not recover valid source syntax in ${remainingIssue.path}: ${remainingIssue.message}`
+      );
+    }
   }
 
   async preflightExistingRepo(

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import type { Spec } from "@u-build/shared";
 import { useAppNavigation } from "./app/useAppNavigation.js";
+import type { ActiveProjectConstruction } from "./app/activeProjectConstruction.js";
 import { useDisplayedWorkflowState } from "./app/useDisplayedWorkflowState.js";
 import {
   useProjectConstructionAction,
@@ -75,6 +76,8 @@ function ProjectConstructionNotification({
 
 export function App(): JSX.Element {
   const { appMode, setAppMode } = useAppNavigation();
+  const [activeConstruction, setActiveConstruction] =
+    useState<ActiveProjectConstruction | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const storyCreateButtonRef = useRef<HTMLButtonElement>(null);
@@ -137,6 +140,10 @@ export function App(): JSX.Element {
     submittedStories,
     persistedSpecsByStoryId: workspace.persistedSpecsByStoryId,
     setWorkspaceFolderError: workspace.setWorkspaceFolderError,
+    onConstructionStarted: (construction) => {
+      setActiveConstruction(construction);
+      setAppMode("preview");
+    },
   });
 
   const handleUpdateWorkspaceSpec = async (
@@ -238,9 +245,10 @@ export function App(): JSX.Element {
       <VisualPreviewConsole
         workspaceFolderId={workspace.selectedWorkspaceFolderId || undefined}
         userStoryId={workspace.selectedStoryId}
+        activeConstruction={activeConstruction}
       />
     ) : appMode === "files" ? (
-      <ProjectFilesPage />
+      <ProjectFilesPage activeConstruction={activeConstruction} />
     ) : appMode === "agents" ? (
       <AgentFlowPage workflowState={agentFlowState} events={workflow.events} />
     ) : appMode === "telemetry" ? (
