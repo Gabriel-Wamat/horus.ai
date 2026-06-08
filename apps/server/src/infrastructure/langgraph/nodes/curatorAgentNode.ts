@@ -212,6 +212,7 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
           userStory,
           spec,
           designContext,
+          codeContext: curatorProjectSnapshot?.codeContext,
           codeChangeSet,
           qaOutput,
           runtimeValidation: runtimeValidationEvidence,
@@ -226,6 +227,26 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
       basePromptContext,
       contextProfile
     );
+    const contextReceipt = deps.buildAgentContextReceipt
+      ? await deps.buildAgentContextReceipt({
+          threadId: state.threadId,
+          userStoryId: userStory.id,
+          agentName: "curator",
+          agentProfileId: "curator_agent",
+          snapshot: curatorProjectSnapshot,
+          codeContext: curatorProjectSnapshot?.codeContext,
+          ...(codeChangeSet ? { codeChangeSet } : {}),
+        })
+      : undefined;
+    if (contextReceipt) {
+      deps.emitWorkflowEvent?.({
+        type: "context_receipt",
+        threadId: state.threadId,
+        userStoryId: userStory.id,
+        receipt: contextReceipt,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     const deterministicCodeChangeGatesRequired =
       Boolean(codeChangeSet) &&
@@ -375,6 +396,7 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
       },
       executionTimeMs: Date.now() - start,
       completedAt: new Date().toISOString(),
+      ...(contextReceipt ? { contextReceipt } : {}),
       ...agentArtifactFields(artifactContext, state),
     };
 

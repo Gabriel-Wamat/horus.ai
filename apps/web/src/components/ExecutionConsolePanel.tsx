@@ -9,6 +9,7 @@ import {
 } from "./execution-console/useExecutionTaskOutputs.js";
 import {
   ExecutionConsoleHeader,
+  ExecutionContextSection,
   ExecutionConsoleMetrics,
   ExecutionDiffSection,
   ExecutionFilesSection,
@@ -18,6 +19,7 @@ import {
 } from "./execution-console/ExecutionConsoleSections.js";
 import {
   hasDiffEvidence,
+  selectContextReceiptRows,
   selectLatestFileOperations,
   selectOperationalTraceRows,
   selectTerminalRows,
@@ -65,6 +67,10 @@ export function ExecutionConsolePanel({
   const operationalTraceRows = useMemo(
     () => selectOperationalTraceRows(workflowEvents, fileOperations),
     [fileOperations, workflowEvents]
+  );
+  const contextRows = useMemo(
+    () => selectContextReceiptRows(workflowEvents),
+    [workflowEvents]
   );
   const [retriedTasks, setRetriedTasks] = useState<
     Map<string, ExecutionTaskRouteTask>
@@ -223,6 +229,7 @@ export function ExecutionConsolePanel({
           traces={operationalTraceRows}
           events={visibleEvents}
         />
+        <ExecutionContextSection rows={contextRows} />
         <ExecutionFilesSection files={latestFiles} />
         <ExecutionTerminalSection
           rows={canonicalTerminalRows}

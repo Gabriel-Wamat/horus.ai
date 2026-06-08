@@ -8,7 +8,7 @@ description: Use this skill when the Spec Agent must generate Horus.AI frontend-
 ```yaml
 id: "spec-frontend-sdd"
 agent: "spec"
-version: "0.3.0"
+version: "0.4.0"
 status: "active"
 created_at_utc: "2026-05-26T00:00:00Z"
 runtime_use: "Injected into SpecAgent prompt before structured spec generation rules."
@@ -94,19 +94,32 @@ principles:
     - "Use the title, description, and acceptance criteria as source of truth."
     - "Every component must support a visible requirement."
     - "Every acceptance criterion must become an observable frontend result."
+  design_intelligence:
+    - "Always produce designBrief before downstream implementation."
+    - "Classify the requested surface with one surfaceType: crud, dashboard, calendar, kanban, editor-canvas, chat-preview, workflow-map, auth, onboarding, settings, file-browser, report, checkout, media-gallery, form, search-results, detail-view, data-table, or custom."
+    - "Capture userIntent as the user's real goal, mental model, success outcome, and non-goals; never treat the story title as enough."
+    - "Define informationArchitecture as regions, hierarchy, navigation model, and primary flow."
+    - "Define componentInventory with expected components, variants, and usage rules."
+    - "Define stateMatrix for empty, loading, success, error, selected, disabled, validation, overflow, and mobile."
+    - "Define designSystemBinding with tokens, real components, allowed libraries, imports, and antiPatterns."
+    - "Define visualStrategy with color roles, typography, density, radius, shadow, motion, and domain rationale."
   frontend_architecture:
     - "Split UI into purpose-driven sections/components."
     - "Separate rendering, state, data adapter, and interaction responsibilities in the spec."
     - "Specify loading, empty, error, success, selected, hover, focus, and responsive states when relevant."
-    - "Plan the frontend so mock data can later be replaced by backend route calls through one data adapter layer."
+    - "Plan the frontend so empty states, user-created local state, or injectable adapters can later be replaced by backend route calls through one data boundary."
   visual_contract:
     - "Use DesignContextBundle as the strongest visual source when present."
     - "Populate visualContract with mode, designSource, density, tone, colorPolicy, typography, spacing, componentPolicy, states, responsiveRules, accessibilityRules, antiPatterns, and referenceFiles."
     - "Set visualContract.layoutArchetype to include the selected frontend pattern id."
     - "Use componentPolicy.requiredPatterns for required pattern rules and componentPolicy.forbiddenPatterns for rejected pattern anti-patterns."
+    - "Treat colorPolicy as a designer strategy, not a decorative palette: define background, surface, text, accent, semantic/status, and category/utility roles when applicable."
+    - "Use colorPolicy.usageRules to explain domain, audience, hierarchy, contrast, state, and category decisions."
+    - "For blank_project, pick colors from the product's actual use context rather than defaulting to a generic dark dashboard or one-hue theme."
     - "Prefer preserve_identity when project files prove an existing visual system."
     - "Use guided_redesign only when the user explicitly asks to change identity."
     - "Use blank_project only when there is no reliable project visual evidence."
+    - "Keep visualContract aligned with designBrief.visualStrategy and designBrief.designSystemBinding."
   frontend_patterns:
     - "Choose exactly one primary pattern id before writing technicalApproach."
     - "Allowed pattern ids: operational-dashboard, chat-preview-workbench, workflow-map, form-crud-tool, content-landing, custom-product-surface."
@@ -121,7 +134,7 @@ principles:
     - "Use apiEndpoints to describe future backend contracts when dynamic data, persistence, submission, filtering, or remote loading is implied."
     - "Keep apiEndpoints empty only when the requested UI is truly static and needs no future route contract."
     - "Describe request and response shapes with stable field names."
-    - "State that the current frontend should use local mock data or adapter functions until real routes exist."
+    - "State that the current frontend should use empty states, user-created local state, or injectable adapters until real routes exist; do not require runtime mock/fake data in project code."
   code_quality:
     - "Require robust vanilla HTML/CSS/JavaScript structure."
     - "Require stable layout dimensions for repeated UI, toolbars, rows, tabs, cards, and controls."
@@ -194,7 +207,7 @@ frontend_spec_plan:
     - "Local state required for interactions."
     - "Derived state, filters, selections, or validation."
   data_model:
-    - "Mock data structures that can map to future backend responses."
+    - "Local state and response shapes that can map to future backend responses without fake seeded records."
   api_contracts:
     - "Future route contracts if needed."
   quality_requirements:
@@ -265,10 +278,11 @@ agent_error_mitigation:
     - "Avoid generic sections such as HeroSection unless the story actually needs them."
     - "Name components from the product domain."
     - "Tie visual structure to the user's task."
+    - "Forbid SDD/workflow metadata as final UI copy: USxx ids, User Story, Spec, Acceptance Criteria, Pattern, visualContract, Project OS, Horus, fallback, and agent terms unless they are the real product domain."
   anti_backend_drift:
     - "Do not say backend routes are implemented."
     - "Use apiEndpoints as future contracts when needed."
-    - "Keep mock data and route response shapes compatible."
+    - "Keep local state and route response shapes compatible without seeding fake runtime records."
   anti_frontend_fragility:
     - "Do not omit loading, empty, error, and responsive states when data or forms exist."
     - "Do not allow text overflow or ambiguous controls."
@@ -305,7 +319,7 @@ testing_checklist:
   frontend_readiness:
     - "Every UI requirement has a component or acceptance criterion."
     - "Every dynamic data requirement has a data model."
-    - "Every future route contract has compatible mock data guidance."
+  - "Every future route contract has compatible local-state or adapter-boundary guidance."
   qa_readiness:
     - "Every acceptance criterion is observable."
     - "Primary journey and edge states are testable."
@@ -339,6 +353,80 @@ spec_output:
     - "<ModelName: { field: type, ... }>"
   acceptanceCriteria:
     - "<observable technical criterion>"
+  designBrief:
+    surfaceType: "<crud | dashboard | calendar | kanban | editor-canvas | chat-preview | workflow-map | auth | onboarding | settings | file-browser | report | checkout | media-gallery | form | search-results | detail-view | data-table | custom>"
+    userIntent:
+      primaryUserGoal: "<what the user is trying to do>"
+      userMentalModel: "<how the user expects the interface to behave>"
+      successOutcome: "<observable successful end state>"
+      nonGoals:
+        - "<explicitly excluded flow>"
+    informationArchitecture:
+      regions:
+        - name: "<region name>"
+          role: "<region responsibility>"
+          priority: "<primary | secondary | supporting>"
+          contents:
+            - "<expected content/control>"
+      hierarchy:
+        - "<visual or decision priority>"
+      navigationModel: "<tabs | sidebar | drilldown | single-flow | command-surface | none>"
+      primaryFlow:
+        - "<step in the user's path>"
+    componentInventory:
+      - name: "<component name>"
+        purpose: "<why it exists>"
+        variants:
+          - "<variant/state>"
+        useWhen: "<when the FrontAgent should use it>"
+    stateMatrix:
+      empty:
+        - trigger: "<condition>"
+          expectedUi: "<visible empty state>"
+          validationSignal: "<how QA/Curator proves it>"
+      loading: []
+      success: []
+      error: []
+      selected: []
+      disabled: []
+      validation: []
+      overflow: []
+      mobile: []
+    designSystemBinding:
+      tokens:
+        - "<semantic token or CSS variable>"
+      components:
+        - "<real component or native primitive>"
+      allowedLibraries:
+        - "<installed library only>"
+      imports:
+        - "<expected import source when known>"
+      antiPatterns:
+        - "<implementation reject rule>"
+    visualStrategy:
+      colorRoles:
+        background:
+          - "<background role/token>"
+        surface:
+          - "<surface role/token>"
+        text:
+          - "<text role/token>"
+        accent:
+          - "<primary action role/token>"
+        semanticStatus:
+          - "<success/warning/error/progress role/token>"
+        categoryUtility:
+          - "<category/chart/tag role/token>"
+      typography:
+        - "<family/scale/weight/line-height rule>"
+      density: "<density decision>"
+      radius:
+        - "<shape rule>"
+      shadow:
+        - "<elevation rule>"
+      motion:
+        - "<motion rule or no-motion rationale>"
+      domainRationale: "<why this visual system fits the domain>"
   visualContract:
     mode: "<preserve_identity | guided_redesign | blank_project>"
     designSource: "<project_files | user_reference | generated_default | mixed>"

@@ -7,6 +7,7 @@ export const SpecRequirementKindSchema = z.enum([
   "api_endpoint",
   "data_model",
   "visual_contract",
+  "design_brief",
   "technical_approach",
 ]);
 

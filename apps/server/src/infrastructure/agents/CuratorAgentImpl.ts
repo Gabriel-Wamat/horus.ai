@@ -14,6 +14,7 @@ import {
 import { createChatModel } from "../llm/createChatModel.js";
 import { invokeChatModel } from "../llm/invokeChatModel.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
+import { formatDesignBriefForPrompt } from "../design/DesignBriefPrompt.js";
 import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
 
 const CuratorOutputSchema = z.object({
@@ -241,6 +242,7 @@ Além da spec ativa, avalie se o HTML e os testes respondem especificamente a es
   const visualContractPreview = spec.visualContract
     ? JSON.stringify(spec.visualContract, null, 2)
     : "N/A";
+  const designBriefBlock = formatDesignBriefForPrompt(spec);
   const deliveryMode =
     spec.visualContract?.mode === "blank_project"
       ? "blank_project_standalone_html"
@@ -281,6 +283,8 @@ ${criteria}
 ${visualContractPreview}
 \`\`\`
 
+${designBriefBlock}
+
 **Modo de entrega esperado:**
 ${deliveryMode}
 
@@ -313,7 +317,7 @@ ${changeSetPreview}
 - score: 0–100 indicando cobertura combinada da spec pelo HTML e pelos testes
 - passed: true se score >= 70, houver CodeChangeSet auditável, houver casos de QA e não houver lacuna crítica no HTML nem nos testes
 - notes: resumo objetivo da avaliação em 1–2 frases
-- missingItems: lista dos itens da spec ausentes, incompletos ou sem cobertura de teste (array vazio se passou). Use prefixos curtos quando possível: [front], [front:pattern], [front:component], [front:visual], [qa], [data], [route], [accessibility], [responsive]
+- missingItems: lista dos itens da spec ausentes, incompletos ou sem cobertura de teste (array vazio se passou). Use prefixos curtos quando possível: [front], [front:pattern], [front:component], [front:visual], [front:copy], [qa], [data], [route], [accessibility], [responsive]
 - fixTarget: se falhou, indique qual agente deve corrigir:
   - "front" → problema visual/estrutural no HTML/CSS/JS
   - "qa" → HTML adequado, mas testes ausentes, fracos ou desalinhados aos critérios de aceite
@@ -327,7 +331,10 @@ ${changeSetPreview}
 - Se dataModels existir, avalie se campos, formatação e fallbacks aparecem no HTML e nos testes.
 - Se a abordagem técnica define loading, empty, error, success, acessibilidade ou responsividade, avalie tanto implementação quanto cobertura de QA.
 - Se visualContract existir, avalie tokens, densidade, componentes existentes, estados, responsividade, acessibilidade e antiPatterns. Violacao clara do contrato visual deve falhar.
+- Se designBrief existir, avalie se a UI respeita surfaceType, userIntent, informationArchitecture, componentInventory, stateMatrix, designSystemBinding e visualStrategy. Violacao clara deve falhar com [front:pattern], [front:component], [front:visual], [front:copy] ou [qa], conforme a origem.
 - Se a spec/technicalApproach/visualContract indicar um frontend pattern, avalie se HTML e CodeChangeSet respeitam a hierarquia, estados, component-policy e anti-patterns desse pattern. Violacao clara deve falhar com [front:pattern], [front:component] ou [front:visual].
+- Se a UI renderizada expuser metadados SDD/workflow como copy de produto, como ids US01/US02, "User Story", "Spec", "Critérios de aceite", "Pattern", "visualContract", "Project OS", "Horus", "fallback" ou termos de agente, passed deve ser false com [front:copy], salvo quando esse texto fizer parte do domínio real do produto.
+- Se visualContract.colorPolicy tiver usageRules ou se o projeto estiver em blank_project, avalie se a paleta tem papeis claros de background, surface, text, accent, semantic/status e category/utility quando aplicavel; paleta arbitraria, monocromatica sem hierarquia ou dark dashboard generico deve falhar com [front:visual].
 - Falhe layouts genericos quando a spec pede ferramenta operacional, workbench de chat/preview, mapa de workflow ou CRUD; pattern errado e visivel nao e preferencia subjetiva.
 - Se CodeChangeSet estiver ausente, vazio, sem diff ou sem operação de arquivo, passed deve ser false.
 - Se a validação smoke do preview existir e status não for "passed", passed deve ser false.

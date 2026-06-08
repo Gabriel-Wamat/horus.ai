@@ -171,6 +171,23 @@ function projectWorkflowEventToChatMessage(
     }
     case "validation_evidence":
       return projectValidationEvidenceEvent(event);
+    case "context_receipt":
+      return {
+        body: `${formatAgentName(event.receipt.agentName)} recebeu contexto: ${event.receipt.selectedFiles.length} arquivo(s), ${event.receipt.retrievalChannels.length} canal(is).`,
+        compactBody: "Contexto do agente registrado.",
+        eventType: "trace",
+        visibility: "developer",
+        dedupeKey: `context_receipt:${event.receipt.id}`,
+        metadata: {
+          userStoryId: event.userStoryId,
+          agentName: event.receipt.agentName,
+          agentProfileId: event.receipt.agentProfileId,
+          snapshotId: event.receipt.snapshotId,
+          selectedFiles: event.receipt.selectedFiles.map((file) => file.path),
+          retrievalChannels: event.receipt.retrievalChannels,
+          confidence: event.receipt.confidence,
+        },
+      };
     case "tool_call_started":
       return {
         body: `${formatAgentName(event.agentName)} iniciou ${formatToolName(event.toolName)}.`,

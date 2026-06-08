@@ -34,6 +34,7 @@ import type {
   ProjectFileMutationOperation,
 } from "../ports/ProjectServicesPort.js";
 import type { ShellCommandRuntimePort } from "../ports/ShellCommandRuntimePort.js";
+import type { RuntimeEvidenceAggregator } from "../services/RuntimeEvidenceAggregator.js";
 import type { WorkflowCodeChangeSetApplier } from "../../domain/services/WorkflowOrchestrator.js";
 import {
   applyExactIncrementalEdit,
@@ -84,6 +85,89 @@ const ListFilesInputSchema = ProjectIdInputSchema.extend({
 const ListFilesOutputSchema = z.object({
   entries: z.array(z.object({ path: z.string(), kind: z.enum(["dir", "file"]) })),
   partial: z.boolean(),
+});
+
+const FindSymbolInputSchema = ProjectIdInputSchema.extend({
+  query: z.string().trim().min(1),
+  limit: z.number().int().positive().max(100).default(20),
+});
+
+const SymbolSearchOutputSchema = z.object({
+  symbols: z.array(
+    z.object({
+      path: z.string(),
+      name: z.string(),
+      kind: z.string(),
+      startLine: z.number().int().positive(),
+      endLine: z.number().int().positive(),
+      detail: z.string().optional(),
+    })
+  ),
+  partial: z.boolean(),
+});
+
+const GraphNeighborsInputSchema = ProjectIdInputSchema.extend({
+  path: z.string().trim().min(1),
+  query: z.string().trim().min(1).optional(),
+  limit: z.number().int().positive().max(100).default(20),
+});
+
+const GraphNeighborsOutputSchema = z.object({
+  path: z.string(),
+  neighbors: z.array(
+    z.object({
+      path: z.string(),
+      reason: z.string(),
+      score: z.number().nonnegative(),
+    })
+  ),
+  status: z.enum(["matched", "no_match", "unavailable"]),
+});
+
+const RuntimeErrorsOutputSchema = z.object({
+  hints: z.array(
+    z.object({
+      kind: z.string(),
+      source: z.string(),
+      message: z.string(),
+      path: z.string().optional(),
+      line: z.number().int().positive().optional(),
+    })
+  ),
+  note: z.string(),
+});
+
+const TerminalOutputOutputSchema = z.object({
+  tasks: z.array(
+    z.object({
+      taskId: z.string(),
+      commandId: z.string(),
+      status: z.string(),
+      startedAt: z.string(),
+      stdoutTail: z.string(),
+      stderrTail: z.string(),
+    })
+  ),
+  output: z
+    .object({
+      taskId: z.string(),
+      stdout: z.string(),
+      stderr: z.string(),
+    })
+    .nullable(),
+  note: z.string(),
+});
+
+const ContextSelectionInputSchema = SearchCodeInputSchema.extend({
+  agentProfileId: z.string().trim().min(1).optional(),
+});
+
+const ContextSelectionOutputSchema = z.object({
+  selectedFiles: z.array(z.object({ path: z.string(), bytes: z.number().int().nonnegative() })),
+  omittedFilesCount: z.number().int().nonnegative(),
+  retrievalStatus: z.string(),
+  retrievalChannels: z.array(z.string()),
+  reasons: z.array(z.object({ path: z.string().optional(), reason: z.string() })),
 });
 
 const SaveFileInputSchema = ProjectIdInputSchema.extend({
@@ -285,6 +369,7 @@ export interface RegisterProjectAgentToolsDeps {
   projectInspector: ProjectInspectorPort;
   shellRuntime?: ShellCommandRuntimePort | undefined;
   previewSmokeValidator?: PreviewSmokeValidatorPort | undefined;
+  runtimeEvidence?: RuntimeEvidenceAggregator | undefined;
 }
 
 export function registerProjectAgentTools(deps: RegisterProjectAgentToolsDeps): void {
@@ -378,6 +463,28 @@ export function registerProjectAgentTools(deps: RegisterProjectAgentToolsDeps): 
   });
 
   deps.registry.register({
+    toolName: "list_project_tree",
+    mutatesState: false,
+    inputSchema: ListFilesInputSchema,
+    outputSchema: ListFilesOutputSchema,
+    handler: async (input, context) => {
+      const tree = await deps.fileBrowser.getTree({
+        projectId: input.projectId,
+        ...(input.runId ? { runId: input.runId } : {}),
+        ...(context.projectRootOverride
+          ? { projectRootOverride: context.projectRootOverride }
+          : {}),
+        ...(input.limit !== undefined ? { limit: input.limit } : {}),
+        ...(input.depth !== undefined ? { depth: input.depth } : {}),
+      });
+      return {
+        entries: tree.entries.map((entry) => ({ path: entry.path, kind: entry.kind })),
+        partial: tree.partial,
+      };
+    },
+  });
+
+  deps.registry.register({
     toolName: "search_code",
     mutatesState: false,
     inputSchema: SearchCodeInputSchema,
@@ -390,6 +497,218 @@ export function registerProjectAgentTools(deps: RegisterProjectAgentToolsDeps): 
         query: input.query,
         ...(input.requestedPaths ? { requestedPaths: input.requestedPaths } : {}),
       });
+    },
+  });
+
+  deps.registry.register({
+    toolName: "read_file_slice",
+    mutatesState: false,
+    inputSchema: ReadFileInputSchema,
+    outputSchema: ReadFileOutputSchema,
+    handler: async (input, context) => {
+      const file = await deps.fileBrowser.getFileContent({
+        projectId: input.projectId,
+        path: input.path,
+        ...(input.runId ? { runId: input.runId } : {}),
+        ...(context.projectRootOverride
+          ? { projectRootOverride: context.projectRootOverride }
+          : {}),
+        maxBytes: input.maxBytes ?? 2_000_000,
+      });
+      const range = sliceFileContentByLineRange(file.content, {
+        startLine: input.startLine,
+        endLine: input.endLine,
+      });
+      return {
+        path: file.path,
+        content: range.content,
+        versionHash: file.version?.hash ?? null,
+        version: file.version ?? null,
+        truncated: file.truncated,
+        binary: file.binary,
+        ...(range.startLine !== undefined ? { startLine: range.startLine } : {}),
+        ...(range.endLine !== undefined ? { endLine: range.endLine } : {}),
+        ...(range.lineCount !== undefined ? { lineCount: range.lineCount } : {}),
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "find_symbol",
+    mutatesState: false,
+    inputSchema: FindSymbolInputSchema,
+    outputSchema: SymbolSearchOutputSchema,
+    handler: async (input, context) => {
+      const { rootPath } = await resolveToolWorkspace(deps, input, context);
+      const codeContext = await deps.codeContext.buildContextFromProjectRoot({
+        projectId: input.projectId,
+        projectRootPath: rootPath,
+        query: input.query,
+      });
+      const query = input.query.toLowerCase();
+      const symbols = (codeContext.structuralContext?.symbols ?? [])
+        .filter((symbol) => symbol.name.toLowerCase().includes(query))
+        .slice(0, input.limit)
+        .map((symbol) => ({
+          path: symbol.path,
+          name: symbol.name,
+          kind: symbol.kind,
+          startLine: symbol.startLine,
+          endLine: symbol.endLine,
+          ...(symbol.detail ? { detail: symbol.detail } : {}),
+        }));
+      return {
+        symbols,
+        partial: (codeContext.structuralContext?.symbols.length ?? 0) > symbols.length,
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "graph_neighbors",
+    mutatesState: false,
+    inputSchema: GraphNeighborsInputSchema,
+    outputSchema: GraphNeighborsOutputSchema,
+    handler: async (input, context) => {
+      const { rootPath } = await resolveToolWorkspace(deps, input, context);
+      const codeContext = await deps.codeContext.buildContextFromProjectRoot({
+        projectId: input.projectId,
+        projectRootPath: rootPath,
+        query: input.query ?? input.path,
+        requestedPaths: [input.path],
+      });
+      const neighbors = (codeContext.structuralContext?.semanticMatches ?? [])
+        .filter((match) => match.path !== input.path)
+        .slice(0, input.limit)
+        .map((match) => ({
+          path: match.path,
+          reason: match.reasons[0] ?? "Related by structural/semantic retrieval.",
+          score: match.score,
+        }));
+      return {
+        path: input.path,
+        neighbors,
+        status: neighbors.length > 0 ? "matched" : codeContext.structuralContext ? "no_match" : "unavailable",
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "get_runtime_errors",
+    mutatesState: false,
+    inputSchema: ProjectIdInputSchema,
+    outputSchema: RuntimeErrorsOutputSchema,
+    handler: async (input) => {
+      const hints = deps.runtimeEvidence?.drain(input.projectId, 20) ?? [];
+      return {
+        hints: hints.map((hint) => ({
+          kind: hint.kind,
+          source: hint.source,
+          message: hint.message,
+          ...(hint.path ? { path: hint.path } : {}),
+          ...(hint.line ? { line: hint.line } : {}),
+        })),
+        note: hints.length
+          ? "Runtime hints from the live project evidence buffer."
+          : "No runtime errors are currently buffered for this project.",
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "get_terminal_output",
+    mutatesState: false,
+    inputSchema: ProjectIdInputSchema.extend({
+      taskId: z.string().trim().min(1).optional(),
+      limit: z.number().int().positive().max(500).default(100),
+    }),
+    outputSchema: TerminalOutputOutputSchema,
+    handler: async (input, context) => {
+      if (!deps.shellRuntime?.listTasks) {
+        return {
+          tasks: [],
+          output: null,
+          note: "Shell runtime does not expose persisted execution task output.",
+        };
+      }
+      const { rootPath } = await resolveToolWorkspace(deps, input, context);
+      const tasks = await deps.shellRuntime.listTasks({
+        projectRootPath: rootPath,
+        limit: input.limit,
+      });
+      if (!input.taskId || !deps.shellRuntime.readOutput) {
+        return {
+          tasks,
+          output: null,
+          note: tasks.length
+            ? "Recent execution tasks returned with stdout/stderr tails."
+            : "No execution tasks found for this project.",
+        };
+      }
+      const [stdout, stderr] = await Promise.all([
+        deps.shellRuntime.readOutput({
+          projectRootPath: rootPath,
+          taskId: input.taskId,
+          stream: "stdout",
+          limit: 20_000,
+        }),
+        deps.shellRuntime.readOutput({
+          projectRootPath: rootPath,
+          taskId: input.taskId,
+          stream: "stderr",
+          limit: 20_000,
+        }),
+      ]);
+      return {
+        tasks,
+        output: {
+          taskId: input.taskId,
+          stdout: stdout.chunk,
+          stderr: stderr.chunk,
+        },
+        note: "Persisted execution task output returned from .horus/execution-tasks.",
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "explain_context_selection",
+    mutatesState: false,
+    inputSchema: ContextSelectionInputSchema,
+    outputSchema: ContextSelectionOutputSchema,
+    handler: async (input, context) => {
+      const { rootPath } = await resolveToolWorkspace(deps, input, context);
+      const codeContext = await deps.codeContext.buildContextFromProjectRoot({
+        projectId: input.projectId,
+        projectRootPath: rootPath,
+        query: input.query,
+        ...(input.requestedPaths ? { requestedPaths: input.requestedPaths } : {}),
+      });
+      return {
+        selectedFiles: codeContext.files.map((file) => ({
+          path: file.path,
+          bytes: file.bytes,
+        })),
+        omittedFilesCount: codeContext.omittedFilesCount,
+        retrievalStatus: codeContext.retrievalStatus,
+        retrievalChannels: [
+          ...(codeContext.retrievalStats?.explicitPathCount ? ["explicit_paths"] : []),
+          "lexical_bm25",
+          ...(codeContext.structuralContext?.symbols.length ? ["ast_symbols"] : []),
+          ...(codeContext.structuralContext ? ["graph_neighbors"] : []),
+          ...(codeContext.structuralContext?.semanticMatches.length
+            ? ["semantic_embeddings", "reranker"]
+            : []),
+          "budget_packer",
+        ],
+        reasons: codeContext.files.map((file) => ({
+          path: file.path,
+          reason:
+            file.matchedTerms.length > 0
+              ? `Matched terms: ${file.matchedTerms.join(", ")}.`
+              : "Selected by repository retrieval.",
+        })),
+      };
     },
   });
 
@@ -842,6 +1161,21 @@ export function registerProjectAgentTools(deps: RegisterProjectAgentToolsDeps): 
 
   deps.registry.register({
     toolName: "get_git_diff",
+    mutatesState: false,
+    inputSchema: GitDiffInputSchema,
+    outputSchema: GitDiffOutputSchema,
+    handler: async (input, context) => {
+      const { rootPath } = await resolveToolWorkspace(deps, input, context);
+      const stats = await diffAnalyzer.readDiffStats(rootPath);
+      return {
+        files: stats.changedPaths,
+        patchSummary: `${stats.filesChanged} file(s), +${stats.insertions}/-${stats.deletions}`,
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "get_recent_diff",
     mutatesState: false,
     inputSchema: GitDiffInputSchema,
     outputSchema: GitDiffOutputSchema,

@@ -25,4 +25,4 @@ Good route-readiness test:
   1. Open the static page.
   2. Locate the item list region.
   3. Trigger the local demo/error state if the UI exposes one, or inspect the visible fallback state described by the spec.
-- Expected: `The list renders mock data using the same fields described by the future route response and shows a clear empty/error fallback without layout shift.`
+- Expected: `The list exposes adapter-compatible local state using the same fields described by the future route response and shows a clear empty/error fallback without layout shift.`

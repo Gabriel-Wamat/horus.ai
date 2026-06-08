@@ -8,6 +8,7 @@ export const WORKFLOW_PROGRESS_EVENT_TYPES = [
   "patch_proposed",
   "patch_applied",
   "validation_evidence",
+  "context_receipt",
   "tool_call_started",
   "tool_call_finished",
   "tool_call_blocked",
@@ -90,6 +91,32 @@ export interface WorkflowProgressEvent {
         screenshotPath?: string | null;
       };
     };
+  };
+  receipt?: {
+    id: string;
+    snapshotId: string;
+    agentName: string;
+    agentProfileId: string;
+    selectedFiles: Array<{ path: string; startLine?: number; endLine?: number }>;
+    selectionReasons: Array<{
+      path?: string;
+      reason: string;
+      channel: string;
+      score?: number;
+    }>;
+    omittedFiles: Array<{ path: string; reason: string; count?: number }>;
+    budget: {
+      maxFiles: number;
+      maxBytesPerFile: number;
+      maxTotalBytes: number;
+      selectedFiles: number;
+      selectedBytes: number;
+      omittedFiles: number;
+    };
+    retrievalChannels: string[];
+    runtimeHints: Array<{ kind: string; source: string; message: string; path?: string }>;
+    diffHints: Array<{ path: string; changeType?: string; summary?: string }>;
+    confidence: number;
   };
   runbookEntry?: AgentRunbookEntry;
 }

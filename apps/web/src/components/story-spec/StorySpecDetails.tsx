@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import type { Spec, UserStory } from "@u-build/shared";
-import { VisualContractSummary } from "../SpecReview.js";
+import { DesignBriefSummary, VisualContractSummary } from "../SpecReview.js";
 import { createDomId, PRIORITY_LABELS } from "./StorySpecFormatters.js";
 import { PlusIcon, TrashIcon } from "./StorySpecIcons.js";
 
@@ -266,6 +266,7 @@ export function ReadOnlySpecDetail({ spec }: { spec: Spec }): JSX.Element {
       </section>
 
       <VisualContractSummary visualContract={spec.visualContract} />
+      <DesignBriefSummary designBrief={spec.designBrief} />
 
       {spec.components.length > 0 && (
         <section className="document-preview-section">

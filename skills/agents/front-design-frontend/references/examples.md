@@ -4,7 +4,7 @@ Good output:
 
 - Starts with `<!DOCTYPE html>`.
 - Implements the named sections from the spec.
-- Uses realistic local mock data.
+- Uses empty states or user-created local state unless the spec requires preexisting visible data.
 - Handles mobile and desktop widths.
 - Has visible focus and meaningful labels.
 

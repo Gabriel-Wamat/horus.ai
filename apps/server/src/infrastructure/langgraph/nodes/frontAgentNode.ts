@@ -144,6 +144,25 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
       basePromptContext,
       contextProfile
     );
+    const contextReceipt = deps.buildAgentContextReceipt
+      ? await deps.buildAgentContextReceipt({
+          threadId: state.threadId,
+          userStoryId: userStory.id,
+          agentName: "front",
+          agentProfileId: "front_agent",
+          snapshot: projectSnapshot,
+          codeContext,
+        })
+      : undefined;
+    if (contextReceipt) {
+      deps.emitWorkflowEvent?.({
+        type: "context_receipt",
+        threadId: state.threadId,
+        userStoryId: userStory.id,
+        receipt: contextReceipt,
+        timestamp: new Date().toISOString(),
+      });
+    }
     // Self-correction: pass curator feedback so the agent improves on retry.
     const frontendOutput = await deps.generateFrontend(
       userStory,
@@ -290,6 +309,7 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
             },
             executionTimeMs: Date.now() - start,
             completedAt: new Date().toISOString(),
+            ...(contextReceipt ? { contextReceipt } : {}),
             ...agentArtifactFields(artifactContext, state),
           },
         ],

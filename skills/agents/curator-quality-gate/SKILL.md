@@ -94,8 +94,10 @@ principles:
     - "Evaluate the full spec: summary, technicalApproach, components, dataModels, apiEndpoints, and acceptanceCriteria."
     - "Treat future apiEndpoints as route-readiness contracts, not proof that a backend exists."
     - "Treat generated artifacts as the source of evaluation evidence."
+    - "Treat designBrief as a required UI construction contract when present."
     - "Treat visualContract as a required contract: implementation and QA must preserve or intentionally satisfy it."
     - "Treat the selected frontend pattern as a required architecture contract when the spec declares one."
+    - "Treat SDD/workflow metadata rendered as product UI copy as an implementation defect, not a stylistic preference."
   architecture:
     - "Keep verdict, score, notes, missingItems, and fixTarget cohesive."
     - "Make feedback actionable for the retry loop."
@@ -148,13 +150,16 @@ evaluation_matrix:
     - "Required components present"
     - "Acceptance criteria implemented"
     - "Selected frontend pattern is respected without hiding required nodes, states, or workflows"
+    - "DesignBrief is respected: surfaceType, userIntent, informationArchitecture, componentInventory, stateMatrix, designSystemBinding, and visualStrategy"
     - "Component policy is respected: existing components/tokens first, installed libraries only when present, no invented dependencies"
     - "Data and interactions represented"
     - "Data models represented with correct fields, formatting, and fallbacks"
-    - "Future route contracts represented through safe adapter/mock behavior when present"
+    - "Future route contracts represented through safe adapter-compatible state when present"
     - "Responsive/accessibility basics present"
     - "VisualContract constraints respected: tokens, density, components, states, antiPatterns"
     - "Pattern anti-patterns absent: excessive frames, nested cards, high-light colors, one-note palettes, text overflow, generic landing pages for tools, style drift"
+    - "No SDD/workflow metadata is visible as product copy: USxx ids, User Story, Spec, Acceptance Criteria, Pattern, visualContract, Project OS, Horus, fallback, or agent terms"
+    - "Color roles are purposeful and consistent with visualContract usageRules instead of arbitrary hex choices or a one-hue theme"
   qa:
     - "Each criterion has test coverage"
     - "Primary journey covered"
@@ -196,6 +201,8 @@ Use pattern-specific prefixes:
 - `[front:pattern]` when the layout pattern is wrong or the UI behaves like a generic template.
 - `[front:component]` when the output ignores existing components, tokens, or installed libraries and invents a parallel implementation.
 - `[front:visual]` when visualContract anti-patterns are present.
+- `[front:copy]` when requirement/workflow metadata is exposed to end users instead of product language.
+- `[qa]` when QA cases do not cover designBrief surface, flow, states, component variants, or visual strategy.
 
 ### Step 5 - Final Output
 
@@ -210,13 +217,15 @@ Return only the structured curator verdict expected by the runtime schema.
 5. Make every missing item concrete, observable, and actionable by FrontAgent or QAAgent.
 6. Check that generated HTML includes required components, realistic content, interactions, and responsive/accessibility basics.
 7. Check that data models are represented in HTML and QA through visible fields, formatting, fallbacks, or interactions.
-8. Check future apiEndpoints as frontend route-readiness contracts through safe adapter/mock behavior, not live backend execution.
+8. Check future apiEndpoints as frontend route-readiness contracts through safe adapter-compatible state, not live backend execution.
 9. Check that QA cases map to acceptance criteria and include primary journey, responsive, interaction, accessibility, data, and route-readiness checks where relevant.
 10. Preserve the self-correction loop by routing narrowly when only one agent needs repair and broadly when both do.
 11. Never claim live execution, browser rendering, or automated test results unless those checks actually ran.
 12. Fail outputs that visibly violate explicit visualContract constraints, even if functional criteria are present.
 13. Fail outputs that violate the selected frontend pattern in a way a user would see, such as turning an operational tool into a hero landing page.
 14. Fail outputs that invent dependencies, duplicate existing components, or ignore the component policy without explicit spec permission.
+15. Fail outputs that expose SDD/workflow metadata as product copy or use a color system with no clear role strategy when visualContract requires one.
+16. Fail outputs that ignore designBrief surfaceType, primary flow, required regions, component inventory, state matrix, design system binding, or visual strategy.
 
 ## Agent Error Mitigation
 
@@ -236,7 +245,7 @@ agent_error_mitigation:
   anti_false_validation:
     - "Do not pass if QA cases are absent or generic."
     - "Do not pass if critical frontend acceptance criteria are absent."
-    - "Do not claim route integration works; only assess adapter/mock readiness unless runtime evidence exists."
+    - "Do not claim route integration works; only assess adapter-compatible readiness unless runtime evidence exists."
   anti_generic_frontend:
     - "Do not pass operational tools that use marketing hero structure."
     - "Do not pass chat/preview workbenches where messages overlap, progress floods the chat, or input history is unstable."

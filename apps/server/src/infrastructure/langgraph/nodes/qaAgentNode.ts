@@ -109,6 +109,7 @@ export function createQaAgentNode(deps: LangGraphDependencies) {
           agentProfileId: "qa_agent",
           userStory,
           spec,
+          codeContext: projectSnapshot?.codeContext,
           designContext,
           // Feed previous turn's runtime evidence so QA's runtime_errors
           // section in the envelope is populated on retry.
@@ -125,6 +126,25 @@ export function createQaAgentNode(deps: LangGraphDependencies) {
       basePromptContext,
       contextProfile
     );
+    const contextReceipt = deps.buildAgentContextReceipt
+      ? await deps.buildAgentContextReceipt({
+          threadId: state.threadId,
+          userStoryId: userStory.id,
+          agentName: "qa",
+          agentProfileId: "qa_agent",
+          snapshot: projectSnapshot,
+          codeContext: projectSnapshot?.codeContext,
+        })
+      : undefined;
+    if (contextReceipt) {
+      deps.emitWorkflowEvent?.({
+        type: "context_receipt",
+        threadId: state.threadId,
+        userStoryId: userStory.id,
+        receipt: contextReceipt,
+        timestamp: new Date().toISOString(),
+      });
+    }
     // Self-correction: curator feedback refines test coverage on retry
     const qaOutput = await deps.generateQaTests(
       userStory,
@@ -206,6 +226,7 @@ export function createQaAgentNode(deps: LangGraphDependencies) {
             },
             executionTimeMs: Date.now() - start,
             completedAt: new Date().toISOString(),
+            ...(contextReceipt ? { contextReceipt } : {}),
             ...agentArtifactFields(artifactContext, state),
           },
         ],

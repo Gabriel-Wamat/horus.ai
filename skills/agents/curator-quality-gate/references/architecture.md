@@ -7,4 +7,4 @@
 - The Curator must not create new product scope or rewrite the spec.
 - The full spec is in scope: summary, technical approach, components, data models, future API/route contracts, and acceptance criteria.
 - Future API/route contracts are route-readiness checks for the frontend, not evidence that a backend exists.
-- Data-model gaps should be routed to `front` when HTML/mock data is wrong, to `qa` when tests miss the model behavior, and to `both` when both are incomplete.
+- Data-model gaps should be routed to `front` when local state or visible rendering is wrong, to `qa` when tests miss the model behavior, and to `both` when both are incomplete.

@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS specs (
   api_endpoints jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(api_endpoints) = 'array'),
   data_models jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(data_models) = 'array'),
   acceptance_criteria jsonb NOT NULL CHECK (jsonb_typeof(acceptance_criteria) = 'array'),
+  visual_contract jsonb NULL CHECK (visual_contract IS NULL OR jsonb_typeof(visual_contract) = 'object'),
+  design_brief jsonb NULL CHECK (design_brief IS NULL OR jsonb_typeof(design_brief) = 'object'),
   generated_at timestamptz NOT NULL,
   approved_at timestamptz NULL,
   approved_by text NULL CHECK (approved_by IS NULL OR approved_by IN ('human', 'auto')),

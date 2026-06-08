@@ -20,6 +20,8 @@ import type {
   HorusRecoveryDecision,
 } from "../entities/HorusError.js";
 import { HorusRecoveryDecisionSchema, HorusRecoveryActionSchema } from "../entities/HorusError.js";
+import type { AgentContextReceipt } from "../entities/AgentContextReceipt.js";
+import { AgentContextReceiptSchema } from "../entities/AgentContextReceipt.js";
 
 export const WorkflowEventSchema = z.discriminatedUnion("type", [
   z.object({
@@ -58,6 +60,13 @@ export const WorkflowEventSchema = z.discriminatedUnion("type", [
     threadId: z.string().uuid(),
     userStoryId: z.string().uuid().optional(),
     evidence: RuntimeValidationEvidenceSchema,
+    timestamp: z.string().datetime(),
+  }),
+  z.object({
+    type: z.literal("context_receipt"),
+    threadId: z.string().uuid(),
+    userStoryId: z.string().uuid().optional(),
+    receipt: AgentContextReceiptSchema,
     timestamp: z.string().datetime(),
   }),
   z.object({
@@ -279,6 +288,13 @@ export type WorkflowEvent =
       threadId: string;
       userStoryId?: string;
       evidence: RuntimeValidationEvidence;
+      timestamp: string;
+    }
+  | {
+      type: "context_receipt";
+      threadId: string;
+      userStoryId?: string;
+      receipt: AgentContextReceipt;
       timestamp: string;
     }
   | {

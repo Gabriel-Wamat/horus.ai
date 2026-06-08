@@ -72,6 +72,15 @@ export function mapWorkflowEventToHorusRunEvent(
     ...(operationalSessionId ? { operationalSessionId } : {}),
     ...(taskId ? { taskId } : {}),
     ...(isToolWorkflowEvent(event) ? { toolName: event.toolName } : {}),
+    ...(event.type === "context_receipt"
+      ? {
+          snapshotId: event.receipt.snapshotId,
+          agentProfileId: event.receipt.agentProfileId,
+          selectedFiles: event.receipt.selectedFiles.map((file) => file.path),
+          retrievalChannels: event.receipt.retrievalChannels,
+          confidence: event.receipt.confidence,
+        }
+      : {}),
     ...traceFields,
     ...(event.type === "command_output"
       ? {
@@ -110,6 +119,7 @@ export function mapWorkflowEventToHorusRunEvent(
     title: titleForWorkflowEvent(event),
     ...(summary ? { summary } : {}),
     ...(event.type === "validation_evidence" ? { evidence: event.evidence } : {}),
+    ...(event.type === "context_receipt" ? { receipt: event.receipt } : {}),
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     ...traceFields,
     ...(filePaths ? { filePaths } : {}),
@@ -247,6 +257,7 @@ export function resolveHorusWorkflowNodeFromEvent(
 ): HorusWorkflowNodeId | undefined {
   if (event.type === "awaiting_approval") return "hitlCheckpoint";
   if (event.type === "validation_evidence") return "qaAgent";
+  if (event.type === "context_receipt") return HORUS_NODE_BY_AGENT[event.receipt.agentName];
   if (event.type === "patch_proposed") return "frontAgent";
   if (event.type === "patch_applied") return "curatorAgent";
   if (
@@ -287,6 +298,8 @@ export function titleForWorkflowEvent(event: WorkflowEvent): string {
       return "Patch aplicado";
     case "validation_evidence":
       return "Evidência de validação registrada";
+    case "context_receipt":
+      return `Contexto usado por ${agentLabel(event.receipt.agentName)}`;
     case "tool_call_started":
       return `${toolLabel(event.toolName)} iniciado`;
     case "tool_call_finished":
@@ -337,6 +350,9 @@ export function summaryForWorkflowEvent(event: WorkflowEvent): string | undefine
       (command) => command.exitCode !== 0
     ).length;
     return `Status: ${event.evidence.status}; comandos: ${event.evidence.commands.length}; falhas: ${failedCommands}; preview: ${event.evidence.preview.status}`;
+  }
+  if (event.type === "context_receipt") {
+    return `${event.receipt.selectedFiles.length} arquivo(s), ${event.receipt.retrievalChannels.length} canal(is), confiança ${Math.round(event.receipt.confidence * 100)}%.`;
   }
   if (event.type === "tool_call_started") {
     return event.summary ?? `${agentLabel(event.agentName)} iniciou ${event.toolName}.`;
@@ -420,6 +436,13 @@ export function loopMetadataForWorkflowEvent(event: WorkflowEvent): {
         actorName: "Runtime validation",
       };
     }
+    case "context_receipt":
+      return {
+        phase: "context_reading",
+        eventType: "context_read",
+        actorKind: "agent",
+        actorName: agentLabel(event.receipt.agentName),
+      };
     case "tool_call_started":
       return {
         phase: toolPhase(event.toolName),
@@ -504,6 +527,7 @@ function profileAgentForEvent(event: WorkflowEvent): AgentName | undefined {
   if (event.type === "patch_proposed") return "front";
   if (event.type === "patch_applied") return "curator";
   if (event.type === "validation_evidence") return "qa";
+  if (event.type === "context_receipt") return event.receipt.agentName;
   if (
     event.type === "tool_call_started" ||
     event.type === "tool_call_finished" ||

@@ -1,7 +1,8 @@
 import type { JSX } from "react";
 import type {
-  ConsoleFileRow,
-  OperationalTraceRow,
+	  ConsoleFileRow,
+	  ContextReceiptRow,
+	  OperationalTraceRow,
   TimelineRow,
   ValidationChainRow,
 } from "./projections.js";
@@ -134,6 +135,56 @@ export function ExecutionFilesSection({
           ))
         ) : (
           <p className="execution-console-empty">Sem arquivos tocados.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function ExecutionContextSection({
+  rows,
+}: {
+  readonly rows: readonly ContextReceiptRow[];
+}): JSX.Element {
+  return (
+    <section className="execution-console-section">
+      <div className="execution-console-section-head">
+        <strong>Contexto usado</strong>
+        <span>{rows.length}</span>
+      </div>
+      <div className="execution-console-context-list">
+        {rows.length ? (
+          rows.map((row) => (
+            <article key={row.id} className="execution-console-context-row">
+              <header>
+                <div>
+                  <strong>{row.agent}</strong>
+                  <span>
+                    {row.profile} · confiança {Math.round(row.confidence * 100)}%
+                  </span>
+                </div>
+                <code>{shortId(row.snapshotId)}</code>
+              </header>
+              <p>
+                {row.selectedFiles.length
+                  ? row.selectedFiles.slice(0, 4).join(", ")
+                  : "Nenhum arquivo selecionado."}
+              </p>
+              <span className="execution-console-trace">
+                {row.channels.join(" · ") || "sem canais"} · {row.selectedBytes} bytes
+                {row.omittedFiles ? ` · ${row.omittedFiles} omitidos` : ""}
+              </span>
+              {row.reasons.length ? (
+                <ul>
+                  {row.reasons.slice(0, 2).map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </article>
+          ))
+        ) : (
+          <p className="execution-console-empty">Sem recibo de contexto.</p>
         )}
       </div>
     </section>

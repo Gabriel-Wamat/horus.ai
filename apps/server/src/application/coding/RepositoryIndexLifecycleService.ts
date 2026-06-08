@@ -49,9 +49,25 @@ export class RepositoryIndexLifecycleService {
         contentHash: match.chunk.contentHash,
         indexVersion: match.chunk.indexVersion,
         tokenEstimate: match.chunk.tokenEstimate,
+        kind: match.chunk.kind,
+        startLine: match.chunk.startLine,
+        endLine: match.chunk.endLine,
+        symbolNames: match.chunk.symbolNames,
         vectorId: match.chunk.id,
       }))
       .sort((left, right) => left.id.localeCompare(right.id));
+    const contentSignature = hash(
+      JSON.stringify({
+        files: files.map((file) => [file.path, file.sourceHash]),
+        chunks: chunks.map((chunk) => [
+          chunk.id,
+          chunk.contentHash,
+          chunk.startLine ?? null,
+          chunk.endLine ?? null,
+        ]),
+      })
+    );
+    const semanticSummary = input.semanticRetrieval?.summary;
 
     return RepositoryIndexManifestSchema.parse({
       id: manifestId(namespace, input.indexVersion, files, chunks),
@@ -66,6 +82,44 @@ export class RepositoryIndexLifecycleService {
         : {}),
       files,
       chunks,
+      ignorePolicy: {
+        gitignoreApplied: input.scan.files.some((file) => file.path === ".gitignore"),
+        horusignoreApplied: input.scan.files.some((file) => file.path === ".horusignore"),
+        ignoredEntries: input.scan.stats.ignoredEntries,
+        blockedFiles: input.scan.stats.blockedFiles,
+        binaryFiles: input.scan.stats.binaryFiles,
+        oversizedFiles: input.scan.stats.oversizedFiles,
+      },
+      ast: {
+        status: semanticSummary
+          ? countIndexedSymbols(chunks) > 0
+            ? "partial"
+            : "unavailable"
+          : "unavailable",
+        parsedDocumentCount: countUniquePaths(chunks),
+        symbolCount: countIndexedSymbols(chunks),
+        diagnosticCount: 0,
+        importCount: 0,
+      },
+      embeddings: {
+        enabled: Boolean(semanticSummary?.embeddingModel && chunks.length > 0),
+        ...(semanticSummary?.embeddingModel ? { model: semanticSummary.embeddingModel } : {}),
+        ...(semanticSummary?.dimensions ? { dimensions: semanticSummary.dimensions } : {}),
+        embeddedChunkCount: semanticSummary?.embeddedChunkCount ?? chunks.length,
+      },
+      graph: {
+        status: "unavailable",
+        nodeCount: 0,
+        edgeCount: 0,
+        importCount: 0,
+        exportCount: 0,
+      },
+      freshness: {
+        status: "fresh",
+        contentSignature,
+        stalePaths: [],
+        checkedAt: generatedAt,
+      },
       sourceFileCount: files.length,
       chunkCount: chunks.length,
       generatedAt,
@@ -209,6 +263,22 @@ function groupChunkIdsByPath(
     output.set(chunk.path, [...(output.get(chunk.path) ?? []), chunk.id]);
   }
   return output;
+}
+
+function countUniquePaths(chunks: readonly { readonly path: string }[]): number {
+  return new Set(chunks.map((chunk) => chunk.path)).size;
+}
+
+function countIndexedSymbols(
+  chunks: readonly { readonly symbolNames?: readonly string[] | undefined }[]
+): number {
+  const symbols = new Set<string>();
+  for (const chunk of chunks) {
+    for (const symbolName of chunk.symbolNames ?? []) {
+      symbols.add(symbolName);
+    }
+  }
+  return symbols.size;
 }
 
 function addReason(entries: Map<string, Set<string>>, path: string, reason: string): void {

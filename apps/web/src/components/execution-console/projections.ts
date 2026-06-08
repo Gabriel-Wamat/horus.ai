@@ -1,5 +1,6 @@
 export type {
   ConsoleFileRow,
+  ContextReceiptRow,
   OperationalTraceRow,
   OperationalTraceStep,
   TimelineRow,
@@ -18,6 +19,7 @@ export {
   selectLatestFileOperations,
 } from "./fileRows.js";
 export { selectOperationalTraceRows } from "./traceRows.js";
+export { selectContextReceiptRows } from "./contextRows.js";
 export { selectTerminalRows } from "./terminalRows.js";
 export { selectTimelineRows } from "./timelineRows.js";
 export { selectValidationChains } from "./validationRows.js";

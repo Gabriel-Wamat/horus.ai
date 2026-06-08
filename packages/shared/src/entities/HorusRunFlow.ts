@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentRunbookEntrySchema } from "./AgentRunbook.js";
+import { AgentContextReceiptSchema } from "./AgentContextReceipt.js";
 import {
   AgentNameSchema,
   AgentProfileIdSchema,
@@ -68,7 +69,8 @@ export const HorusRunEventTypeSchema = z.enum([
   "node_completed",
   "patch_proposed",
   "patch_applied",
-  "validation_evidence",
+	  "validation_evidence",
+	  "context_receipt",
   "awaiting_approval",
   "retry_started",
   "awaiting_retry_approval",
@@ -124,6 +126,7 @@ export const HorusRunEventSnapshotSchema = z.object({
   title: z.string().min(1),
   summary: z.string().optional(),
   evidence: RuntimeValidationEvidenceSchema.optional(),
+  receipt: AgentContextReceiptSchema.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   filePaths: z.array(z.string().trim().min(1)).optional(),
   commandIds: z.array(z.string().trim().min(1)).optional(),

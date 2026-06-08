@@ -18,6 +18,7 @@ Purpose: make subjective UI failures observable enough for generation, review, a
 - Static HTML implementation for a reachable framework project.
 - Orphan component/file not imported by the app entrypoint.
 - Mock/fake adapter in runtime project code.
+- SDD/workflow metadata rendered as product UI copy, including USxx ids, User Story, Spec, Acceptance Criteria, Pattern, visualContract, Project OS, Horus, fallback, or agent terms unless those words are truly part of the product domain.
 
 ## Pattern-Specific Checks
 

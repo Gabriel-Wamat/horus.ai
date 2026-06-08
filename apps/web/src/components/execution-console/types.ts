@@ -43,6 +43,20 @@ export interface ConsoleFileRow {
   diffPreview: string;
 }
 
+export interface ContextReceiptRow {
+  id: string;
+  agent: string;
+  profile: string;
+  snapshotId: string;
+  timestamp: string;
+  confidence: number;
+  selectedFiles: string[];
+  omittedFiles: number;
+  selectedBytes: number;
+  channels: string[];
+  reasons: string[];
+}
+
 export interface ValidationChainRow {
   id: string;
   title: string;

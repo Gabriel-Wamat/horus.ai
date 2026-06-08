@@ -96,6 +96,58 @@ export function VisualContractSummary({
   );
 }
 
+export function DesignBriefSummary({
+  designBrief,
+}: {
+  designBrief?: Spec["designBrief"];
+}): JSX.Element | null {
+  if (!designBrief) return null;
+
+  const regions = designBrief.informationArchitecture.regions.slice(0, 4);
+  const components = designBrief.componentInventory.slice(0, 5);
+  const stateCount = Object.values(designBrief.stateMatrix).reduce(
+    (total, states) => total + states.length,
+    0
+  );
+
+  return (
+    <section className="visual-contract-summary" aria-label="Design intelligence da spec">
+      <div className="visual-contract-summary-head">
+        <div>
+          <p className="panel-kicker">Design intelligence</p>
+          <p className="workflow-title">{designBrief.surfaceType}</p>
+        </div>
+        <span className="status-chip">
+          <span className="status-chip-label">estados</span>
+          <span className="status-chip-value">{stateCount}</span>
+        </span>
+      </div>
+      <p className="workflow-meta">{designBrief.userIntent.primaryUserGoal}</p>
+      <div className="visual-contract-columns">
+        <div>
+          <p className="panel-kicker">Regiões</p>
+          {regions.map((region) => (
+            <p key={region.name} className="workflow-meta">
+              {region.name} · {region.priority}
+            </p>
+          ))}
+        </div>
+        <div>
+          <p className="panel-kicker">Componentes</p>
+          {components.map((component) => (
+            <p key={component.name} className="workflow-meta">
+              {component.name}
+            </p>
+          ))}
+        </div>
+      </div>
+      <p className="workflow-meta">
+        {designBrief.visualStrategy.domainRationale}
+      </p>
+    </section>
+  );
+}
+
 export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.Element {
   const [summary, setSummary] = useState(spec.summary);
   const [approach, setApproach] = useState(spec.technicalApproach);
@@ -152,6 +204,7 @@ export function SpecReview({ spec, onApprove, onReject }: SpecReviewProps): JSX.
         </div>
 
         <VisualContractSummary visualContract={spec.visualContract} />
+        <DesignBriefSummary designBrief={spec.designBrief} />
 
         {spec.components.length > 0 && (
           <div>

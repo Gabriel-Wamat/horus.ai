@@ -14,11 +14,11 @@ export function buildProjectManagerAppTsx(input: {
   codeContext?: CodeContextBundle;
   workspaceContext?: ProjectWorkspaceContextSnapshot;
 }): string {
-  const title = sanitizeTsString(
-    input.userStory.title.replace(/^PM-\d+\s*-\s*/i, "") ||
-      "Gerenciamento de projeto"
-  );
-  const summary = sanitizeTsString(input.spec.summary || input.userStory.description);
+  const productTitle = sanitizeTsString(deriveFallbackProductTitle(input));
+  const productIntro = sanitizeTsString(deriveFallbackProductIntro(input));
+  const productKicker = sanitizeTsString(deriveFallbackProductKicker(input));
+  const logoLetter = sanitizeTsString(deriveFallbackLogoLetter(input));
+  const categoryOptions = JSON.stringify(deriveFallbackCategoryOptions(input));
   const exportStyle = detectReactAppExportStyle(input);
   const appDeclaration =
     exportStyle === "default" ? "function App()" : "export function App()";
@@ -30,109 +30,153 @@ export function buildProjectManagerAppTsx(input: {
   return `import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 
-type View = "home" | "tasks" | "calendar";
-type TaskWindow = "day" | "week" | "month";
-type TaskStatus = "pending" | "progress" | "done" | "overdue";
+type View = "today" | "tasks" | "history";
+type TaskStatus = "pending" | "done";
 type TaskPriority = "Alta" | "Media" | "Baixa";
 
 interface Task {
   id: number;
   title: string;
-  owner: string;
-  dueDate: string;
+  description: string;
+  dueAt: string;
+  category: string;
   priority: TaskPriority;
   status: TaskStatus;
+  completedAt: string | null;
 }
 
-const initialTasks: Task[] = [
-  { id: 1, title: "Revisar escopo do dashboard", owner: "Ana", dueDate: "2026-05-27", priority: "Alta", status: "progress" },
-  { id: 2, title: "Publicar lista de entregas do dia", owner: "Bruno", dueDate: "2026-05-27", priority: "Media", status: "pending" },
-  { id: 3, title: "Validar prototipo mobile", owner: "Clara", dueDate: "2026-05-28", priority: "Alta", status: "done" },
-  { id: 4, title: "Ajustar dependencias do calendario", owner: "Davi", dueDate: "2026-05-22", priority: "Baixa", status: "overdue" },
-];
+const initialTasks: Task[] = [];
 
 const navItems: Array<{ id: View; label: string }> = [
-  { id: "home", label: "Home" },
+  { id: "today", label: "Hoje" },
   { id: "tasks", label: "Tarefas" },
-  { id: "calendar", label: "Calendario" },
+  { id: "history", label: "Historico" },
 ];
 
 const statusLabel: Record<TaskStatus, string> = {
   pending: "Pendente",
-  progress: "Em curso",
   done: "Concluida",
-  overdue: "Atrasada",
 };
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+const priorityOrder: Record<TaskPriority, number> = {
+  Alta: 3,
+  Media: 2,
+  Baixa: 1,
+};
+
+const initialCategories = ${categoryOptions};
+
+function nowInputValue() {
+  return new Date().toISOString().slice(0, 16);
 }
 
-function isInWindow(taskDate: string, window: TaskWindow) {
-  const today = new Date(todayIso());
-  const date = new Date(taskDate);
-  const diffDays = Math.floor((date.getTime() - today.getTime()) / 86400000);
+function formatDueAt(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
 
-  if (window === "day") return taskDate === todayIso();
-  if (window === "week") return diffDays >= -6 && diffDays <= 6;
-  return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+function isOverdue(task: Task) {
+  return task.status === "pending" && new Date(task.dueAt).getTime() < Date.now();
 }
 
 ${appDeclaration} {
-  const [activeView, setActiveView] = useState<View>("home");
-  const [taskWindow, setTaskWindow] = useState<TaskWindow>("day");
+  const [activeView, setActiveView] = useState<View>("today");
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [categoryFilter, setCategoryFilter] = useState("Todas");
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [selectedDay, setSelectedDay] = useState(27);
+  const [categories, setCategories] = useState(initialCategories);
   const [form, setForm] = useState({
     title: "",
-    owner: "",
-    dueDate: todayIso(),
+    description: "",
+    dueAt: nowInputValue(),
+    category: "Casa",
+    newCategory: "",
     priority: "Media" as TaskPriority,
   });
 
   const visibleTasks = useMemo(
-    () => tasks.filter((task) => isInWindow(task.dueDate, taskWindow)),
-    [tasks, taskWindow]
+    () =>
+      tasks
+        .filter((task) => (statusFilter === "all" ? true : task.status === statusFilter))
+        .filter((task) => (categoryFilter === "Todas" ? true : task.category === categoryFilter))
+        .slice()
+        .sort((left, right) => {
+          if (left.status !== right.status) return left.status === "pending" ? -1 : 1;
+          if (isOverdue(left) !== isOverdue(right)) return isOverdue(left) ? -1 : 1;
+          if (priorityOrder[left.priority] !== priorityOrder[right.priority]) {
+            return priorityOrder[right.priority] - priorityOrder[left.priority];
+          }
+          return new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime();
+        }),
+    [categoryFilter, statusFilter, tasks]
   );
 
   const metrics = useMemo(() => {
     const done = tasks.filter((task) => task.status === "done").length;
-    const overdue = tasks.filter((task) => task.status === "overdue").length;
-    const inProgress = tasks.filter((task) => task.status === "progress").length;
-    const completion = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
-    return { done, overdue, inProgress, completion };
+    const pending = tasks.filter((task) => task.status === "pending").length;
+    const overdue = tasks.filter(isOverdue).length;
+    return { done, pending, overdue };
   }, [tasks]);
 
   function createTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form.title.trim()) return;
+    const resolvedCategory = form.newCategory.trim() || form.category;
+    if (form.newCategory.trim() && !categories.includes(form.newCategory.trim())) {
+      setCategories((current) => [...current, form.newCategory.trim()]);
+    }
     setTasks((current) => [
       {
         id: Date.now(),
         title: form.title.trim(),
-        owner: form.owner.trim() || "Sem dono",
-        dueDate: form.dueDate,
+        description: form.description.trim(),
+        dueAt: form.dueAt,
+        category: resolvedCategory,
         priority: form.priority,
         status: "pending",
+        completedAt: null,
       },
       ...current,
     ]);
-    setForm({ title: "", owner: "", dueDate: todayIso(), priority: "Media" });
+    setForm({
+      title: "",
+      description: "",
+      dueAt: nowInputValue(),
+      category: resolvedCategory,
+      newCategory: "",
+      priority: "Media",
+    });
+    setActiveView("tasks");
   }
 
-  const selectedDate = \`2026-05-\${String(selectedDay).padStart(2, "0")}\`;
-  const selectedTasks = tasks.filter((task) => task.dueDate === selectedDate);
+  function toggleTask(taskId: number) {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status: task.status === "done" ? "pending" : "done",
+              completedAt:
+                task.status === "done" ? null : new Date().toISOString().slice(0, 16),
+            }
+          : task
+      )
+    );
+  }
+
+  const completedTasks = tasks.filter((task) => task.status === "done");
 
   return (
-    <main className="pm-shell">
-      <aside className="pm-sidebar">
-        <div>
-          <span className="pm-logo">H</span>
-          <p className="pm-kicker">Project OS</p>
-          <h1>${title}</h1>
-          <p className="pm-summary">${summary}</p>
-        </div>
-        <nav className="pm-nav" aria-label="Navegacao principal">
+    <main className="task-shell">
+      <section className="task-intro" aria-labelledby="app-title">
+        <span className="task-logo">${logoLetter}</span>
+        <p className="task-kicker">${productKicker}</p>
+        <h1 id="app-title">${productTitle}</h1>
+        <p className="task-summary">${productIntro}</p>
+
+        <nav className="task-nav" aria-label="Navegacao principal">
           {navItems.map((item) => (
             <button
               className={activeView === item.id ? "is-active" : ""}
@@ -144,197 +188,195 @@ ${appDeclaration} {
             </button>
           ))}
         </nav>
-      </aside>
 
-      <section className="pm-workspace">
-        <header className="pm-topbar">
-          <div>
-            <p className="pm-kicker">Status do projeto</p>
-            <strong>{metrics.completion}% concluido</strong>
+        <form className="task-form" onSubmit={createTask}>
+          <label>
+            Titulo da tarefa
+            <input
+              aria-required="true"
+              onChange={(event) => setForm({ ...form, title: event.target.value })}
+              placeholder="Digite o titulo"
+              value={form.title}
+            />
+          </label>
+          <label>
+            Descricao opcional
+            <textarea
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
+              placeholder="Detalhes opcionais"
+              value={form.description}
+            />
+          </label>
+          <div className="task-form-grid">
+            <label>
+              Vencimento
+              <input
+                onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
+                type="datetime-local"
+                value={form.dueAt}
+              />
+            </label>
+            <label>
+              Prioridade
+              <select
+                onChange={(event) => setForm({ ...form, priority: event.target.value as TaskPriority })}
+                value={form.priority}
+              >
+                <option>Alta</option>
+                <option>Media</option>
+                <option>Baixa</option>
+              </select>
+            </label>
           </div>
-          <div className="pm-live-pill">
-            <span />
-            Atualizado agora
+          <div className="task-form-grid">
+            <label>
+              Categoria
+              <select
+                onChange={(event) => setForm({ ...form, category: event.target.value })}
+                value={form.category}
+              >
+                {categories.map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Nova categoria
+              <input
+                onChange={(event) => setForm({ ...form, newCategory: event.target.value })}
+                placeholder="Opcional"
+                value={form.newCategory}
+              />
+            </label>
           </div>
+          <button className="task-primary" disabled={!form.title.trim()} type="submit">
+            Criar tarefa
+          </button>
+        </form>
+      </section>
+
+      <section className="task-workspace">
+        <header className="task-topbar">
+          <article>
+            <span>Pendentes</span>
+            <strong>{metrics.pending}</strong>
+          </article>
+          <article>
+            <span>Concluidas</span>
+            <strong>{metrics.done}</strong>
+          </article>
+          <article>
+            <span>Atrasadas</span>
+            <strong>{metrics.overdue}</strong>
+          </article>
         </header>
 
-        {activeView === "home" && (
-          <section className="pm-page">
-            <div className="pm-section-head">
-              <p className="pm-kicker">Home</p>
-              <h2>Desempenho do projeto</h2>
+        {activeView === "today" && (
+          <section className="task-page">
+            <div className="task-section-head">
+              <p className="task-kicker">Prioridade do dia</p>
+              <h2>Resolva o que vence primeiro</h2>
             </div>
-
-            <div className="pm-metrics">
-              <article>
-                <span>Concluidas</span>
-                <strong>{metrics.done}</strong>
-                <small>tarefas fechadas</small>
-              </article>
-              <article>
-                <span>Em progresso</span>
-                <strong>{metrics.inProgress}</strong>
-                <small>frentes ativas</small>
-              </article>
-              <article>
-                <span>Atrasadas</span>
-                <strong>{metrics.overdue}</strong>
-                <small>pedem decisao</small>
-              </article>
-            </div>
-
-            <div className="pm-dashboard-grid">
-              <article className="pm-panel pm-chart">
-                <div className="pm-section-head compact">
-                  <p className="pm-kicker">Semana</p>
-                  <h3>Produtividade</h3>
-                </div>
-                <div className="pm-bars" aria-label="Grafico simples de produtividade semanal">
-                  {[42, 58, 64, 72, 54, 81, metrics.completion].map((value, index) => (
-                    <span key={index} style={{ height: \`\${value}%\` }} />
-                  ))}
-                </div>
-              </article>
-
-              <article className="pm-panel">
-                <div className="pm-section-head compact">
-                  <p className="pm-kicker">Marcos</p>
-                  <h3>Proximas entregas</h3>
-                </div>
-                <ul className="pm-timeline">
-                  <li><span />Design aprovado para home</li>
-                  <li><span />Fluxo diario de tarefas</li>
-                  <li><span />Calendario pronto para revisao</li>
-                </ul>
-              </article>
-            </div>
+            <TaskList
+              emptyText="Nenhuma tarefa pendente para agora."
+              onToggle={toggleTask}
+              tasks={visibleTasks.filter((task) => task.status === "pending").slice(0, 4)}
+            />
           </section>
         )}
 
         {activeView === "tasks" && (
-          <section className="pm-page">
-            <div className="pm-section-head">
-              <p className="pm-kicker">Tarefas</p>
-              <h2>Criar e acompanhar listas</h2>
+          <section className="task-page">
+            <div className="task-section-head">
+              <p className="task-kicker">Lista principal</p>
+              <h2>Tarefas por status e categoria</h2>
             </div>
-
-            <div className="pm-task-layout">
-              <form className="pm-panel pm-form" onSubmit={createTask}>
-                <label>
-                  Titulo
-                  <input
-                    onChange={(event) => setForm({ ...form, title: event.target.value })}
-                    placeholder="Nova tarefa"
-                    value={form.title}
-                  />
-                </label>
-                <label>
-                  Responsavel
-                  <input
-                    onChange={(event) => setForm({ ...form, owner: event.target.value })}
-                    placeholder="Nome"
-                    value={form.owner}
-                  />
-                </label>
-                <div className="pm-form-row">
-                  <label>
-                    Data
-                    <input
-                      onChange={(event) => setForm({ ...form, dueDate: event.target.value })}
-                      type="date"
-                      value={form.dueDate}
-                    />
-                  </label>
-                  <label>
-                    Prioridade
-                    <select
-                      onChange={(event) => setForm({ ...form, priority: event.target.value as TaskPriority })}
-                      value={form.priority}
-                    >
-                      <option>Alta</option>
-                      <option>Media</option>
-                      <option>Baixa</option>
-                    </select>
-                  </label>
-                </div>
-                <button className="pm-primary" type="submit">Criar tarefa</button>
-              </form>
-
-              <article className="pm-panel pm-list-panel">
-                <div className="pm-filter-tabs" aria-label="Filtro de periodo">
-                  {(["day", "week", "month"] as TaskWindow[]).map((item) => (
-                    <button
-                      className={taskWindow === item ? "is-active" : ""}
-                      key={item}
-                      onClick={() => setTaskWindow(item)}
-                      type="button"
-                    >
-                      {item === "day" ? "Dia" : item === "week" ? "Semana" : "Mes"}
-                    </button>
-                  ))}
-                </div>
-                <div className="pm-task-list">
-                  {visibleTasks.length === 0 ? (
-                    <p className="pm-empty">Nenhuma tarefa para este periodo.</p>
-                  ) : (
-                    visibleTasks.map((task) => (
-                      <article className="pm-task-item" key={task.id}>
-                        <div>
-                          <strong>{task.title}</strong>
-                          <span>{task.owner} · {task.dueDate}</span>
-                        </div>
-                        <div className="pm-task-meta">
-                          <small>{task.priority}</small>
-                          <em className={\`status-\${task.status}\`}>{statusLabel[task.status]}</em>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </article>
+            <div className="task-filters" aria-label="Filtros de tarefas">
+              <select
+                aria-label="Filtrar por status"
+                onChange={(event) => setStatusFilter(event.target.value as "all" | TaskStatus)}
+                value={statusFilter}
+              >
+                <option value="all">Todos os status</option>
+                <option value="pending">Pendentes</option>
+                <option value="done">Concluidas</option>
+              </select>
+              <select
+                aria-label="Filtrar por categoria"
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                value={categoryFilter}
+              >
+                <option>Todas</option>
+                {categories.map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </select>
             </div>
+            <TaskList
+              emptyText="Nenhuma tarefa encontrada com estes filtros."
+              onToggle={toggleTask}
+              tasks={visibleTasks}
+            />
           </section>
         )}
 
-        {activeView === "calendar" && (
-          <section className="pm-page">
-            <div className="pm-section-head">
-              <p className="pm-kicker">Calendario</p>
-              <h2>Maio 2026</h2>
+        {activeView === "history" && (
+          <section className="task-page">
+            <div className="task-section-head">
+              <p className="task-kicker">Historico</p>
+              <h2>Concluidas recentemente</h2>
             </div>
-            <div className="pm-calendar-layout">
-              <article className="pm-panel pm-calendar">
-                {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
-                  <button
-                    className={selectedDay === day ? "is-selected" : ""}
-                    key={day}
-                    onClick={() => setSelectedDay(day)}
-                    type="button"
-                  >
-                    <span>{day}</span>
-                    {tasks.some((task) => task.dueDate.endsWith(String(day).padStart(2, "0"))) && <i />}
-                  </button>
-                ))}
-              </article>
-              <aside className="pm-panel pm-day-panel">
-                <p className="pm-kicker">Dia {selectedDay}</p>
-                <h3>Agenda selecionada</h3>
-                {selectedTasks.length === 0 ? (
-                  <p className="pm-empty">Sem entregas nesse dia.</p>
-                ) : (
-                  selectedTasks.map((task) => (
-                    <article className="pm-day-task" key={task.id}>
-                      <strong>{task.title}</strong>
-                      <span>{task.owner} · {statusLabel[task.status]}</span>
-                    </article>
-                  ))
-                )}
-              </aside>
-            </div>
+            <TaskList
+              emptyText="Nenhuma tarefa concluida ainda."
+              onToggle={toggleTask}
+              tasks={completedTasks}
+            />
           </section>
         )}
       </section>
     </main>
+  );
+}
+
+function TaskList(props: {
+  emptyText: string;
+  onToggle: (taskId: number) => void;
+  tasks: Task[];
+}) {
+  if (props.tasks.length === 0) {
+    return <p className="task-empty">{props.emptyText}</p>;
+  }
+
+  return (
+    <div className="task-list">
+      {props.tasks.map((task) => (
+        <article
+          className={
+            "task-item " +
+            (task.status === "done" ? "is-done " : "") +
+            (isOverdue(task) ? "is-overdue" : "")
+          }
+          key={task.id}
+        >
+          <input
+            aria-label={task.status === "done" ? "Reabrir tarefa" : "Concluir tarefa"}
+            checked={task.status === "done"}
+            onChange={() => props.onToggle(task.id)}
+            type="checkbox"
+          />
+          <div>
+            <strong>{task.title}</strong>
+            <p>{task.description || "Sem descricao adicional."}</p>
+            <div className="task-meta">
+              <span>{task.category}</span>
+              <span>{task.priority}</span>
+              <span>{formatDueAt(task.dueAt)}</span>
+              <em>{isOverdue(task) ? "Atrasada" : statusLabel[task.status]}</em>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 ${appExport}`;
@@ -372,6 +414,110 @@ function detectReactAppExportStyle(input: {
   }
 
   return "named";
+}
+
+function deriveFallbackProductTitle(input: {
+  userStory: UserStory;
+  spec: Spec;
+}): string {
+  const source = buildFallbackSource(input);
+  if (containsAny(source, ["tarefa", "tarefas", "pendencia", "pendencias"])) {
+    return "Tarefas pessoais";
+  }
+
+  const domainLabel = input.userStory.labels.find((label) => {
+    const normalized = label.trim().toLowerCase();
+    return (
+      normalized.length > 0 &&
+      !containsAny(normalized, ["legacy", "story", "spec", "horus"])
+    );
+  });
+  if (domainLabel) return titleCaseLabel(domainLabel);
+
+  return "Area de trabalho";
+}
+
+function deriveFallbackProductIntro(input: {
+  userStory: UserStory;
+  spec: Spec;
+}): string {
+  const source = buildFallbackSource(input);
+  if (containsAny(source, ["tarefa", "tarefas", "pendencia", "pendencias"])) {
+    return "Crie tarefas, defina vencimento, organize categorias e acompanhe o que ja foi concluido.";
+  }
+  if (containsAny(source, ["formulario", "cadastro", "crud", "configuracao"])) {
+    return "Registre informacoes, valide entradas e acompanhe o estado de cada item em uma interface direta.";
+  }
+  return "Organize entradas, prioridades e status em uma interface direta para uso diario.";
+}
+
+function deriveFallbackProductKicker(input: {
+  userStory: UserStory;
+  spec: Spec;
+}): string {
+  const source = buildFallbackSource(input);
+  if (containsAny(source, ["tarefa", "tarefas", "pendencia", "pendencias"])) {
+    return "Organizacao pessoal";
+  }
+  if (containsAny(source, ["formulario", "cadastro", "crud", "configuracao"])) {
+    return "Fluxo operacional";
+  }
+  return "Workspace";
+}
+
+function deriveFallbackLogoLetter(input: {
+  userStory: UserStory;
+  spec: Spec;
+}): string {
+  const title = deriveFallbackProductTitle(input).trim();
+  return (title[0] ?? "A").toUpperCase();
+}
+
+function deriveFallbackCategoryOptions(input: {
+  userStory: UserStory;
+  spec: Spec;
+}): string[] {
+  const source = buildFallbackSource(input);
+  if (containsAny(source, ["tarefa", "tarefas", "pendencia", "pendencias"])) {
+    return ["Pessoal"];
+  }
+  return ["Geral"];
+}
+
+function buildFallbackSource(input: { userStory: UserStory; spec: Spec }): string {
+  return [
+    input.userStory.title,
+    input.userStory.description,
+    ...input.userStory.acceptanceCriteria,
+    ...input.userStory.labels,
+    input.spec.summary,
+    input.spec.technicalApproach,
+    ...input.spec.acceptanceCriteria,
+    ...input.spec.dataModels,
+    ...input.spec.components.flatMap((component) => [
+      component.name,
+      component.description,
+    ]),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function containsAny(source: string, terms: string[]): boolean {
+  return terms.some((term) => source.includes(term));
+}
+
+function titleCaseLabel(label: string): string {
+  return label
+    .split("-")
+    .filter((part) => part.length > 0)
+    .map(capitalizeAsciiWord)
+    .join(" ");
+}
+
+function capitalizeAsciiWord(word: string): string {
+  if (word.length === 0) return "";
+  return `${word[0]?.toUpperCase() ?? ""}${word.slice(1).toLowerCase()}`;
 }
 
 function sanitizeTsString(value: string): string {

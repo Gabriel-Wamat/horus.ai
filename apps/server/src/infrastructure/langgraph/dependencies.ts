@@ -1,8 +1,9 @@
 import type {
-  CodeChangeSet,
-  CodeContextBundle,
-  DesignContextBundle,
-  AgentContextEnvelope,
+	  CodeChangeSet,
+	  CodeContextBundle,
+	  DesignContextBundle,
+	  AgentContextEnvelope,
+	  AgentContextReceipt,
   LlmSettings,
   OperationalMemorySummary,
   ProjectContextSnapshot,
@@ -66,6 +67,10 @@ import {
   type BuildAgentContextProfileInput,
 } from "../../application/services/AgentContextProfileService.js";
 import {
+  AgentContextReceiptService,
+  type BuildAgentContextReceiptInput,
+} from "../../application/services/AgentContextReceiptService.js";
+import {
   ProjectContextEngine,
   type BuildProjectContextSnapshotInput,
 } from "../../application/services/ProjectContextEngine.js";
@@ -126,6 +131,9 @@ export interface LangGraphDependencies {
   buildAgentContextProfile?(
     input: BuildAgentContextProfileInput
   ): AgentContextEnvelope | Promise<AgentContextEnvelope>;
+  buildAgentContextReceipt?(
+    input: BuildAgentContextReceiptInput
+  ): AgentContextReceipt | Promise<AgentContextReceipt>;
   // Canonical entry point for "project context for an agent". Wraps inspection,
   // code retrieval, validation policy, and edit restrictions into one
   // ProjectContextSnapshot. Downstream callers (Front/QA/Curator) should prefer
@@ -266,6 +274,7 @@ const codeChangeSetPreflightService = new CodeChangeSetPreflightService();
 const operationalMemoryProjector = new OperationalMemoryProjector();
 const specTraceabilityService = new SpecTraceabilityService();
 const agentContextProfileService = new AgentContextProfileService();
+const agentContextReceiptService = new AgentContextReceiptService();
 // Single canonical context engine — reuses the already-configured
 // ReadOnlyCodeContextService so cache, semantic retrieval and AST analyzer are
 // shared with the legacy code-context tool path.
@@ -313,6 +322,7 @@ export const defaultLangGraphDependencies: LangGraphDependencies = {
   buildOperationalMemory: (input) => operationalMemoryProjector.build(input),
   buildSpecTraceability: (input) => specTraceabilityService.build(input),
   buildAgentContextProfile: (input) => agentContextProfileService.build(input),
+  buildAgentContextReceipt: (input) => agentContextReceiptService.build(input),
   buildProjectContextSnapshot: (input) => projectContextEngine.buildSnapshot(input),
   runtimeEvidence: runtimeEvidenceAggregator,
   recordAgentDebugTrace: (input) => {

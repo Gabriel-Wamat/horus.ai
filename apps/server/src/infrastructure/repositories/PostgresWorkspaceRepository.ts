@@ -52,6 +52,8 @@ interface SpecRow {
   api_endpoints: unknown;
   data_models: unknown;
   acceptance_criteria: unknown;
+  visual_contract: unknown | null;
+  design_brief: unknown | null;
   generated_at: Date;
   approved_at: Date | null;
   approved_by: "human" | "auto" | null;
@@ -351,9 +353,9 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
         INSERT INTO specs (
           id, folder_id, story_id, version, summary, technical_approach,
           components, api_endpoints, data_models, acceptance_criteria,
-          generated_at, approved_at, approved_by, active_revision
+          visual_contract, design_brief, generated_at, approved_at, approved_by, active_revision
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13, $14, $15, $16)
         ON CONFLICT (id) DO UPDATE SET
           version = EXCLUDED.version,
           summary = EXCLUDED.summary,
@@ -362,6 +364,8 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
           api_endpoints = EXCLUDED.api_endpoints,
           data_models = EXCLUDED.data_models,
           acceptance_criteria = EXCLUDED.acceptance_criteria,
+          visual_contract = EXCLUDED.visual_contract,
+          design_brief = EXCLUDED.design_brief,
           generated_at = EXCLUDED.generated_at,
           approved_at = EXCLUDED.approved_at,
           approved_by = EXCLUDED.approved_by,
@@ -378,6 +382,8 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
           json(validated.apiEndpoints),
           json(validated.dataModels),
           json(validated.acceptanceCriteria),
+          validated.visualContract ? json(validated.visualContract) : null,
+          validated.designBrief ? json(validated.designBrief) : null,
           validated.generatedAt,
           approvedAt,
           approvedBy,
@@ -519,6 +525,8 @@ function specFromRow(row: SpecRow): Spec {
     apiEndpoints: row.api_endpoints,
     dataModels: row.data_models,
     acceptanceCriteria: row.acceptance_criteria,
+    ...(row.visual_contract ? { visualContract: row.visual_contract } : {}),
+    ...(row.design_brief ? { designBrief: row.design_brief } : {}),
     generatedAt: toIso(row.generated_at),
     ...(row.approved_at ? { approvedAt: toIso(row.approved_at) } : {}),
     ...(row.approved_by ? { approvedBy: row.approved_by } : {}),

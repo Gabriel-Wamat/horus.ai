@@ -17,7 +17,7 @@ A strong spec separates these responsibilities:
 - UI structure: semantic sections and controls.
 - Styling: tokens, layout, spacing, responsive behavior, visual hierarchy.
 - State: selected items, filters, form state, validation, loading/error/empty/success.
-- Data adapter: one replaceable boundary where mock data can later become route calls.
+- Data adapter: one replaceable boundary where local state can later become route calls.
 - Route contracts: future endpoints and schemas when dynamic data is implied.
 
 ## Backend Route Readiness
@@ -33,4 +33,4 @@ Use `apiEndpoints` as contracts when the story implies:
 
 Do not add endpoints for purely static informational pages.
 
-When endpoints are present, `technicalApproach` must say the current static frontend should use local mock data behind adapter functions until real backend routes are available.
+When endpoints are present, `technicalApproach` must say the current frontend should use empty states, user-created local state, or injectable adapters until real backend routes are available.

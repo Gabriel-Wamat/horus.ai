@@ -56,6 +56,14 @@ export const AgentToolNameSchema = z.enum([
   "direct_fs_write",
   "arbitrary_shell",
   "run_arbitrary_command",
+  "list_project_tree",
+  "read_file_slice",
+  "find_symbol",
+  "graph_neighbors",
+  "get_runtime_errors",
+  "get_recent_diff",
+  "get_terminal_output",
+  "explain_context_selection",
 ]);
 
 export const AgentToolCapabilitySchema = z.enum([
