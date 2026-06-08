@@ -1,5 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#09110f"/>
-  <path d="M18 33c4-8 9-12 14-12s10 4 14 12c-4 8-9 12-14 12s-10-4-14-12Z" fill="none" stroke="#24d3a2" stroke-width="5" stroke-linejoin="round"/>
-  <circle cx="32" cy="33" r="7" fill="#24d3a2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <defs>
+    <linearGradient id="horus-eye-stroke" x1="12" y1="20" x2="84" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#28e98f"/>
+      <stop offset="0.52" stop-color="#7df9d7"/>
+      <stop offset="1" stop-color="#13b9f2"/>
+    </linearGradient>
+    <radialGradient id="horus-eye-iris" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(56 45) rotate(115) scale(18 14)">
+      <stop stop-color="#a5ffe6"/>
+      <stop offset="0.45" stop-color="#28e98f"/>
+      <stop offset="1" stop-color="#0aa4d6"/>
+    </radialGradient>
+  </defs>
+  <path d="M17 32c18 1 31-10 51-8 8 1 13 4 15 8-15-2-25 2-38 8-10 5-18 6-30 5" stroke="url(#horus-eye-stroke)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 47h27c8 0 14-13 28-13 8 0 15 4 21 13-7 10-15 14-25 14-13 0-21-7-29-7H16" stroke="url(#horus-eye-stroke)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="58" cy="48" r="11" fill="url(#horus-eye-iris)"/>
+  <path d="M44 57c-8 8-14 15-22 20-6 4-12 3-15-1 7 0 12-4 18-10 6-5 12-10 19-13" stroke="url(#horus-eye-stroke)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M65 61v20" stroke="url(#horus-eye-stroke)" stroke-width="8" stroke-linecap="round"/>
 </svg>

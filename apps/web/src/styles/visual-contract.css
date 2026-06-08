@@ -1,19 +1,19 @@
 .visual-contract-summary {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   max-width: 980px;
-  margin: 16px 0 4px;
+  margin: 12px 0 4px;
   border: 1px solid rgba(255, 255, 255, 0.085);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.028);
-  padding: 14px;
+  padding: 12px;
 }
 
 .visual-contract-summary-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .visual-contract-token-row {
@@ -37,7 +37,7 @@
 .visual-contract-columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   padding-top: 10px;
 }
@@ -65,7 +65,7 @@
   border: 1px solid var(--bd-soft);
   border-radius: 8px;
   background: var(--s2);
-  padding: 12px;
+  padding: 10px;
 }
 
 .story-detail-meta-row,
@@ -114,21 +114,21 @@
 .workflow-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: 7px;
+  padding: 10px;
 }
 
 .workflow-step {
   display: grid;
-  min-height: 58px;
+  min-height: 50px;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--t3);
-  padding: 8px 10px;
+  padding: 7px 9px;
 }
 
 .workflow-step.active,
@@ -145,7 +145,7 @@
 .workflow-title {
   overflow: hidden;
   color: var(--t);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -159,15 +159,15 @@
 .event-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .message {
   max-width: 78%;
   border: 1px solid rgba(255, 255, 255, 0.055);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.025);
-  padding: 12px 13px;
+  padding: 10px 11px;
 }
 
 .message.user {
@@ -200,11 +200,11 @@
 
 .message-body {
   color: var(--t);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .inspector {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .inspector-tabs {
@@ -235,7 +235,7 @@
   background: #080b0a;
   color: #c6f6dc;
   font: 12px/1.55 "JetBrains Mono", ui-monospace, monospace;
-  padding: 18px;
+  padding: 14px;
 }
 
 .artifact-frame {

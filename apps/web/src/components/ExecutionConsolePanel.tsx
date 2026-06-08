@@ -34,17 +34,21 @@ interface ExecutionTaskRouteTask {
 }
 
 export function ExecutionConsolePanel({
+  isCollapsed,
   selectedProject,
   workflowThreadId,
   workflowEvents,
   fileOperations,
   chatMessages,
+  onToggleCollapsed,
 }: {
+  readonly isCollapsed: boolean;
   readonly selectedProject: FrontendProject | null;
   readonly workflowThreadId: string | null;
   readonly workflowEvents: WorkflowProgressEvent[];
   readonly fileOperations: AgentFileOperationTelemetry[];
   readonly chatMessages: PreviewChatMessage[];
+  readonly onToggleCollapsed: () => void;
 }): JSX.Element {
   const latestFiles = useMemo(
     () => selectLatestFileOperations(fileOperations, chatMessages),
@@ -174,12 +178,40 @@ export function ExecutionConsolePanel({
     : chatMessages.some((message) => message.isStreaming)
       ? "chat live"
       : "idle";
+  const summaryCount = eventCount + latestFiles.length + terminalRows.length;
+
+  if (isCollapsed) {
+    return (
+      <aside
+        className="execution-console-panel is-collapsed"
+        aria-label="Execution Console recolhido"
+      >
+        <button
+          className="execution-console-collapse-rail"
+          type="button"
+          aria-label="Expandir Execution Console"
+          title="Expandir console"
+          onClick={onToggleCollapsed}
+        >
+          <span className="execution-console-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <rect x="4" y="5" width="16" height="14" rx="2" />
+              <path d="M15 5v14M14 8l-4 4 4 4" />
+            </svg>
+          </span>
+          <span className="execution-console-rail-label">Console</span>
+          <strong>{summaryCount}</strong>
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside className="execution-console-panel" aria-label="Execution Console">
       <ExecutionConsoleHeader
         projectName={selectedProject?.name ?? "Sem projeto"}
         runLabel={runLabel}
+        onToggleCollapsed={onToggleCollapsed}
       />
       <ExecutionConsoleMetrics
         eventCount={eventCount}

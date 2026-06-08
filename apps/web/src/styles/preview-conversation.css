@@ -1,10 +1,14 @@
 .preview-console {
   display: grid;
-  height: calc(100vh - 108px);
+  height: calc(100vh - 82px);
   min-height: 0;
-  grid-template-columns: minmax(340px, 390px) minmax(0, 1fr) minmax(300px, 360px);
-  gap: 14px;
+  grid-template-columns: minmax(292px, 340px) minmax(420px, 1fr) minmax(260px, 318px);
+  gap: 10px;
   overflow: hidden;
+}
+
+.preview-console.is-execution-console-collapsed {
+  grid-template-columns: minmax(292px, 340px) minmax(520px, 1fr) 42px;
 }
 
 .preview-conversation-panel,
@@ -37,17 +41,17 @@
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid var(--bd);
   background: rgba(255, 255, 255, 0.015);
-  padding: 16px;
+  padding: 12px;
 }
 
 .preview-project-identity {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .preview-project-identity > div {
@@ -56,8 +60,8 @@
 
 .preview-project-icon {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   place-items: center;
   border: 1px solid var(--bd-soft);
@@ -70,7 +74,7 @@
   overflow: hidden;
   margin: 0;
   color: var(--t);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -79,7 +83,7 @@
 .preview-project-identity p {
   margin: 1px 0 0;
   color: var(--t3);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 750;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,7 +97,7 @@
   align-items: end;
   gap: 8px;
   border-bottom: 1px solid var(--bd);
-  padding: 10px 14px 12px;
+  padding: 9px 12px 10px;
 }
 
 .preview-config-field {
@@ -112,10 +116,10 @@
 .preview-conversation-config .input,
 .preview-conversation-config .select {
   min-width: 0;
-  height: 34px;
+  height: 32px;
   border-radius: 8px;
-  padding: 0 10px;
-  font-size: 12px;
+  padding: 0 9px;
+  font-size: 11px;
   font-weight: 750;
 }
 
@@ -129,9 +133,9 @@
   min-height: 0;
   overflow: hidden;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   border-top: 1px solid var(--bd-soft);
-  padding: 12px;
+  padding: 10px;
 }
 
 .preview-chat-history {
@@ -153,10 +157,10 @@
   min-height: 0;
   max-height: 100%;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 4px 4px 12px;
+  padding: 3px 3px 10px;
   scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
 }
 
@@ -195,21 +199,34 @@
   grid-template-rows: auto auto minmax(0, 1fr);
 }
 
+.execution-console-panel.is-collapsed {
+  display: block;
+  min-width: 0;
+  grid-template-rows: none;
+}
+
 .execution-console-head {
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid var(--bd);
   background: rgba(255, 255, 255, 0.015);
-  padding: 14px;
+  padding: 12px;
 }
 
-.execution-console-head div {
+.execution-console-title {
   display: grid;
   min-width: 0;
   gap: 3px;
+}
+
+.execution-console-head-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
 }
 
 .execution-console-head span,
@@ -236,10 +253,96 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--t2);
-  padding: 6px 9px;
+  padding: 5px 8px;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10px;
   font-weight: 800;
+}
+
+.execution-console-toggle,
+.execution-console-collapse-rail {
+  border: 1px solid var(--bd-soft);
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--t3);
+  transition:
+    background var(--ease),
+    border-color var(--ease),
+    color var(--ease);
+}
+
+.execution-console-toggle {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  padding: 0;
+}
+
+.execution-console-toggle:hover,
+.execution-console-collapse-rail:hover {
+  border-color: var(--bd-strong);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--t);
+}
+
+.execution-console-toggle svg,
+.execution-console-rail-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.execution-console-collapse-rail {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-content: start;
+  justify-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  padding: 12px 0;
+}
+
+.execution-console-rail-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--bd-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.execution-console-rail-label {
+  color: var(--t3);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  transform: rotate(180deg);
+  writing-mode: vertical-rl;
+}
+
+.execution-console-collapse-rail strong {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--bd-soft);
+  border-radius: 999px;
+  color: var(--t2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .execution-console-metrics {
@@ -253,7 +356,7 @@
   gap: 3px;
   border-right: 1px solid var(--bd-soft);
   color: var(--t3);
-  padding: 11px 12px;
+  padding: 9px 10px;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -266,7 +369,7 @@
 
 .execution-console-metrics strong {
   color: var(--t);
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 0;
 }
 
@@ -283,7 +386,7 @@
   min-height: auto;
   grid-template-rows: auto auto;
   border-bottom: 1px solid var(--bd);
-  padding: 11px 12px 12px;
+  padding: 9px 10px 10px;
 }
 
 .execution-console-section:last-child {
@@ -296,7 +399,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 9px;
+  margin-bottom: 7px;
 }
 
 .execution-console-section-head strong {
@@ -313,38 +416,38 @@
   display: grid;
   min-height: 0;
   align-content: start;
-  gap: 7px;
+  gap: 6px;
   overflow: auto;
   padding-right: 3px;
   scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
 }
 
 .execution-console-timeline {
-  max-height: 300px;
+  max-height: 260px;
 }
 
 .execution-console-file-list {
-  max-height: 220px;
+  max-height: 190px;
 }
 
 .execution-console-terminal {
-  max-height: 360px;
+  max-height: 300px;
 }
 
 .execution-console-validation-list,
 .execution-console-diff-list {
-  max-height: 280px;
+  max-height: 240px;
 }
 
 .execution-console-event {
   display: grid;
   min-width: 0;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 7px;
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.016);
-  padding: 8px;
+  padding: 7px;
 }
 
 .execution-console-event time {
@@ -389,7 +492,7 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   background: rgba(3, 8, 12, 0.34);
-  padding: 8px;
+  padding: 7px;
 }
 
 .execution-console-trace-row header {
@@ -491,7 +594,7 @@
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.016);
-  padding: 8px;
+  padding: 7px;
 }
 
 .execution-console-file-row em {
@@ -527,7 +630,7 @@
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: 8px;
   background: rgba(3, 8, 12, 0.34);
-  padding: 8px;
+  padding: 7px;
 }
 
 .execution-console-terminal-meta {
@@ -610,9 +713,9 @@
 .execution-console-retry-task,
 .execution-console-approve-task {
   display: grid;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
   place-items: center;
   border: 1px solid rgba(240, 85, 108, 0.32);
   border-radius: 7px;

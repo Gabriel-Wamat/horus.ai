@@ -36,6 +36,8 @@ export function VisualPreviewConsole({
   const [timeline, setTimeline] = useState<PreviewEvent[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [isActing, setIsActing] = useState(false);
+  const [isExecutionConsoleCollapsed, setIsExecutionConsoleCollapsed] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasUserSelectedProjectRef = useRef(false);
 
@@ -203,7 +205,11 @@ export function VisualPreviewConsole({
   };
 
   return (
-    <div className="preview-console">
+    <div
+      className={`preview-console ${
+        isExecutionConsoleCollapsed ? "is-execution-console-collapsed" : ""
+      }`}
+    >
       <PreviewConversationPanel
         projects={projects}
         selectedProjectId={selectedProjectId}
@@ -246,11 +252,15 @@ export function VisualPreviewConsole({
       </section>
 
       <ExecutionConsolePanel
+        isCollapsed={isExecutionConsoleCollapsed}
         selectedProject={selectedProject}
         workflowThreadId={chatRuntime.activeWorkflowThreadId}
         workflowEvents={chatRuntime.workflowEvents}
         fileOperations={chatRuntime.fileOperations}
         chatMessages={chatRuntime.chatMessages}
+        onToggleCollapsed={() =>
+          setIsExecutionConsoleCollapsed((current) => !current)
+        }
       />
     </div>
   );

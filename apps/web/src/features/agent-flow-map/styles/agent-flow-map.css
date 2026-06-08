@@ -12,7 +12,7 @@
   --agent-flow-danger: var(--danger, #f0556c);
   display: flex;
   min-height: 0;
-  height: calc(100vh - 92px);
+  height: calc(100vh - 78px);
   color: var(--agent-flow-text);
 }
 
@@ -21,7 +21,7 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   overflow: hidden;
 }
 
@@ -29,11 +29,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   border: 1px solid var(--agent-flow-border);
-  border-radius: var(--radius-lg, 16px);
+  border-radius: var(--radius-lg, 10px);
   background: linear-gradient(180deg, rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.006)), var(--agent-flow-panel);
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .agent-flow-toolbar-title,
@@ -60,15 +60,15 @@
 }
 
 .agent-flow-toolbar-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md, 8px);
 }
 
 .agent-flow-toolbar h2,
 .agent-flow-drawer h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -90,18 +90,18 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid var(--agent-flow-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 8px);
   background: rgb(255 255 255 / 0.025);
-  padding: 0 10px;
+  padding: 0 9px;
   color: var(--agent-flow-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
 .agent-flow-run-select select {
-  width: min(280px, 30vw);
+  width: min(240px, 26vw);
   border: 0;
   background: transparent;
   color: var(--agent-flow-text);
@@ -112,9 +112,9 @@
 .agent-flow-segmented {
   gap: 4px;
   border: 1px solid var(--agent-flow-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 8px);
   background: rgb(255 255 255 / 0.03);
-  padding: 4px;
+  padding: 3px;
 }
 
 .agent-flow-segmented button,
@@ -124,14 +124,14 @@
   background: transparent;
   color: var(--agent-flow-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
 .agent-flow-segmented button {
-  height: 30px;
+  height: 28px;
   border-radius: 7px;
-  padding: 0 10px;
+  padding: 0 9px;
 }
 
 .agent-flow-segmented button.active,
@@ -142,12 +142,12 @@
 }
 
 .agent-flow-tool-button {
-  min-height: 38px;
+  min-height: 34px;
   gap: 7px;
   border-color: var(--agent-flow-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md, 8px);
   background: rgb(255 255 255 / 0.025);
-  padding: 0 11px;
+  padding: 0 9px;
 }
 
 .agent-flow-tool-button:disabled {
@@ -160,18 +160,18 @@
   min-height: 0;
   flex: 1;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .agent-flow-workbench.is-inspector-open {
-  grid-template-columns: minmax(0, 1fr) minmax(350px, 390px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
 }
 
 .agent-flow-main-stack {
   display: grid;
   min-height: 0;
-  grid-template-rows: minmax(320px, 1fr) minmax(250px, 0.58fr);
-  gap: 12px;
+  grid-template-rows: minmax(280px, 1fr) minmax(220px, 0.58fr);
+  gap: 10px;
 }
 
 .agent-flow-canvas-shell,
@@ -182,7 +182,7 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--agent-flow-border);
-  border-radius: var(--radius-lg, 16px);
+  border-radius: var(--radius-lg, 10px);
   background:
     linear-gradient(180deg, rgb(255 255 255 / 0.018), rgb(255 255 255 / 0.004)),
     var(--agent-flow-bg);
@@ -198,7 +198,7 @@
   display: flex;
   min-height: 0;
   flex-direction: column;
-  padding: 13px;
+  padding: 10px;
 }
 
 .agent-flow-telemetry-head,

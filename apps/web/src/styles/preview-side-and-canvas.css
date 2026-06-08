@@ -5,7 +5,7 @@
 
 .preview-side-section {
   min-width: 0;
-  padding: 16px;
+  padding: 12px;
 }
 
 .preview-side-section + .preview-side-section {
@@ -16,8 +16,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 15px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .preview-section-head.compact {
@@ -27,14 +27,14 @@
 .preview-session-status,
 .preview-count-pill {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 26px;
   align-items: center;
   border: 1px solid var(--bd-soft);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.018);
   color: var(--t2);
-  padding: 0 10px;
-  font-size: 11px;
+  padding: 0 9px;
+  font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -55,8 +55,8 @@
 
 .preview-project-meta {
   display: grid;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 7px;
+  margin-top: 12px;
 }
 
 .preview-project-meta div,
@@ -68,7 +68,7 @@
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.014);
-  padding: 10px 11px;
+  padding: 8px 9px;
 }
 
 .preview-project-meta span,
@@ -93,7 +93,7 @@
 .preview-session-card {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .preview-timeline-section {
@@ -102,16 +102,16 @@
 
 .preview-timeline-list {
   display: grid;
-  max-height: calc(100vh - 470px);
-  min-height: 180px;
-  gap: 10px;
+  max-height: calc(100vh - 410px);
+  min-height: 150px;
+  gap: 8px;
   overflow: auto;
   padding-right: 4px;
 }
 
 .preview-timeline-empty {
   display: grid;
-  min-height: 118px;
+  min-height: 96px;
   place-items: center;
   border: 1px dashed rgba(255, 255, 255, 0.075);
   border-radius: 10px;
@@ -124,7 +124,7 @@
 .preview-event-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .preview-event-dot {
@@ -141,7 +141,7 @@
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.018);
-  padding: 9px 10px;
+  padding: 8px 9px;
 }
 
 .preview-event-head {
@@ -173,32 +173,32 @@
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-rows: auto minmax(420px, 1fr);
+  grid-template-rows: auto minmax(360px, 1fr);
 }
 
 .preview-toolbar {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 1px solid var(--bd);
   background: transparent;
-  padding: 14px 16px;
+  padding: 10px 12px;
 }
 
 .preview-route-display,
 .preview-stream-chip {
   display: inline-flex;
   min-width: 0;
-  height: 38px;
+  height: 34px;
   align-items: center;
-  gap: 9px;
+  gap: 7px;
   border: 1px solid var(--bd-soft);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.018);
   color: var(--t2);
-  padding: 0 12px;
-  font-size: 12px;
+  padding: 0 10px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -219,7 +219,7 @@
 }
 
 .preview-action-button {
-  min-height: 38px;
+  min-height: 34px;
   white-space: nowrap;
 }
 
@@ -229,26 +229,26 @@
 
 .preview-device-switcher {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   border: 1px solid var(--bd-soft);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.018);
-  padding: 5px;
+  padding: 4px;
 }
 
 .preview-device-button,
 .composer-mode-button {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 28px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--t3);
-  padding: 0 10px;
-  font-size: 12px;
+  padding: 0 8px;
+  font-size: 11px;
   font-weight: 800;
   transition: border-color 0.14s, background 0.14s, color 0.14s;
 }
@@ -270,23 +270,23 @@
 .preview-canvas {
   position: relative;
   display: grid;
-  min-height: 420px;
+  min-height: 360px;
   overflow: hidden;
   place-items: center;
   background:
     linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     #080d0c;
-  background-size: 34px 34px, 34px 34px, auto;
+  background-size: 30px 30px, 30px 30px, auto;
 }
 
 .preview-frame-stage {
   display: grid;
   width: 100%;
   height: 100%;
-  min-height: 420px;
+  min-height: 360px;
   place-items: center;
-  padding: 18px;
+  padding: 12px;
 }
 
 .preview-frame-stage.device-pc {
@@ -316,14 +316,14 @@
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 420px;
+  min-height: 360px;
   border: 0;
   background: white;
 }
 
 .preview-empty-state {
   display: grid;
-  max-width: 420px;
+  max-width: 360px;
   justify-items: center;
   gap: 10px;
   color: var(--t2);
@@ -332,11 +332,11 @@
 
 .preview-empty-icon {
   display: grid;
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--t2);
 }
@@ -350,7 +350,7 @@
 .preview-empty-state h2 {
   margin: 0;
   color: var(--t);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -358,6 +358,44 @@
 .preview-empty-state p {
   margin: 0;
   color: var(--t3);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
+}
+
+@media (max-width: 1180px) {
+  .preview-console {
+    height: auto;
+    min-height: calc(100vh - 82px);
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  .execution-console-panel {
+    grid-column: 1 / -1;
+    min-height: 260px;
+  }
+
+  .execution-console-panel.is-collapsed {
+    min-height: 42px;
+  }
+
+  .preview-console.is-execution-console-collapsed {
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .preview-console {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview-conversation-panel,
+  .preview-main-panel,
+  .execution-console-panel {
+    min-height: 420px;
+  }
+
+  .execution-console-panel.is-collapsed {
+    min-height: 42px;
+  }
 }

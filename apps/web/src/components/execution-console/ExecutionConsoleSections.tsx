@@ -17,17 +17,33 @@ import type { FollowedTaskOutput, TerminalRow } from "./useExecutionTaskOutputs.
 export function ExecutionConsoleHeader({
   projectName,
   runLabel,
+  onToggleCollapsed,
 }: {
   readonly projectName: string;
   readonly runLabel: string;
+  readonly onToggleCollapsed: () => void;
 }): JSX.Element {
   return (
     <header className="execution-console-head">
-      <div>
+      <div className="execution-console-title">
         <span>Execution Console</span>
         <strong>{projectName}</strong>
       </div>
-      <code>{runLabel}</code>
+      <div className="execution-console-head-actions">
+        <code>{runLabel}</code>
+        <button
+          className="execution-console-toggle"
+          type="button"
+          aria-label="Recolher Execution Console"
+          title="Recolher console"
+          onClick={onToggleCollapsed}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="14" rx="2" />
+            <path d="M15 5v14M10 8l4 4-4 4" />
+          </svg>
+        </button>
+      </div>
     </header>
   );
 }
