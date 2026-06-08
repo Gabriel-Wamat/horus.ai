@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-const baseUrl = new URL(process.env.PRESTAGING_BASE_URL ?? "http://127.0.0.1:8080");
+const baseUrl = new URL(process.env.HORUS_DOCKER_BASE_URL ?? "http://127.0.0.1:8080");
 
 const checks = [
   { name: "web root", path: "/", expectedStatus: 200 },
   { name: "api health via web", path: "/health", expectedStatus: 200 },
   { name: "api readiness via web", path: "/ready", expectedStatus: 200 },
-  { name: "authenticated preview projects via web proxy", path: "/api/preview/projects", expectedStatus: 200 },
+  { name: "preview projects via web proxy", path: "/api/preview/projects", expectedStatus: 200 },
 ];
 
 for (const check of checks) {
@@ -23,4 +23,4 @@ for (const check of checks) {
   console.log(`PASS ${check.name}: ${url}`);
 }
 
-console.log(`Pre-staging smoke passed for ${baseUrl}`);
+console.log(`Docker smoke passed for ${baseUrl}`);

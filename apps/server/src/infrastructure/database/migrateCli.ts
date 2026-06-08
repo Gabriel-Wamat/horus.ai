@@ -2,6 +2,14 @@ import "dotenv/config";
 import { createPgPool, readDatabaseConfig } from "./pool.js";
 import { runMigrations } from "./migrate.js";
 
+const persistenceDriver = process.env["PERSISTENCE_DRIVER"]?.trim() || "file";
+if (persistenceDriver !== "postgres") {
+  console.log(
+    `[db:migrate] Skipping migrations for PERSISTENCE_DRIVER=${persistenceDriver}.`
+  );
+  process.exit(0);
+}
+
 const pool = createPgPool(readDatabaseConfig());
 
 try {

@@ -6,7 +6,10 @@ import {
   type FrontendProject,
 } from "@u-build/shared";
 import type { PgPool } from "../database/pool.js";
-import { FrontendProjectNotFoundError } from "../preview/FileFrontendProjectRegistry.js";
+import {
+  FrontendProjectNotFoundError,
+  FrontendProjectRootError,
+} from "../preview/FileFrontendProjectRegistry.js";
 import {
   buildSeedFrontendProject,
   canonicalizeProjectRoot,
@@ -147,11 +150,16 @@ export class PostgresFrontendProjectRepository
   }
 
   private async ensureSeedProject(): Promise<void> {
-    const project = await buildSeedFrontendProject({
-      repositoryRoot: this.repositoryRoot,
-      env: this.env,
-    });
-    await this.upsertProject(project);
+    try {
+      const project = await buildSeedFrontendProject({
+        repositoryRoot: this.repositoryRoot,
+        env: this.env,
+      });
+      await this.upsertProject(project);
+    } catch (err) {
+      if (err instanceof FrontendProjectRootError) return;
+      throw err;
+    }
   }
 
   private async upsertProject(project: FrontendProject): Promise<void> {

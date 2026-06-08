@@ -38,4 +38,3 @@ arquitetura.png
 .env
 .env.*
 !/.env.example
-!.env.prestaging.example

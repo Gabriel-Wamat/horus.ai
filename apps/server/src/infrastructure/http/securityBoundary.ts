@@ -2,7 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { isProductionRuntime } from "../config/runtimeMode.js";
 
-export type HorusSecurityRole = "member" | "admin";
+export type HorusSecurityRole = "member";
 
 export interface HorusSecurityContext {
   role: HorusSecurityRole;
@@ -14,7 +14,6 @@ export interface SecurityBoundaryPolicy {
   required: boolean;
   tenantId: string | null;
   memberToken: string | null;
-  adminToken: string | null;
 }
 
 export function resolveSecurityBoundaryPolicy(
@@ -23,14 +22,14 @@ export function resolveSecurityBoundaryPolicy(
   const production = isProductionRuntime(env);
   const authMode = env["HORUS_AUTH_MODE"]?.trim().toLowerCase();
   const memberToken = readSecret(env, "HORUS_API_TOKEN");
-  const adminToken = readSecret(env, "HORUS_API_ADMIN_TOKEN");
   const tenantId = readSecret(env, "HORUS_TENANT_ID");
-  const enabled = production || authMode === "token" || Boolean(memberToken || adminToken);
+  const enabled = production || authMode === "token" || Boolean(memberToken);
 
-  if (production && !memberToken && !adminToken) {
-    throw new Error(
-      "HORUS_API_TOKEN or HORUS_API_ADMIN_TOKEN must be set in production."
-    );
+  if (authMode === "token" && !memberToken) {
+    throw new Error("HORUS_AUTH_MODE=token requires HORUS_API_TOKEN.");
+  }
+  if (production && !memberToken) {
+    throw new Error("HORUS_API_TOKEN must be set in production.");
   }
   if (production && !tenantId) {
     throw new Error("HORUS_TENANT_ID must be set in production.");
@@ -41,7 +40,6 @@ export function resolveSecurityBoundaryPolicy(
     required: production || authMode === "token",
     tenantId,
     memberToken,
-    adminToken,
   };
 }
 
@@ -88,8 +86,11 @@ function readSecret(
 function readBearerToken(req: Request): string | null {
   const value = req.header("authorization")?.trim();
   if (!value) return null;
-  const [scheme, token] = value.split(/\s+/, 2);
-  if (scheme?.toLowerCase() !== "bearer" || !token) return null;
+  const separatorIndex = value.indexOf(" ");
+  if (separatorIndex <= 0) return null;
+  const scheme = value.slice(0, separatorIndex);
+  const token = value.slice(separatorIndex + 1).trim();
+  if (scheme.toLowerCase() !== "bearer" || !token) return null;
   return token;
 }
 
@@ -98,7 +99,6 @@ function resolveRole(
   policy: SecurityBoundaryPolicy
 ): HorusSecurityRole | null {
   if (!token) return null;
-  if (policy.adminToken && secretsEqual(token, policy.adminToken)) return "admin";
   if (policy.memberToken && secretsEqual(token, policy.memberToken)) return "member";
   return null;
 }
