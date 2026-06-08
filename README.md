@@ -1,8 +1,6 @@
 # Horus.AI
 
-Horus.AI is an autonomous multi-agent software generation system. It receives user stories, turns them into technical specifications, coordinates implementation and QA agents, validates the generated work through a curator, and exposes the resulting project, preview, files, and execution evidence through a React web interface.
-
-The project is a TypeScript monorepo built with pnpm and Turbo. It contains an Express/LangGraph backend, a React/Vite frontend, and shared Zod contracts used by both sides.
+Horus.AI is an autonomous multi-agent interface generation system. It receives user stories, transforms them into technical specifications (SDDs), coordinates implementation and quality control agents, validates the generated work through a curator, and exposes the resulting project, preview, files, and execution evidence.
 
 ## Documentation Map
 
