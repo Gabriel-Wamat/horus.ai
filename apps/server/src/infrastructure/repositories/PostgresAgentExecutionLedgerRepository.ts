@@ -163,6 +163,23 @@ export class PostgresAgentExecutionLedgerRepository
     return result.rows[0] ? runFromRow(result.rows[0]) : null;
   }
 
+  async listRuns(filter: {
+    status?: AgentWorkflowRun["status"];
+    limit?: number;
+  } = {}): Promise<AgentWorkflowRun[]> {
+    const limit = normalizeLimit(filter.limit, 50, 200);
+    const result = filter.status
+      ? await this.pool.query<RunRow>(
+          "SELECT * FROM agent_workflow_runs WHERE status = $1 ORDER BY updated_at DESC LIMIT $2",
+          [filter.status, limit]
+        )
+      : await this.pool.query<RunRow>(
+          "SELECT * FROM agent_workflow_runs ORDER BY updated_at DESC LIMIT $1",
+          [limit]
+        );
+    return result.rows.map(runFromRow);
+  }
+
   async listRecoverableRuns(): Promise<AgentWorkflowRun[]> {
     const result = await this.pool.query<RunRow>(
       "SELECT * FROM agent_workflow_runs WHERE status = 'running' ORDER BY updated_at"
@@ -337,6 +354,23 @@ export class PostgresAgentExecutionLedgerRepository
     });
   }
 
+  async listOutbox(filter: {
+    status?: AgentExecutionOutboxEvent["status"];
+    limit?: number;
+  } = {}): Promise<AgentExecutionOutboxEvent[]> {
+    const limit = normalizeLimit(filter.limit, 50, 200);
+    const result = filter.status
+      ? await this.pool.query<OutboxRow>(
+          "SELECT * FROM agent_execution_outbox WHERE status = $1 ORDER BY updated_at DESC LIMIT $2",
+          [filter.status, limit]
+        )
+      : await this.pool.query<OutboxRow>(
+          "SELECT * FROM agent_execution_outbox ORDER BY updated_at DESC LIMIT $1",
+          [limit]
+        );
+    return result.rows.map(outboxFromRow);
+  }
+
   private async updateOutbox(
     outboxId: string,
     patch: {
@@ -419,4 +453,13 @@ function outboxFromRow(row: OutboxRow): AgentExecutionOutboxEvent {
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   });
+}
+
+function normalizeLimit(
+  value: number | undefined,
+  fallback: number,
+  max: number
+): number {
+  if (!Number.isInteger(value) || value === undefined || value <= 0) return fallback;
+  return Math.min(value, max);
 }

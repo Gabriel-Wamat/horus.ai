@@ -255,6 +255,10 @@ export interface AgentExecutionLedgerRepository {
   createRun(input: CreateAgentWorkflowRunInput): Promise<AgentWorkflowRun>;
   getRunByThreadId(threadId: string): Promise<AgentWorkflowRun | null>;
   getRunByTurnId(turnId: string): Promise<AgentWorkflowRun | null>;
+  listRuns(filter?: {
+    status?: WorkflowStatus;
+    limit?: number;
+  }): Promise<AgentWorkflowRun[]>;
   listRecoverableRuns(): Promise<AgentWorkflowRun[]>;
   updateRunStatus(input: {
     runId: string;
@@ -285,6 +289,10 @@ export interface AgentExecutionLedgerRepository {
     status?: Extract<AgentExecutionOutboxStatus, "failed" | "dead_letter">;
     error: string;
   }): Promise<AgentExecutionOutboxEvent>;
+  listOutbox(filter?: {
+    status?: AgentExecutionOutboxStatus;
+    limit?: number;
+  }): Promise<AgentExecutionOutboxEvent[]>;
 }
 
 export interface CreateAgentOperationalSessionInput {

@@ -130,6 +130,17 @@ export class FileAgentExecutionLedgerRepository
     return (await this.read()).runs.find((run) => run.turnId === turnId) ?? null;
   }
 
+  async listRuns(filter: {
+    status?: AgentWorkflowRun["status"];
+    limit?: number;
+  } = {}): Promise<AgentWorkflowRun[]> {
+    const limit = normalizeLimit(filter.limit, 50, 200);
+    return (await this.read()).runs
+      .filter((run) => !filter.status || run.status === filter.status)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .slice(0, limit);
+  }
+
   async listRecoverableRuns(): Promise<AgentWorkflowRun[]> {
     return (await this.read()).runs.filter((run) => run.status === "running");
   }
@@ -301,6 +312,17 @@ export class FileAgentExecutionLedgerRepository
     });
   }
 
+  async listOutbox(filter: {
+    status?: AgentExecutionOutboxEvent["status"];
+    limit?: number;
+  } = {}): Promise<AgentExecutionOutboxEvent[]> {
+    const limit = normalizeLimit(filter.limit, 50, 200);
+    return (await this.read()).outbox
+      .filter((event) => !filter.status || event.status === filter.status)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .slice(0, limit);
+  }
+
   private async updateOutbox(
     outboxId: string,
     patch: Partial<AgentExecutionOutboxEvent>
@@ -364,4 +386,13 @@ export class FileAgentExecutionLedgerRepository
     await this.write(ledger);
     return value;
   }
+}
+
+function normalizeLimit(
+  value: number | undefined,
+  fallback: number,
+  max: number
+): number {
+  if (!Number.isInteger(value) || value === undefined || value <= 0) return fallback;
+  return Math.min(value, max);
 }
