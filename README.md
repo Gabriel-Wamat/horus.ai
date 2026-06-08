@@ -1,6 +1,6 @@
 # Horus.AI
 
-Horus.AI is a TypeScript multi-agent software delivery console. It receives a user story, creates a technical specification, coordinates implementation and verification agents, validates the result, and exposes the generated project through a React preview UI.
+Horus.AI is an autonomous multi-agent interface generation system. It receives user stories, transforms them into technical specifications (SDDs), coordinates implementation and quality control agents, validates the generated work through a curator, and exposes the resulting project, preview, files, and execution evidence.
 
 This public repository is intentionally minimal. It contains only the source and operational files required to install, build, run, and reproduce the project.
 
