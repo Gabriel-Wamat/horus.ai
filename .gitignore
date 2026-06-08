@@ -24,11 +24,17 @@ packages/**/tests/
 scripts/*.test.mjs
 scripts/worktree-spec-audit.mjs
 /openclaude/
-/skills/
+/skills/*
 /tools/
+apps/web/src/features/design-studio/
 *.log
 *.md
 !README.md
+!/skills/
+!/skills/agents/
+!/skills/agents/**
+/skills/*.md
+/skills/scripts/
 
 .vite/
 .next/
