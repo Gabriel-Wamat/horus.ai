@@ -14,6 +14,10 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-}
+      FRONT_AGENT_TIMEOUT_MS: ${FRONT_AGENT_TIMEOUT_MS:-60000}
+      QA_AGENT_LLM_TIMEOUT_MS: ${QA_AGENT_LLM_TIMEOUT_MS:-45000}
+      HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST: 0.0.0.0
+      HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST:-localhost}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -21,6 +25,7 @@ services:
       - horus-data:/app/.horus/data
     ports:
       - "3001:3000"
+      - "5184-6184:5184-6184"
     healthcheck:
       test:
         [

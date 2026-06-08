@@ -18,6 +18,8 @@ export interface CuratorFeedback {
   fixTarget: "front" | "qa" | "both";
 }
 
+const MAX_AGENT_RESULTS_PER_STORY = 12;
+
 // Payload surfaced to the frontend when max retries are exceeded
 export interface PendingRetryApproval {
   userStoryId: string;
@@ -57,7 +59,10 @@ export const UBuildStateAnnotation = Annotation.Root({
     reducer: (prev, next) => {
       const merged = { ...prev };
       for (const [key, value] of Object.entries(next)) {
-        merged[key] = [...(merged[key] ?? []), ...value];
+        merged[key] = compactAgentResultHistory([
+          ...(merged[key] ?? []),
+          ...value,
+        ]);
       }
       return merged;
     },
@@ -146,3 +151,95 @@ export const UBuildStateAnnotation = Annotation.Root({
 
 export type UBuildState = typeof UBuildStateAnnotation.State;
 export type UBuildUpdate = typeof UBuildStateAnnotation.Update;
+
+export function compactAgentResultHistory(
+  results: readonly AgentResult[]
+): AgentResult[] {
+  const tail = results.slice(-MAX_AGENT_RESULTS_PER_STORY);
+  const latestFullIndexes = new Set<number>(
+    ["front", "qa", "curator"]
+      .map((agentName) => findLatestSuccessfulAgentIndex(tail, agentName))
+      .filter((index) => index >= 0)
+  );
+
+  return tail.map((result, index) =>
+    latestFullIndexes.has(index)
+      ? dropVolatileResultFields(result)
+      : compactHistoricalAgentResult(result)
+  );
+}
+
+function findLatestSuccessfulAgentIndex(
+  results: readonly AgentResult[],
+  agentName: string
+): number {
+  for (let index = results.length - 1; index >= 0; index -= 1) {
+    const result = results[index];
+    if (result?.status === "success" && result.agentName === agentName) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function dropVolatileResultFields(result: AgentResult): AgentResult {
+  if (result.status !== "success") return result;
+  const output = { ...result.output };
+  delete output["toolEvents"];
+
+  const toolLoop = output["toolLoop"];
+  if (toolLoop && typeof toolLoop === "object" && !Array.isArray(toolLoop)) {
+    const compactToolLoop = { ...(toolLoop as Record<string, unknown>) };
+    delete compactToolLoop["operationalSession"];
+    output["toolLoop"] = compactToolLoop;
+  }
+
+  return { ...result, output };
+}
+
+function compactHistoricalAgentResult(result: AgentResult): AgentResult {
+  const cleaned = dropVolatileResultFields(result);
+  if (cleaned.status !== "success") return cleaned;
+
+  const output = { ...cleaned.output };
+  if (cleaned.agentName === "front") {
+    const html = output["html"];
+    if (typeof html === "string") {
+      output["htmlLength"] = html.length;
+      delete output["html"];
+    }
+
+    if (output["codeChangeSet"]) {
+      output["codeChangeSetSummary"] = summarizeCodeChangeSet(
+        output["codeChangeSet"]
+      );
+      delete output["codeChangeSet"];
+    }
+  }
+
+  return { ...cleaned, output };
+}
+
+function summarizeCodeChangeSet(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { available: false };
+  }
+
+  const record = value as Record<string, unknown>;
+  const operations = Array.isArray(record["operations"])
+    ? record["operations"]
+    : [];
+  return {
+    available: true,
+    id: record["id"] ?? null,
+    artifactCandidateId: record["artifactCandidateId"] ?? null,
+    operationCount: operations.length,
+    targetPaths: operations
+      .map((operation) =>
+        operation && typeof operation === "object"
+          ? (operation as Record<string, unknown>)["targetPath"]
+          : null
+      )
+      .filter((targetPath): targetPath is string => typeof targetPath === "string"),
+  };
+}

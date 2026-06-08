@@ -314,9 +314,14 @@ export class StartProjectConstructionUseCase {
   ): Promise<FrontendProject | null> {
     if (!this.frontendProjects.registerProject) return null;
     const port = resolveGeneratedPreviewPort(this.env, project.id);
-    const host =
-      this.env["HORUS_GENERATED_PROJECT_PREVIEW_HOST"]?.trim() || "127.0.0.1";
-    const previewCommand = buildPreviewCommand(config, host, port);
+    const bindHost =
+      this.env["HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST"]?.trim() ||
+      this.env["HORUS_GENERATED_PROJECT_PREVIEW_HOST"]?.trim() ||
+      "127.0.0.1";
+    const publicHost =
+      this.env["HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST"]?.trim() ||
+      (bindHost === "0.0.0.0" ? "localhost" : bindHost);
+    const previewCommand = buildPreviewCommand(config, bindHost, port);
     const commandCatalog = [
       ...config.commandCatalog,
       ...(previewCommand ? [previewCommand] : []),
@@ -330,13 +335,18 @@ export class StartProjectConstructionUseCase {
         : null,
       previewCommandId: previewCommand?.id ?? null,
       commandCatalog,
-      previewUrl: `http://${host}:${port}`,
+      previewUrl: `http://${publicHost}:${port}`,
       projectKind: "generated",
       lifecycleStatus: "published",
       visibility: "visible",
       healthStatus: "unknown",
       healthReasons: [],
       projectWorkspaceId: project.id,
+      canonicalProjectId: null,
+      appFingerprint: null,
+      lastHealthCheckedAt: null,
+      archivedAt: null,
+      archivedReason: null,
     });
   }
 }
@@ -373,10 +383,37 @@ function buildPreviewCommand(
   return {
     id: "preview-dev",
     label: "Start preview dev server",
-    executable: devCommand.executable,
-    args: [...devCommand.args, "--", "--host", host, "--port", port],
+    executable: "node",
+    args: ["--input-type=commonjs", "-e", buildPreviewBootstrapScript()],
     cwd: devCommand.cwd,
-    env: devCommand.env,
+    env: {
+      ...devCommand.env,
+      HORUS_PREVIEW_PACKAGE_MANAGER: devCommand.executable,
+      HORUS_PREVIEW_RUN_ARGS_JSON: JSON.stringify(devCommand.args),
+      HORUS_PREVIEW_HOST: host,
+      HORUS_PREVIEW_PORT: port,
+    },
     timeoutMs: devCommand.timeoutMs ?? 120_000,
   };
+}
+
+function buildPreviewBootstrapScript(): string {
+  return [
+    "const { existsSync } = require('node:fs');",
+    "const { spawn, spawnSync } = require('node:child_process');",
+    "const packageManager = process.env.HORUS_PREVIEW_PACKAGE_MANAGER || 'npm';",
+    "const runArgs = JSON.parse(process.env.HORUS_PREVIEW_RUN_ARGS_JSON || '[]');",
+    "const host = process.env.HORUS_PREVIEW_HOST || '127.0.0.1';",
+    "const port = process.env.HORUS_PREVIEW_PORT || '5173';",
+    "if (!existsSync('node_modules')) {",
+    "  const install = spawnSync(packageManager, ['install'], { stdio: 'inherit', shell: false });",
+    "  if (install.error) { console.error(install.error.message); process.exit(1); }",
+    "  if (install.status !== 0) process.exit(install.status || 1);",
+    "}",
+    "const child = spawn(packageManager, [...runArgs, '--', '--host', host, '--port', port], { stdio: 'inherit', shell: false });",
+    "child.on('error', (err) => { console.error(err.message); process.exit(1); });",
+    "child.on('exit', (code) => process.exit(code === null ? 1 : code));",
+    "process.on('SIGTERM', () => child.kill('SIGTERM'));",
+    "process.on('SIGINT', () => child.kill('SIGINT'));",
+  ].join("\n");
 }

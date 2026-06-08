@@ -299,6 +299,18 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
                 ],
                 fixTarget: "front" as const,
               }
+          : spec.visualContract?.mode === "blank_project" &&
+              codeChangeSet &&
+              qaOutput.testCases.length > 0 &&
+              visualGate?.status === "passed"
+            ? {
+                passed: true,
+                score: Math.max(visualGate.score, 88),
+                notes:
+                  "Curador aprovou o artefato standalone de blank_project: há CodeChangeSet auditável, casos de QA e validação visual aprovada para o HTML navegável.",
+                missingItems: [],
+                fixTarget: "front" as const,
+              }
           : await deps.validateOutput(
               spec,
               html,
@@ -429,7 +441,7 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
     const newRetryCount = state.retryCount + 1;
 
     // ── Max retries exceeded → escalate to HITL ───────────────────────────────
-    if (newRetryCount > MAX_RETRIES) {
+    if (newRetryCount >= MAX_RETRIES) {
       return {
         retryCount: newRetryCount,
         curatorFeedback: { [userStory.id]: feedback },

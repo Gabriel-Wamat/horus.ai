@@ -77,7 +77,9 @@ export class ProjectFileBrowserService {
     ]);
     return projects
       .map((project) => {
-        const latestRun = runs.find((run) => run.projectWorkspaceId === project.id);
+        const latestRun = selectLatestRun(
+          runs.filter((run) => run.projectWorkspaceId === project.id)
+        );
         return {
           id: project.id,
           name: project.name,
@@ -612,6 +614,22 @@ export class ProjectFileBrowserService {
       reason,
     });
   }
+}
+
+function selectLatestRun(
+  runs: readonly ProjectConstructionRun[]
+): ProjectConstructionRun | undefined {
+  let latest: ProjectConstructionRun | undefined;
+  for (const run of runs) {
+    if (!latest || runTimestamp(run).localeCompare(runTimestamp(latest)) > 0) {
+      latest = run;
+    }
+  }
+  return latest;
+}
+
+function runTimestamp(run: ProjectConstructionRun): string {
+  return run.finishedAt ?? run.startedAt ?? "";
 }
 
 function normalizeRequestedPath(path: string): string {

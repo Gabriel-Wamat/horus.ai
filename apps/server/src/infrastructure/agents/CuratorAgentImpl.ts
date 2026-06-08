@@ -241,6 +241,10 @@ Além da spec ativa, avalie se o HTML e os testes respondem especificamente a es
   const visualContractPreview = spec.visualContract
     ? JSON.stringify(spec.visualContract, null, 2)
     : "N/A";
+  const deliveryMode =
+    spec.visualContract?.mode === "blank_project"
+      ? "blank_project_standalone_html"
+      : "project_integrated_code_change";
 
   return `Você é um curador de qualidade de software. Analise o HTML gerado e os casos de teste de QA. Verifique se ambos atendem à especificação técnica completa.
 
@@ -276,6 +280,9 @@ ${criteria}
 \`\`\`json
 ${visualContractPreview}
 \`\`\`
+
+**Modo de entrega esperado:**
+${deliveryMode}
 
 # HTML Gerado
 \`\`\`html
@@ -313,8 +320,10 @@ ${changeSetPreview}
   - "both" → HTML e testes precisam ser refeitos
 
 ## Regras adicionais
-- Se apiEndpoints existir, avalie se o frontend usa boundary/adapters injetáveis e compatíveis sem assumir backend inexistente nem mock/fake em runtime aplicado.
-- Se o CodeChangeSet usar mock/fake adapter, Math.random ou arquivo solto não alcançável pelo entrypoint do app, passed deve ser false.
+- Se o modo de entrega for "project_integrated_code_change" e apiEndpoints existir, avalie se o frontend usa boundary/adapters injetáveis e compatíveis sem assumir backend inexistente nem mock/fake em runtime aplicado.
+- Se o modo de entrega for "blank_project_standalone_html", avalie como protótipo navegável standalone: pode usar dados locais e camada adaptadora em memória para demonstrar estados, validações e fluxo futuro de API, desde que o HTML explicite os contratos e não finja integração real com backend inexistente.
+- Se o modo for "project_integrated_code_change" e o CodeChangeSet usar mock/fake adapter, Math.random ou arquivo solto não alcançável pelo entrypoint do app, passed deve ser false.
+- A regra de arquivo solto não alcançável pelo entrypoint só se aplica ao modo "project_integrated_code_change"; em "blank_project_standalone_html", arquivos em generated/horus são o artefato esperado.
 - Se dataModels existir, avalie se campos, formatação e fallbacks aparecem no HTML e nos testes.
 - Se a abordagem técnica define loading, empty, error, success, acessibilidade ou responsividade, avalie tanto implementação quanto cobertura de QA.
 - Se visualContract existir, avalie tokens, densidade, componentes existentes, estados, responsividade, acessibilidade e antiPatterns. Violacao clara do contrato visual deve falhar.

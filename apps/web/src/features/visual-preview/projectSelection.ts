@@ -33,6 +33,21 @@ export function selectNewestProject(
   })[0] ?? null;
 }
 
+export function upsertPreviewProject(
+  projects: FrontendProject[],
+  project: FrontendProject
+): FrontendProject[] {
+  return [
+    project,
+    ...projects.filter((item) => item.id !== project.id),
+  ].sort((left, right) => {
+    const byCreatedAt =
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    if (byCreatedAt !== 0) return byCreatedAt;
+    return left.name.localeCompare(right.name);
+  });
+}
+
 export function findProjectWorkspaceFolder(
   folders: WorkspaceFolder[],
   project: FrontendProject

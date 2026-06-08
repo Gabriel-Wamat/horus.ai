@@ -23,6 +23,7 @@ import {
   FileMutationPreflightError,
   type FileMutationFailureReason,
 } from "./FileMutationPreflightErrors.js";
+import { findSourceSyntaxIssue } from "./SourceSyntaxGuard.js";
 
 export {
   FileMutationPreflightError,
@@ -275,6 +276,10 @@ function buildPlannedOperation(input: {
       `File mutation requires afterContent for ${input.relativePath}.`
     );
   }
+  assertSourceSyntax({
+    targetPath: input.relativePath,
+    content: afterContent,
+  });
   const actualChangeType =
     input.operation.changeType === "delete"
       ? "delete"
@@ -308,6 +313,28 @@ function buildPlannedOperation(input: {
     expectedDiff: diff.diff,
     expectedDiffStats: diff.stats,
   };
+}
+
+function assertSourceSyntax(input: {
+  targetPath: string;
+  content: string | null;
+}): void {
+  const issue = findSourceSyntaxIssue({
+    path: input.targetPath,
+    content: input.content,
+  });
+  if (!issue) return;
+
+  const location =
+    issue.line !== undefined && issue.column !== undefined
+      ? ` at ${issue.line}:${issue.column}`
+      : "";
+  throw new FileMutationPreflightError(
+    "invalid_operation",
+    input.targetPath,
+    `File mutation would leave invalid source syntax in ${input.targetPath}${location}: ${issue.message}`,
+    { diagnostic: issue.message }
+  );
 }
 
 function codeChangeOperationFor(input: {

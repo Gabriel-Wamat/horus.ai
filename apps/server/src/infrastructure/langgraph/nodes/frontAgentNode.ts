@@ -271,7 +271,7 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
                 : {}),
               ...(toolLoopResult
                 ? {
-                    toolEvents: toolLoopResult.events,
+                    toolEventCount: toolLoopResult.events.length,
                     toolLoop: {
                       status: toolLoopResult.status,
                       changedFiles: toolLoopResult.changedFiles,
@@ -283,10 +283,6 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
                             operationalSessionId:
                               toolLoopResult.operationalSessionId,
                           }
-                        : {}),
-                      ...("operationalSession" in toolLoopResult &&
-                      toolLoopResult.operationalSession
-                        ? { operationalSession: toolLoopResult.operationalSession }
                         : {}),
                     },
                   }
@@ -561,6 +557,7 @@ async function executeChangeSetThroughToolLoop(input: {
 
 function shouldUseFrontAgentToolMode(state: UBuildState): boolean {
   return (
+    state.workflowMode === "project_construction" ||
     state.workflowMode === "chat_code_change" ||
     process.env["HORUS_ENABLE_TOOL_MODE"] === "true"
   );

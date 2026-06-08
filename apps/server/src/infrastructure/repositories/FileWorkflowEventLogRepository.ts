@@ -1,6 +1,5 @@
 import { dirname, join } from "node:path";
-import { mkdir, open, readFile, rm } from "node:fs/promises";
-import { setTimeout as delay } from "node:timers/promises";
+import { mkdir, open, readFile } from "node:fs/promises";
 import {
   HorusRunEventSnapshotSchema,
   type HorusRunEventSnapshot,
@@ -8,6 +7,7 @@ import {
 } from "@u-build/shared";
 import { mapWorkflowEvent } from "../../application/services/horusRunFlowMapping.js";
 import { readJsonFile } from "../storage/JsonFileStore.js";
+import { withFileLock } from "./fileLock.js";
 import type { WorkflowEventLogRepository } from "./contracts.js";
 
 export class FileWorkflowEventLogRepository
@@ -16,14 +16,18 @@ export class FileWorkflowEventLogRepository
   constructor(private readonly baseDir = "./data/workflow-events") {}
 
   async append(event: WorkflowEvent): Promise<HorusRunEventSnapshot> {
-    return withFileLock(this.lockPath(event.threadId), async () => {
-      const nextSequence = (await this.maxSequence(event.threadId)) + 1;
-      const snapshot = HorusRunEventSnapshotSchema.parse(
-        mapWorkflowEvent(event, nextSequence)
-      );
-      await appendWorkflowEventLine(this.eventLogPath(event.threadId), snapshot);
-      return snapshot;
-    });
+    return withFileLock(
+      this.lockPath(event.threadId),
+      async () => {
+        const nextSequence = (await this.maxSequence(event.threadId)) + 1;
+        const snapshot = HorusRunEventSnapshotSchema.parse(
+          mapWorkflowEvent(event, nextSequence)
+        );
+        await appendWorkflowEventLine(this.eventLogPath(event.threadId), snapshot);
+        return snapshot;
+      },
+      { label: "workflow event" }
+    );
   }
 
   async list(threadId: string): Promise<HorusRunEventSnapshot[]> {
@@ -107,34 +111,4 @@ async function readWorkflowEventLines(
     events.push(HorusRunEventSnapshotSchema.parse(JSON.parse(trimmed)));
   }
   return events;
-}
-
-async function withFileLock<T>(
-  path: string,
-  operation: () => Promise<T>
-): Promise<T> {
-  await mkdir(dirname(path), { recursive: true });
-  const lock = await acquireFileLock(path);
-  try {
-    return await operation();
-  } finally {
-    await lock.close();
-    await rm(path, { force: true }).catch(() => undefined);
-  }
-}
-
-async function acquireFileLock(path: string): Promise<Awaited<ReturnType<typeof open>>> {
-  const started = Date.now();
-  const timeoutMs = 5_000;
-  for (;;) {
-    try {
-      return await open(path, "wx");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-      if (Date.now() - started > timeoutMs) {
-        throw new Error(`Timed out waiting for workflow event lock: ${path}`);
-      }
-      await delay(25);
-    }
-  }
 }

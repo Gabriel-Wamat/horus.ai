@@ -54,6 +54,7 @@ export function usePreviewChatRuntime({
   workspaceFolderId,
   userStoryId,
   previewSession,
+  workflowThreadId,
   onPreviewSessionResolved,
   onError,
 }: {
@@ -61,6 +62,7 @@ export function usePreviewChatRuntime({
   readonly workspaceFolderId: string | undefined;
   readonly userStoryId: string | null;
   readonly previewSession: PreviewSession | null;
+  readonly workflowThreadId: string | null;
   readonly onPreviewSessionResolved: (
     session: PreviewSession,
     events: PreviewEvent[]
@@ -133,9 +135,10 @@ export function usePreviewChatRuntime({
     onProgressEvent: handleWorkflowProgressEvent,
   });
 
-  const activeWorkflowThreadId =
+  const latestChatWorkflowThreadId =
     [...chatMessages].reverse().find((message) => message.workflowThreadId)
       ?.workflowThreadId ?? null;
+  const activeWorkflowThreadId = workflowThreadId ?? latestChatWorkflowThreadId;
   const { fileOperations } = useWorkflowFileOperations(activeWorkflowThreadId);
   const chatTouchedFiles = useMemo(
     () => selectChatTouchedFiles(chatMessages),

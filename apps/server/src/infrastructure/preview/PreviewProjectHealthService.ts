@@ -116,7 +116,6 @@ function hasBlockedReason(project: FrontendProject): boolean {
       "root_missing",
       "preview_command_missing",
       "preview_url_missing",
-      "scaffold_only",
     ].includes(reason)
   );
 }

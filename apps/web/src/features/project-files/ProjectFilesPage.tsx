@@ -13,6 +13,7 @@ import type {
   SaveProjectFileRequest,
 } from "@u-build/shared";
 import { projectFilesApi } from "../../api/projectFilesApi.js";
+import type { ActiveProjectConstruction } from "../../app/activeProjectConstruction.js";
 import { CodeViewer } from "./components/CodeViewer.js";
 import { FileTabs } from "./components/FileTabs.js";
 import { FileTree } from "./components/FileTree.js";
@@ -26,7 +27,17 @@ import "./styles/project-files.css";
 
 const projectFilesQueryClient = new QueryClient();
 
-function getProjectRunId(project?: ProjectFileBrowserProject): string | null {
+function getProjectRunId(
+  project: ProjectFileBrowserProject | undefined,
+  activeConstruction: ActiveProjectConstruction | null
+): string | null {
+  if (
+    project &&
+    activeConstruction?.projectWorkspaceId === project.id &&
+    activeConstruction.constructionRunId
+  ) {
+    return activeConstruction.constructionRunId;
+  }
   return project?.latestRunId ?? null;
 }
 
@@ -38,7 +49,11 @@ function fileQueryKey(
   return ["project-files", "file", projectId, runId, path];
 }
 
-function ProjectFilesPageContent(): JSX.Element {
+function ProjectFilesPageContent({
+  activeConstruction,
+}: {
+  readonly activeConstruction: ActiveProjectConstruction | null;
+}): JSX.Element {
   const queryClient = useQueryClient();
   const [dirtyPaths, setDirtyPaths] = useState<Set<string>>(() => new Set());
   const projectsQuery = useQuery({
@@ -51,11 +66,30 @@ function ProjectFilesPageContent(): JSX.Element {
   });
   const projects = projectsQuery.data?.projects ?? [];
   const state = useProjectFilesState(projects.map((project) => project.id));
+  const selectedProjectId = state.selectedProjectId;
+  const setSelectedProjectId = state.setSelectedProjectId;
   const selectedProject = useMemo(
-    () => projects.find((project) => project.id === state.selectedProjectId),
-    [projects, state.selectedProjectId]
+    () => projects.find((project) => project.id === selectedProjectId),
+    [projects, selectedProjectId]
   );
-  const runId = getProjectRunId(selectedProject);
+  const runId = getProjectRunId(selectedProject, activeConstruction);
+
+  useEffect(() => {
+    const activeProjectId = activeConstruction?.projectWorkspaceId;
+    if (!activeProjectId || activeProjectId === selectedProjectId) return;
+    if (dirtyPaths.size > 0) return;
+    setSelectedProjectId(activeProjectId);
+    void queryClient.invalidateQueries({ queryKey: ["project-files", "projects"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["project-files", "tree", activeProjectId],
+    });
+  }, [
+    activeConstruction?.projectWorkspaceId,
+    dirtyPaths.size,
+    queryClient,
+    selectedProjectId,
+    setSelectedProjectId,
+  ]);
 
   const treeQuery = useQuery({
     queryKey: ["project-files", "tree", state.selectedProjectId, runId],
@@ -276,6 +310,7 @@ function ProjectFilesPageContent(): JSX.Element {
   const treeError = treeQuery.error instanceof Error ? treeQuery.error : null;
   const fileError = fileQuery.error instanceof Error ? fileQuery.error : null;
   const treeEntries = treeQuery.data?.entries ?? [];
+  const hasProjectSelection = Boolean(state.selectedProjectId);
 
   return (
     <div className="project-files-page">
@@ -309,7 +344,7 @@ function ProjectFilesPageContent(): JSX.Element {
           <span className="project-files-loading-dot" aria-hidden="true" />
           <h2>Carregando projetos</h2>
         </section>
-      ) : projects.length === 0 ? (
+      ) : !hasProjectSelection ? (
         <section className="project-files-page-state">
           <h2>Nenhum projeto disponível</h2>
           <p>Inicie a construção de um projeto para navegar pelos arquivos gerados.</p>
@@ -363,10 +398,14 @@ function ProjectFilesPageContent(): JSX.Element {
   );
 }
 
-export function ProjectFilesPage(): JSX.Element {
+export function ProjectFilesPage({
+  activeConstruction,
+}: {
+  readonly activeConstruction: ActiveProjectConstruction | null;
+}): JSX.Element {
   return (
     <QueryClientProvider client={projectFilesQueryClient}>
-      <ProjectFilesPageContent />
+      <ProjectFilesPageContent activeConstruction={activeConstruction} />
     </QueryClientProvider>
   );
 }

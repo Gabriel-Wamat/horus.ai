@@ -1,6 +1,5 @@
 import { promises as fs } from "node:fs";
-import { dirname, join } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { join } from "node:path";
 import {
   AgentOperationEventSchema,
   AgentOperationalSessionSchema,
@@ -13,6 +12,7 @@ import {
   readJsonFileRaw,
   writeJsonFileAtomic,
 } from "../storage/JsonFileStore.js";
+import { withFileLock } from "./fileLock.js";
 import type {
   AgentOperationalSessionRepository,
   AppendAgentOperationEventInput,
@@ -215,12 +215,16 @@ export class FileAgentOperationalSessionRepository
       document: OperationalSessionDocument
     ) => { document: OperationalSessionDocument; value: T }
   ): Promise<T> {
-    return withFileLock(join(this.baseDir, OPERATIONAL_SESSIONS_LOCK_FILE), async () => {
-      const current = await this.read();
-      const { document, value } = mutate(current);
-      await this.write(document);
-      return value;
-    });
+    return withFileLock(
+      join(this.baseDir, OPERATIONAL_SESSIONS_LOCK_FILE),
+      async () => {
+        const current = await this.read();
+        const { document, value } = mutate(current);
+        await this.write(document);
+        return value;
+      },
+      { label: "agent operational session" }
+    );
   }
 }
 
@@ -233,36 +237,4 @@ function nextSequence(
       .filter((event) => event.sessionId === sessionId)
       .reduce((max, event) => Math.max(max, event.sequence), -1) + 1
   );
-}
-
-async function withFileLock<T>(
-  path: string,
-  operation: () => Promise<T>
-): Promise<T> {
-  await fs.mkdir(dirname(path), { recursive: true });
-  const lock = await acquireFileLock(path);
-  try {
-    return await operation();
-  } finally {
-    await lock.close();
-    await fs.rm(path, { force: true }).catch(() => undefined);
-  }
-}
-
-async function acquireFileLock(
-  path: string
-): Promise<Awaited<ReturnType<typeof fs.open>>> {
-  const started = Date.now();
-  const timeoutMs = 5_000;
-  for (;;) {
-    try {
-      return await fs.open(path, "wx");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-      if (Date.now() - started > timeoutMs) {
-        throw new Error(`Timed out waiting for agent operational session lock: ${path}`);
-      }
-      await delay(25);
-    }
-  }
 }

@@ -2,7 +2,7 @@ FROM node:22-bookworm-slim AS base
 WORKDIR /app
 ENV CI=true
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
+  && apt-get install -y --no-install-recommends git python3 make g++ \
   && rm -rf /var/lib/apt/lists/* \
   && corepack enable
 
