@@ -24,6 +24,7 @@ apps/server/test/*
 !apps/server/test/curatorRetryLimit.test.mjs
 !apps/server/test/frontAgentDesignIntelligence.test.mjs
 !apps/server/test/projectConstructionPreviewSession.test.mjs
+!apps/server/test/visualDesignGateProfessional.test.mjs
 packages/**/test/
 packages/**/tests/
 scripts/*.test.mjs
