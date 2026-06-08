@@ -19,8 +19,8 @@
     "test": "pnpm verify:ci",
     "type-check": "turbo run type-check",
     "verify:ci": "pnpm lint && pnpm type-check && pnpm security:secrets && pnpm build",
+    "verify:docker": "node scripts/docker-smoke.mjs",
     "verify:production-smoke": "node scripts/production-hardening-smoke.mjs",
-    "verify:prestage": "node scripts/prestaging-smoke.mjs",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {

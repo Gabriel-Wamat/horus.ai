@@ -99,7 +99,7 @@ export async function createRepositories(
       ),
       frontendProjects: new PostgresFrontendProjectRepository(
         pool,
-        undefined,
+        runtimeConfig.repositoryRoot,
         env
       ),
       previewSessions: new PostgresPreviewSessionRepository(pool),

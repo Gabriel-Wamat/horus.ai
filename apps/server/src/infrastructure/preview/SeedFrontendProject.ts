@@ -60,7 +60,14 @@ async function discoverFrontendProjectRoot(
   repositoryRoot: string
 ): Promise<string> {
   const appsRoot = resolve(repositoryRoot, "apps");
-  const entries = await fs.readdir(appsRoot, { withFileTypes: true });
+  const entries = await fs.readdir(appsRoot, { withFileTypes: true }).catch((err) => {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new FrontendProjectRootError(
+        "Unable to discover a frontend project. Set HORUS_WEB_PROJECT_ROOT."
+      );
+    }
+    throw err;
+  });
   const appDirectories = entries
     .filter((entry) => entry.isDirectory())
     .map((entry) => join(appsRoot, entry.name));

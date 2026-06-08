@@ -69,12 +69,19 @@ export class FileFrontendProjectRegistry {
   }
 
   private async seedProjects(): Promise<FrontendProject[]> {
-    return [
-      await buildSeedFrontendProject({
-        repositoryRoot: this.repositoryRoot,
-        env: this.env,
-      }),
-    ];
+    try {
+      return [
+        await buildSeedFrontendProject({
+          repositoryRoot: this.repositoryRoot,
+          env: this.env,
+        }),
+      ];
+    } catch (err) {
+      if (err instanceof FrontendProjectRootError) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   private async readProjects(): Promise<FrontendProject[]> {

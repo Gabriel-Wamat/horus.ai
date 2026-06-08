@@ -79,7 +79,11 @@ export function loadRuntimeConfig(
   env: Record<string, string | undefined> = process.env,
   options: { repositoryRoot?: string } = {}
 ): RuntimeConfig {
-  const repositoryRoot = resolve(options.repositoryRoot ?? DEFAULT_REPOSITORY_ROOT);
+  const repositoryRoot = resolve(
+    options.repositoryRoot ??
+      readEnv(env, "HORUS_REPOSITORY_ROOT") ??
+      DEFAULT_REPOSITORY_ROOT
+  );
   const persistenceDriver = readPersistenceDriver(env);
   assertProductionPersistenceSafety(env, persistenceDriver);
   const dataDir = resolveDefaultDataDir(repositoryRoot, env);

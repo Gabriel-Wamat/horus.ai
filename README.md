@@ -11,7 +11,7 @@ apps/server/      Express API, LangGraph workflow, agents, repositories, preview
 apps/web/         React/Vite web application
 packages/shared/  Shared Zod schemas and TypeScript contracts
 skills/agents/    Runtime skills loaded by the Horus agents
-docker/           nginx template for the pre-staging web container
+docker/           nginx template for the containerized local web app
 scripts/          Operational scripts required by install/build/smoke checks
 ```
 
@@ -22,7 +22,7 @@ The repository must not include local runtime state, logs, generated builds, doc
 - Node.js 22
 - pnpm 9.15.0
 - Git
-- Docker and Docker Compose for the pre-staging stack
+- Docker and Docker Compose for the containerized local stack
 
 The repo includes `.node-version` and `packageManager` metadata. If Corepack can manage pnpm on your machine:
 
@@ -44,13 +44,13 @@ Create a local environment file:
 cp .env.example .env
 ```
 
-Set at least one real provider key before using LLM-backed agents:
+For the default OpenAI setup, fill only your API key:
 
 ```bash
-LLM_PROVIDER=openai
-LLM_MODEL=<provider-model>
-OPENAI_API_KEY=<your-key>
+OPENAI_API_KEY=<your-openai-key>
 ```
+
+`LLM_PROVIDER=openai` and `LLM_MODEL=gpt-5-mini` are already the defaults. Use the optional provider fields in `.env.example` only if you want OpenRouter or Groq.
 
 Never commit `.env`, `.env.*.local`, `.horus/`, `data/`, logs, generated workspaces, or build output.
 
@@ -100,7 +100,7 @@ pnpm build
 
 This public distribution does not include test folders. Internal test suites and specs stay local/private and must not be committed to this repository.
 
-## Production-Like Local Run
+## Production Build Run
 
 Build all shipped packages:
 
@@ -122,23 +122,25 @@ apps/server/dist/main.js
 
 Runtime behavior is configured through environment variables such as `PORT`, `HOST`, `PERSISTENCE_DRIVER`, `DATABASE_URL`, `HORUS_AUTH_MODE`, `HORUS_API_TOKEN`, and provider settings.
 
-## Pre-Staging With Docker
+For local use, leave `PERSISTENCE_DRIVER`, `HORUS_AUTH_MODE`, and `HORUS_API_TOKEN` unset. Horus will use file persistence under `.horus/data` and no local auth token.
 
-The Docker Compose stack is the reproducible pre-staging path. It builds the source from scratch, starts Postgres and Redis, applies database migrations before the API starts, serves the built web app through nginx, and proxies `/api` to the API with configured Horus auth headers.
+## Docker Run
 
-Create a pre-staging env file:
+Docker is the clean-machine path for people who want to run the shipped app without managing local Node processes. It builds the source from scratch, starts the API with file persistence, serves the built web app through nginx, and persists Horus state in the `horus-data` Docker volume.
 
-```bash
-cp .env.prestaging.example .env.prestaging.local
-```
-
-Edit `.env.prestaging.local` with local-only secrets, then run:
+Create the local env file and add your API key:
 
 ```bash
-docker compose --env-file .env.prestaging.local up --build
+cp .env.example .env
 ```
 
-Default pre-staging endpoints:
+Run:
+
+```bash
+docker compose up --build
+```
+
+Default Docker endpoints:
 
 ```text
 Web UI: http://localhost:8080
@@ -151,19 +153,19 @@ Direct API: http://localhost:3001
 Smoke check:
 
 ```bash
-pnpm verify:prestage
+pnpm verify:docker
 ```
 
 Stop the stack:
 
 ```bash
-docker compose --env-file .env.prestaging.local down
+docker compose down
 ```
 
-Reset all pre-staging database state:
+Reset all local Docker state:
 
 ```bash
-docker compose --env-file .env.prestaging.local down -v
+docker compose down -v
 ```
 
 ## Clean-Machine Reproduction
@@ -176,9 +178,10 @@ cd horus
 corepack prepare pnpm@9.15.0 --activate || npm install -g pnpm@9.15.0
 pnpm install --frozen-lockfile
 pnpm verify:ci
-cp .env.prestaging.example .env.prestaging.local
-docker compose --env-file .env.prestaging.local up --build
-pnpm verify:prestage
+cp .env.example .env
+# edit .env and set OPENAI_API_KEY
+docker compose up --build
+pnpm verify:docker
 ```
 
 Expected result:
@@ -187,17 +190,33 @@ Expected result:
 - TypeScript validation passes
 - secret scan passes
 - production build passes
-- Docker pre-staging stack becomes healthy
-- `pnpm verify:prestage` succeeds against `http://localhost:8080`
+- Docker stack becomes healthy
+- `pnpm verify:docker` succeeds against `http://localhost:8080`
+
+## Production Notes
+
+For a real multi-user deployment, configure explicit production settings instead of the local defaults:
+
+```bash
+HORUS_ENV=production
+HORUS_AUTH_MODE=token
+HORUS_API_TOKEN=<server-token>
+HORUS_TENANT_ID=<tenant-id>
+PERSISTENCE_DRIVER=postgres
+DATABASE_URL=<postgres-url>
+CORS_ORIGIN=<allowed-origin>
+```
+
+The local Docker Compose file is intentionally optimized for first-run usability. Production deployments should provide their own database, secret management, TLS, and reverse proxy policy.
 
 ## Troubleshooting
 
 - Missing provider key: configure `.env` or a provider profile in the UI.
 - Port conflict: set `PORT`, `HOST`, or Compose port mappings.
-- CORS issue: set `CORS_ORIGIN` for split frontend/API origins.
+- CORS issue: set `CORS_ORIGIN` only when using split frontend/API origins.
 - Lost local state: verify `HORUS_DATA_DIR` and `PERSISTENCE_DRIVER`.
-- Postgres startup failure: verify `DATABASE_URL`, `DATABASE_SSL`, and migration logs.
-- Docker hangs or fails with `input/output error`: inspect Docker Desktop logs for `EXT4-fs` or `vda1` read-only errors. That is a local Docker VM disk problem. Restart Docker Desktop first; if it remains read-only, repair or reset Docker Desktop data before rerunning pre-staging.
+- Postgres startup failure: only applies when `PERSISTENCE_DRIVER=postgres`; verify `DATABASE_URL`, `DATABASE_SSL`, and migration logs.
+- Docker hangs or fails with `input/output error`: inspect Docker Desktop logs for `EXT4-fs` or `vda1` read-only errors. That is a local Docker VM disk problem. Restart Docker Desktop first; if it remains read-only, repair or reset Docker Desktop data before rerunning the stack.
 
 ## License
 

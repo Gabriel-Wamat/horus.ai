@@ -1,42 +1,24 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: horus
-      POSTGRES_USER: horus
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-    volumes:
-      - horus-postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U horus -d horus"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
   api:
     build:
       context: .
       target: server-runtime
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      HORUS_ENV: production
-      HORUS_AUTH_MODE: token
       NODE_ENV: production
+      HORUS_ENV: local
       HOST: 0.0.0.0
       PORT: 3000
-      PERSISTENCE_DRIVER: postgres
-      DATABASE_URL: postgresql://horus:${POSTGRES_PASSWORD}@postgres:5432/horus
+      HORUS_REPOSITORY_ROOT: /app
+      PERSISTENCE_DRIVER: file
+      HORUS_DATA_DIR: /app/.horus/data
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
-      HORUS_API_TOKEN: ${HORUS_API_TOKEN:?Set HORUS_API_TOKEN}
-      HORUS_API_ADMIN_TOKEN: ${HORUS_API_ADMIN_TOKEN:-}
-      HORUS_TENANT_ID: ${HORUS_TENANT_ID:?Set HORUS_TENANT_ID}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-gpt-5-mini}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+    volumes:
+      - horus-data:/app/.horus/data
     ports:
       - "3001:3000"
     healthcheck:
@@ -58,9 +40,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    environment:
-      HORUS_API_TOKEN: ${HORUS_API_TOKEN:?Set HORUS_API_TOKEN}
-      HORUS_TENANT_ID: ${HORUS_TENANT_ID:?Set HORUS_TENANT_ID}
     ports:
       - "8080:8080"
     healthcheck:
@@ -70,4 +49,4 @@ services:
       retries: 12
 
 volumes:
-  horus-postgres:
+  horus-data:

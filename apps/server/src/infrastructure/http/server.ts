@@ -152,7 +152,10 @@ export async function createApp(
   );
   const projectConfigService = new ProjectConfigService();
   const projectExecutionService = new ProjectExecutionService();
-  const projectWorkspaceService = new ProjectWorkspaceService();
+  const projectWorkspaceService = new ProjectWorkspaceService({
+    env,
+    repositoryRoot: repositories.runtimeConfig.repositoryRoot,
+  });
   const projectDiffAnalyzer = new ProjectDiffAnalyzer();
   const projectArchiveService = new ProjectArchiveService(projectFileBrowser);
   const agentSkillRegistry = new AgentSkillRegistryService(
