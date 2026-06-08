@@ -3,6 +3,7 @@ import type {
   Spec,
   HumanFeedback,
   WorkflowState,
+  LlmProviderCapability,
   LlmSettingsDraft,
   LlmSettingsProfile,
   LlmSettingsReference,
@@ -206,28 +207,10 @@ export const workflowApi = {
     return res.json() as Promise<StartProjectConstructionResponse>;
   },
 
-  listLlmProviders: async (): Promise<{
-    providers: Array<{
-      provider: string;
-      label: string;
-      defaultBaseUrl: string;
-      supportsStructuredOutput: boolean;
-      supportsResponsesApi: boolean;
-      defaultModels: string[];
-    }>;
-  }> => {
+  listLlmProviders: async (): Promise<{ providers: LlmProviderCapability[] }> => {
     const res = await fetch(`${BASE}/llm/providers`, { cache: "no-store" });
     await requireOk(res, "Listar providers LLM");
-    return res.json() as Promise<{
-      providers: Array<{
-        provider: string;
-        label: string;
-        defaultBaseUrl: string;
-        supportsStructuredOutput: boolean;
-        supportsResponsesApi: boolean;
-        defaultModels: string[];
-      }>;
-    }>;
+    return res.json() as Promise<{ providers: LlmProviderCapability[] }>;
   },
 
   getLlmSettings: async (): Promise<LlmSettingsProfile | null> => {

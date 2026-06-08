@@ -8,18 +8,41 @@ import {
 import { Eye, EyeOff, PlugZap, Trash2 } from "lucide-react";
 import type {
   LlmProvider,
+  LlmProviderCapability,
   LlmSettingsDraft,
   LlmSettingsProfile,
 } from "@u-build/shared";
 
-const PROVIDERS: Array<{ value: LlmProvider; label: string }> = [
-  { value: "openai", label: "OpenAI" },
-  { value: "openrouter", label: "OpenRouter" },
-  { value: "groq", label: "Groq" },
+const FALLBACK_PROVIDERS: LlmProviderCapability[] = [
+  {
+    provider: "openai",
+    label: "OpenAI",
+    defaultBaseUrl: "https://api.openai.com/v1",
+    supportsStructuredOutput: true,
+    supportsResponsesApi: true,
+    defaultModels: ["gpt-5-mini", "gpt-4.1-mini"],
+  },
+  {
+    provider: "openrouter",
+    label: "OpenRouter",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    supportsStructuredOutput: true,
+    supportsResponsesApi: false,
+    defaultModels: ["openai/gpt-5-mini", "openai/gpt-4.1-mini"],
+  },
+  {
+    provider: "groq",
+    label: "Groq",
+    defaultBaseUrl: "https://api.groq.com/openai/v1",
+    supportsStructuredOutput: true,
+    supportsResponsesApi: false,
+    defaultModels: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+  },
 ];
 
 interface LlmSettingsModalProps {
   readonly isOpen: boolean;
+  readonly providers: readonly LlmProviderCapability[];
   readonly profile: LlmSettingsProfile | null;
   readonly onSave: (
     settings: LlmSettingsDraft & {
@@ -37,6 +60,7 @@ interface LlmSettingsModalProps {
 
 export function LlmSettingsModal({
   isOpen,
+  providers,
   profile,
   onSave,
   onTest,
@@ -58,13 +82,20 @@ export function LlmSettingsModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const firstFieldRef = useRef<HTMLSelectElement>(null);
+  const providerOptions = providers.length > 0 ? providers : FALLBACK_PROVIDERS;
+  const selectedCapability =
+    providerOptions.find((item) => item.provider === provider) ?? providerOptions[0];
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setProvider(profile?.provider ?? "openai");
-    setModel(profile?.model ?? "");
-    setBaseUrl(profile?.baseUrl ?? "");
+    const options = providers.length > 0 ? providers : FALLBACK_PROVIDERS;
+    const initialProvider = profile?.provider ?? options[0]?.provider ?? "openai";
+    const capability = options.find((item) => item.provider === initialProvider);
+
+    setProvider(initialProvider);
+    setModel(profile?.model ?? capability?.defaultModels[0] ?? "");
+    setBaseUrl(profile?.baseUrl ?? capability?.defaultBaseUrl ?? "");
     setApiKey("");
     setIsRevealed(false);
     setError(null);
@@ -76,7 +107,7 @@ export function LlmSettingsModal({
     });
 
     window.setTimeout(() => firstFieldRef.current?.focus(), 0);
-  }, [isOpen, profile]);
+  }, [isOpen, profile, providers]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -112,6 +143,16 @@ export function LlmSettingsModal({
       ...(trimmedKey ? { apiKey: trimmedKey } : {}),
       ...(trimmedBaseUrl ? { baseUrl: trimmedBaseUrl } : {}),
     };
+  };
+
+  const handleProviderChange = (nextProvider: LlmProvider): void => {
+    const capability = providerOptions.find((item) => item.provider === nextProvider);
+    setProvider(nextProvider);
+    setModel(capability?.defaultModels[0] ?? "");
+    setBaseUrl(capability?.defaultBaseUrl ?? "");
+    setValidation({ status: "untested" });
+    setNotice(null);
+    setError(null);
   };
 
   const handleTest = async (): Promise<void> => {
@@ -199,10 +240,10 @@ export function LlmSettingsModal({
             className="field-control"
             name="horus-llm-provider"
             value={provider}
-            onChange={(event) => setProvider(event.target.value as LlmProvider)}
+            onChange={(event) => handleProviderChange(event.target.value as LlmProvider)}
           >
-            {PROVIDERS.map((item) => (
-              <option key={item.value} value={item.value}>
+            {providerOptions.map((item) => (
+              <option key={item.provider} value={item.provider}>
                 {item.label}
               </option>
             ))}
@@ -216,9 +257,15 @@ export function LlmSettingsModal({
             name="horus-llm-model"
             value={model}
             onChange={(event) => setModel(event.target.value)}
-            placeholder="ex: LLM_MODEL configurado no backend"
+            placeholder={selectedCapability?.defaultModels[0] ?? "Modelo"}
+            list="horus-llm-model-options"
             autoComplete="off"
           />
+          <datalist id="horus-llm-model-options">
+            {(selectedCapability?.defaultModels ?? []).map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
         </label>
 
         <label className="field">
@@ -252,7 +299,7 @@ export function LlmSettingsModal({
             name="horus-llm-base-url"
             value={baseUrl}
             onChange={(event) => setBaseUrl(event.target.value)}
-            placeholder="Default do provider"
+            placeholder={selectedCapability?.defaultBaseUrl ?? "Default do provider"}
             autoComplete="off"
           />
         </label>

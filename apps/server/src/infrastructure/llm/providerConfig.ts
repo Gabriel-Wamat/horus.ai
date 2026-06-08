@@ -28,7 +28,11 @@ type Env = Record<string, string | undefined>;
 
 const PROVIDERS = ["openai", "openrouter", "groq"] as const;
 const DEFAULT_PROVIDER: LlmProvider = "openai";
-const DEFAULT_MODEL = "gpt-5-mini";
+const DEFAULT_MODEL: Record<LlmProvider, string> = {
+  openai: "gpt-5-mini",
+  openrouter: "openai/gpt-5-mini",
+  groq: "llama-3.3-70b-versatile",
+};
 
 const PROVIDER_KEY_ENV: Record<LlmProvider, string> = {
   openai: "OPENAI_API_KEY",
@@ -88,7 +92,7 @@ export function resolveAgentModelConfig(
     runtimeSettings?.model,
     env[`${prefix}_MODEL`],
     env["LLM_MODEL"],
-    DEFAULT_MODEL
+    DEFAULT_MODEL[provider]
   );
   if (!model) {
     throw new LlmProviderConfigError(
@@ -125,6 +129,10 @@ export function resolveAgentModelConfig(
 
 export function getDefaultBaseUrl(provider: LlmProvider): string {
   return DEFAULT_BASE_URL[provider];
+}
+
+export function getDefaultModel(provider: LlmProvider): string {
+  return DEFAULT_MODEL[provider];
 }
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {

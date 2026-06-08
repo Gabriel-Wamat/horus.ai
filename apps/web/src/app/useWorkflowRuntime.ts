@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type {
+  LlmProviderCapability,
   LlmSettingsDraft,
   LlmSettingsProfile,
   Spec,
@@ -43,6 +44,7 @@ export function useWorkflowRuntime({
   setThreadId: (threadId: string | null) => void;
   workflowState: WorkflowState | null;
   setWorkflowState: Dispatch<SetStateAction<WorkflowState | null>>;
+  llmProviders: LlmProviderCapability[];
   llmProfile: LlmSettingsProfile | null;
   isLoadingLlmProfile: boolean;
   saveLlmSettings: (
@@ -77,6 +79,7 @@ export function useWorkflowRuntime({
 } {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
+  const [llmProviders, setLlmProviders] = useState<LlmProviderCapability[]>([]);
   const [llmProfile, setLlmProfile] = useState<LlmSettingsProfile | null>(null);
   const [isLoadingLlmProfile, setIsLoadingLlmProfile] = useState(false);
   const [pendingSpec, setPendingSpec] = useState<{ userStoryId: string; spec: Spec } | null>(null);
@@ -90,11 +93,16 @@ export function useWorkflowRuntime({
 
   useEffect(() => {
     setIsLoadingLlmProfile(true);
-    void workflowApi
-      .getLlmSettings()
-      .then(setLlmProfile)
-      .catch(() => setLlmProfile(null))
-      .finally(() => setIsLoadingLlmProfile(false));
+    void Promise.all([
+      workflowApi
+        .listLlmProviders()
+        .then((result) => setLlmProviders(result.providers))
+        .catch(() => setLlmProviders([])),
+      workflowApi
+        .getLlmSettings()
+        .then(setLlmProfile)
+        .catch(() => setLlmProfile(null)),
+    ]).finally(() => setIsLoadingLlmProfile(false));
   }, []);
 
   useEffect(() => {
@@ -279,6 +287,7 @@ export function useWorkflowRuntime({
     setThreadId,
     workflowState,
     setWorkflowState,
+    llmProviders,
     llmProfile,
     isLoadingLlmProfile,
     saveLlmSettings,
