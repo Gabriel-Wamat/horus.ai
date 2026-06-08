@@ -20,7 +20,6 @@ import { Button, Panel, PanelHeader } from "./components/ui/index.js";
 import { AgentFlowPage } from "./features/agent-flow-map/AgentFlowPage.js";
 import { AgentTelemetryPage } from "./features/agent-flow-map/AgentTelemetryPage.js";
 import { AgentSkillsPage } from "./features/agent-skills/AgentSkillsPage.js";
-import { DesignStudioPage } from "./features/design-studio/DesignStudioPage.js";
 import { ProjectFilesPage } from "./features/project-files/ProjectFilesPage.js";
 
 function CancelledPanel({ onRestart }: { onRestart: () => void }): JSX.Element {
@@ -242,8 +241,6 @@ export function App(): JSX.Element {
       />
     ) : appMode === "files" ? (
       <ProjectFilesPage />
-    ) : appMode === "design" ? (
-      <DesignStudioPage />
     ) : appMode === "agents" ? (
       <AgentFlowPage workflowState={agentFlowState} events={workflow.events} />
     ) : appMode === "telemetry" ? (

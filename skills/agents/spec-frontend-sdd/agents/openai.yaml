@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Spec Architect"
+  short_description: "Generate frontend-first SDD specs ready for backend routes."
+  default_prompt: "Use this skill to generate a frontend-first Horus.AI spec with robust UI architecture, typed data models, future backend route contracts, validation-ready criteria, and static artifact compatibility."

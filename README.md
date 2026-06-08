@@ -10,11 +10,12 @@ This public repository is intentionally minimal. It contains only the source and
 apps/server/      Express API, LangGraph workflow, agents, repositories, preview runtime
 apps/web/         React/Vite web application
 packages/shared/  Shared Zod schemas and TypeScript contracts
+skills/agents/    Runtime skills loaded by the Horus agents
 docker/           nginx template for the pre-staging web container
 scripts/          Operational scripts required by install/build/smoke checks
 ```
 
-The repository must not include local runtime state, logs, generated builds, documentation folders, internal specs, test folders, screenshots, OpenClaude baselines, or Markdown files other than this README.
+The repository must not include local runtime state, logs, generated builds, documentation folders, internal specs, test folders, screenshots, OpenClaude baselines, experimental UI prototypes, or Markdown files other than this README and agent skill bundles under `skills/agents`.
 
 ## Requirements
 
