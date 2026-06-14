@@ -69,4 +69,12 @@ export class PostgresWorkflowStateRepository implements IStorageProvider {
       threadId,
     ]);
   }
+
+  async loadLatestByFolder(folderId: string): Promise<string | null> {
+    const result = await this.pool.query<{ thread_id: string }>(
+      "SELECT thread_id FROM workflow_states WHERE workspace_folder_id = $1 ORDER BY updated_at DESC LIMIT 1",
+      [folderId]
+    );
+    return result.rows[0]?.thread_id ?? null;
+  }
 }

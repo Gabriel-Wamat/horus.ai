@@ -14,6 +14,7 @@ import type { ResumeWorkflowUseCase } from "../../../application/usecases/Resume
 import type { GetWorkflowStatusUseCase } from "../../../application/usecases/GetWorkflowStatusUseCase.js";
 import type { RetryDecisionUseCase } from "../../../application/usecases/RetryDecisionUseCase.js";
 import type { CuratorReviewDecisionUseCase } from "../../../application/usecases/CuratorReviewDecisionUseCase.js";
+import type { WorkflowFolderLookup } from "../../repositories/createRepositories.js";
 
 interface WorkflowRouteDeps {
   startUseCase: StartWorkflowUseCase;
@@ -21,6 +22,7 @@ interface WorkflowRouteDeps {
   statusUseCase: GetWorkflowStatusUseCase;
   retryDecisionUseCase: RetryDecisionUseCase;
   curatorReviewDecisionUseCase: CuratorReviewDecisionUseCase;
+  folderLookup: WorkflowFolderLookup;
 }
 
 export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
@@ -119,6 +121,24 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
         res.status(400).json({ error: "Validation failed", issues: err.issues });
         return;
       }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.get("/folder/:folderId/thread", async (req: Request, res: Response) => {
+    try {
+      const folderId = req.params["folderId"] ?? "";
+      if (!folderId) {
+        res.status(400).json({ error: "Missing folderId" });
+        return;
+      }
+      const threadId = await deps.folderLookup.loadLatestByFolder(folderId);
+      if (!threadId) {
+        res.status(404).json({ error: "No thread found for folder" });
+        return;
+      }
+      res.json({ threadId });
+    } catch {
       res.status(500).json({ error: "Internal server error" });
     }
   });

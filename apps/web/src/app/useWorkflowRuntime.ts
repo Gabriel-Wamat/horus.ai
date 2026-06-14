@@ -133,6 +133,28 @@ export function useWorkflowRuntime({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When localStorage has no threadId (e.g. incognito), restore the latest thread
+  // for the selected folder from the backend so the preview persists across tabs.
+  const hadLocalThreadIdRef = useRef(Boolean(readPersistedThreadId()));
+  const restoredFromFolderRef = useRef(false);
+  useEffect(() => {
+    if (
+      restoredFromFolderRef.current ||
+      hadLocalThreadIdRef.current ||
+      threadId ||
+      !selectedWorkspaceFolderId
+    ) return;
+    restoredFromFolderRef.current = true;
+    void workflowApi.getLatestThreadForFolder(selectedWorkspaceFolderId)
+      .then((latestThreadId) => {
+        if (!latestThreadId) return;
+        setThreadId(latestThreadId);
+        void workflowApi.getStatus(latestThreadId).then(setWorkflowState).catch(() => {});
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkspaceFolderId, threadId, setThreadId]);
+
   const [llmProviders, setLlmProviders] = useState<LlmProviderCapability[]>([]);
   const [llmProfile, setLlmProfile] = useState<LlmSettingsProfile | null>(null);
   const [isLoadingLlmProfile, setIsLoadingLlmProfile] = useState(false);

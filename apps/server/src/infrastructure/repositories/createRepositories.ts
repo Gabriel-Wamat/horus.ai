@@ -55,11 +55,16 @@ import type {
 } from "./contracts.js";
 import type { IStorageProvider } from "@u-build/shared";
 
+export interface WorkflowFolderLookup {
+  loadLatestByFolder(folderId: string): Promise<string | null>;
+}
+
 export interface PersistenceRepositories {
   driver: "file" | "postgres";
   runtimeConfig: RuntimeConfig;
   pool?: PgPool;
   storage: IStorageProvider;
+  workflowStateRepo: WorkflowFolderLookup;
   workspaceStore: WorkspaceRepository;
   chatMemoryStore: ChatMemoryRepository;
   frontendProjects: FrontendProjectRepository;
@@ -91,6 +96,7 @@ export async function createRepositories(
       runtimeConfig,
       pool,
       storage,
+      workflowStateRepo: storage,
       workspaceStore,
       chatMemoryStore: new PostgresChatMemoryRepository(
         pool,
@@ -127,6 +133,7 @@ export async function createRepositories(
     driver,
     runtimeConfig,
     storage,
+    workflowStateRepo: storage,
     workspaceStore,
     chatMemoryStore: new FileChatMemoryStore(
       workspaceStore,
