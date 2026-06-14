@@ -45,4 +45,19 @@ export class JsonStorageAdapter implements IStorageProvider {
   async delete(threadId: string): Promise<void> {
     await fs.unlink(this.filePath(threadId));
   }
+
+  async loadLatestByFolder(folderId: string): Promise<string | null> {
+    const threadIds = await this.list();
+    let latest: { threadId: string; startedAt: string } | null = null;
+    for (const threadId of threadIds) {
+      const state = await this.load(threadId);
+      if (state?.workspaceFolderId === folderId) {
+        const ts = state.startedAt ?? "";
+        if (!latest || ts > latest.startedAt) {
+          latest = { threadId, startedAt: ts };
+        }
+      }
+    }
+    return latest?.threadId ?? null;
+  }
 }

@@ -396,6 +396,7 @@ export async function createApp(
       statusUseCase,
       retryDecisionUseCase,
       curatorReviewDecisionUseCase,
+      folderLookup: repositories.workflowStateRepo,
     })
   );
   app.use(

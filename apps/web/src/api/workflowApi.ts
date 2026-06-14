@@ -108,6 +108,13 @@ export const workflowApi = {
     return res.json() as Promise<WorkflowState>;
   },
 
+  getLatestThreadForFolder: async (folderId: string): Promise<string | null> => {
+    const res = await fetch(`${BASE}/workflow/folder/${folderId}/thread`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { threadId: string };
+    return body.threadId ?? null;
+  },
+
   listWorkspaceFolders: async (): Promise<WorkspaceFolder[]> => {
     const res = await fetch(`${BASE}/workspace/folders`, { cache: "no-store" });
     await requireOk(res, "Listar pastas do workspace");
