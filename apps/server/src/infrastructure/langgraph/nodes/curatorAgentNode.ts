@@ -7,6 +7,7 @@ import { agentArtifactFields, getArtifactContext } from "../artifactContext.js";
 import {
   visualGateFeedbackItems,
   visualGateToRuntimeEvidence,
+  SCORE_THRESHOLD,
 } from "../../visual/VisualDesignGateService.js";
 import { summarizePromptContextForResult } from "../../prompt/PromptContextAssembler.js";
 import { attachAgentContextProfile } from "../../../application/services/AgentContextProfileService.js";
@@ -242,8 +243,26 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
       frontToolLoop?.status === "succeeded" &&
       frontToolLoop.changedFiles.length > 0;
 
+    const isStructuralMismatch =
+      !codeChangeSet &&
+      html.trim().startsWith("<!DOCTYPE") &&
+      /react|typescript|tsx/i.test(
+        [spec.technicalApproach ?? "", spec.summary ?? ""].join(" ")
+      );
+
     const validation =
-      deterministicCodeChangeGatesUnavailable
+      isStructuralMismatch
+        ? {
+            passed: false,
+            score: 0,
+            notes:
+              "Curator bloqueou: spec exige implementação React/TypeScript mas o Front Agent gerou HTML standalone. O projeto frontend precisa estar configurado e acessível — o codeContext não foi fornecido ao Front Agent.",
+            missingItems: [
+              "structural-mismatch: spec expects React/TypeScript but Front Agent produced standalone HTML without codeChangeSet; configure the frontend project so codeContext is available",
+            ],
+            fixTarget: "front" as const,
+          }
+      : deterministicCodeChangeGatesUnavailable
         ? {
             passed: false,
             score: 0,
@@ -405,13 +424,47 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
 
     // ── Success path ──────────────────────────────────────────────────────────
     if (validation.passed) {
+      if (validation.score < SCORE_THRESHOLD) {
+        return {
+          retryCount: state.retryCount,
+          pendingRetryApproval: null,
+          pendingCuratorReview: {
+            userStoryId: userStory.id,
+            score: validation.score,
+            notes: validation.notes,
+          },
+          curatorFeedback: { [userStory.id]: feedback },
+          status: "awaiting_human",
+          agentResults: { [userStory.id]: [agentResultEntry] },
+        };
+      }
+
       const nextIndex = state.currentUSIndex + 1;
       return {
         currentUSIndex: nextIndex,
         retryCount: 0,
         pendingRetryApproval: null,
+        pendingCuratorReview: null,
         curatorFeedback: { [userStory.id]: feedback },
         status: nextIndex >= state.userStories.length ? "completed" : "running",
+        agentResults: { [userStory.id]: [agentResultEntry] },
+      };
+    }
+
+    // ── Structural mismatch: escalate immediately, retrying will not help ────
+    if (isStructuralMismatch) {
+      const newRetryCount = state.retryCount + 1;
+      return {
+        retryCount: newRetryCount,
+        curatorFeedback: { [userStory.id]: feedback },
+        pendingRetryApproval: {
+          userStoryId: userStory.id,
+          retryCount: newRetryCount,
+          score: validation.score,
+          notes: validation.notes,
+          missingItems: validation.missingItems,
+        },
+        status: "awaiting_human",
         agentResults: { [userStory.id]: [agentResultEntry] },
       };
     }
@@ -440,6 +493,22 @@ export function createCuratorAgentNode(deps: LangGraphDependencies) {
           notes: validation.notes,
           missingItems: validation.missingItems,
         },
+        status: "awaiting_human",
+        agentResults: { [userStory.id]: [agentResultEntry] },
+      };
+    }
+
+    // ── Score below threshold → human decides before retrying ─────────────────
+    if (validation.score < SCORE_THRESHOLD) {
+      return {
+        retryCount: newRetryCount,
+        pendingRetryApproval: null,
+        pendingCuratorReview: {
+          userStoryId: userStory.id,
+          score: validation.score,
+          notes: validation.notes,
+        },
+        curatorFeedback: { [userStory.id]: feedback },
         status: "awaiting_human",
         agentResults: { [userStory.id]: [agentResultEntry] },
       };

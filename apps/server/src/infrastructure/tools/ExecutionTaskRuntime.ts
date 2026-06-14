@@ -12,6 +12,7 @@ import { CliCommandPolicy } from "./CliCommandPolicy.js";
 import {
   buildAllowlistedChildEnv,
   DEFAULT_INHERITED_CHILD_ENV_KEYS,
+  resolveWindowsExecutable,
 } from "../process/ChildProcessEnv.js";
 
 export type ExecutionTaskStatus =
@@ -340,6 +341,10 @@ export class ExecutionTaskRuntime {
 
     const decision = await this.policy.evaluate(spec);
     if (!decision.allowed || !decision.normalized) {
+      const taskStatus = decision.action === "ask" ? "awaiting_approval" : "rejected";
+      console.log(
+        `[ExecutionTaskRuntime] ${taskStatus} commandId=${spec.id} reason="${decision.reason ?? "command rejected"}"`
+      );
       return stoppedBeforeSpawn(decision.reason ?? "command rejected", {
         status: decision.action === "ask" ? "awaiting_approval" : "rejected",
         approvalRequired: decision.approvalRequired,
@@ -347,6 +352,9 @@ export class ExecutionTaskRuntime {
       });
     }
 
+    console.log(
+      `[ExecutionTaskRuntime] starting taskId=${taskId} commandId=${spec.id} executable=${decision.normalized.executable} cwd=${decision.normalized.cwd}`
+    );
     return this.spawnAndTrack({
       spec: decision.normalized,
       trace: traceContext(spec),
@@ -516,14 +524,20 @@ export class ExecutionTaskRuntime {
     };
 
     try {
-      child = spawn(input.spec.executable, input.spec.args, {
+      child = spawn(resolveWindowsExecutable(input.spec.executable), input.spec.args, {
         cwd: input.spec.cwd,
         env: this.buildChildEnv(input.spec.env),
         detached: true,
         shell: false,
         stdio: ["ignore", "pipe", "pipe"],
       });
+      console.log(
+        `[ExecutionTaskRuntime] spawned taskId=${input.taskId} commandId=${input.spec.id} pid=${child.pid ?? "?"}`
+      );
     } catch (err) {
+      console.log(
+        `[ExecutionTaskRuntime] spawn failed taskId=${input.taskId} commandId=${input.spec.id} error="${err instanceof Error ? err.message : String(err)}"`
+      );
       await closeStream(stdoutStream);
       await closeStream(stderrStream);
       const task = {
@@ -535,6 +549,13 @@ export class ExecutionTaskRuntime {
       await this.persist(input.metadataPath, task);
       return { task, completion: Promise.resolve({ task, stdout, stderr }) };
     }
+
+    // Register a no-op error listener immediately so that if the process emits
+    // 'error' asynchronously (e.g. ENOENT on Windows) before the real handler
+    // is attached inside the Promise below, it doesn't crash the process as an
+    // unhandled 'error' event. The real handler registered in the Promise
+    // constructor will still fire because EventEmitter calls all listeners.
+    child.once("error", () => undefined);
 
     const initialTask = taskBase();
     this.activeTaskSnapshots.set(input.taskId, initialTask);
@@ -633,6 +654,9 @@ export class ExecutionTaskRuntime {
                 : exitCode === 0
                   ? "completed"
                   : "failed";
+            console.log(
+              `[ExecutionTaskRuntime] finished taskId=${input.taskId} commandId=${input.spec.id} status=${status} exitCode=${exitCode ?? "null"} durationMs=${nowMs() - input.start}`
+            );
             const task: ExecutionTaskRecord = {
               ...taskBase(),
               status,

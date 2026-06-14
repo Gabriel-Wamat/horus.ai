@@ -15,7 +15,8 @@ import {
   loadAgentSkill,
 } from "../agentSkills/loadAgentSkill.js";
 import { createChatModel } from "../llm/createChatModel.js";
-import { invokeChatModel } from "../llm/invokeChatModel.js";
+import { createLinkedAbortController, invokeChatModel } from "../llm/invokeChatModel.js";
+import { resolveAgentModelConfig, type AgentModelConfig } from "../llm/providerConfig.js";
 import type { FrontendFileOperationPlan } from "../code/buildFrontendCodeChangeSet.js";
 import type { ProjectWorkspaceContextSnapshot } from "../project/ProjectExecutionService.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
@@ -293,26 +294,36 @@ ${criteria}
 - Retorne APENAS o código HTML completo, começando com <!DOCTYPE html>
 - Não inclua explicações, markdown code fences, ou qualquer texto fora do HTML`;
 
-  const model = createChatModel("front", {
-    temperature: 0.2,
-    maxTokens: 8192,
-  }, llmSettings);
-  const response = await withTimeout(
-    invokeChatModel(model, prompt),
-    timeoutMs,
-    `FrontAgent timed out after ${timeoutMs / 1000}s while generating HTML.`
-  );
-  const content =
-    typeof response.content === "string"
-      ? response.content
-      : response.content
-          .map((c) => ("text" in c ? c.text : ""))
-          .join("");
+  const frontConfig = resolveAgentModelConfig("front", { temperature: 0.2, maxTokens: 16000 }, process.env, llmSettings);
 
-  const html = content
-    .replace(/^```html\s*/i, "")
-    .replace(/\s*```\s*$/, "")
-    .trim();
+  let html: string;
+  try {
+    if (frontConfig.provider === "openai") {
+      html = await invokeOpenAiResponsesForFrontHtml(prompt, frontConfig, timeoutMs);
+    } else {
+      const model = createChatModel("front", { temperature: 0.2, maxTokens: 16000 }, llmSettings);
+      const response = await withTimeout(
+        invokeChatModel(model, prompt),
+        timeoutMs,
+        `FrontAgent timed out after ${timeoutMs / 1000}s while generating HTML.`
+      );
+      const content =
+        typeof response.content === "string"
+          ? response.content
+          : response.content
+              .map((c) => ("text" in c ? c.text : ""))
+              .join("");
+      html = content
+        .replace(/^```html\s*/i, "")
+        .replace(/\s*```\s*$/, "")
+        .trim();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("FrontAgent timed out")) {
+      return buildStandaloneHtmlFallback(userStory, spec);
+    }
+    throw err;
+  }
 
   return { html };
 }
@@ -668,11 +679,164 @@ function buildReactViteFallbackProjectPlan(
   });
 }
 
+async function invokeOpenAiResponsesForFrontHtml(
+  prompt: string,
+  config: AgentModelConfig,
+  timeoutMs: number
+): Promise<string> {
+  const { controller, cleanup } = createLinkedAbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
+
+  try {
+    const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/responses`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: config.model,
+        input: prompt,
+        max_output_tokens: config.maxTokens ?? 16000,
+        text: { verbosity: "low" },
+      }),
+      signal: controller.signal,
+    });
+
+    const body = (await response.json().catch(() => null)) as unknown;
+    if (!response.ok) {
+      throw new Error(
+        `OpenAI Responses API failed (${response.status}): ${extractOpenAiResponsesErrorMessage(body)}`
+      );
+    }
+
+    const outputText = extractOpenAiResponsesOutputText(body);
+    if (!outputText) {
+      const bodySnippet = JSON.stringify(body)?.slice(0, 400) ?? "(null)";
+      throw new Error(
+        `OpenAI Responses API returned no output text for FrontAgent. Response body: ${bodySnippet}`
+      );
+    }
+
+    console.log(`[FrontAgentImpl] OpenAI Responses API completed in ${Date.now() - startedAt}ms`);
+    return outputText
+      .replace(/^```html\s*/i, "")
+      .replace(/\s*```\s*$/, "")
+      .trim();
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(`FrontAgent timed out after ${timeoutMs / 1000}s while generating HTML.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+    cleanup();
+  }
+}
+
+function extractOpenAiResponsesOutputText(body: unknown): string | undefined {
+  if (!body || typeof body !== "object") return undefined;
+
+  // Top-level output_text shorthand (some API versions)
+  const topText = (body as { output_text?: unknown }).output_text;
+  if (typeof topText === "string" && topText) return topText;
+
+  const output = (body as { output?: unknown }).output;
+  if (!Array.isArray(output)) return undefined;
+
+  for (const item of output) {
+    if (!item || typeof item !== "object") continue;
+    const itemType = (item as { type?: unknown }).type;
+
+    // Item is directly an output_text node: { type: "output_text", text: "..." }
+    if (
+      (itemType === "output_text" || itemType === "text") &&
+      typeof (item as { text?: unknown }).text === "string"
+    ) {
+      const t = (item as { text: string }).text;
+      if (t) return t;
+    }
+
+    // Item wraps content array: { type: "message", content: [...] }
+    const content = (item as { content?: unknown }).content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      if (!part || typeof part !== "object") continue;
+      const partType = (part as { type?: unknown }).type;
+      if (
+        (partType === "output_text" || partType === "text") &&
+        typeof (part as { text?: unknown }).text === "string"
+      ) {
+        const t = (part as { text: string }).text;
+        if (t) return t;
+      }
+    }
+  }
+  return undefined;
+}
+
+function extractOpenAiResponsesErrorMessage(body: unknown): string {
+  if (!body || typeof body !== "object") return "Unknown error";
+  const error = (body as { error?: unknown }).error;
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return "Unknown error";
+}
+
+function buildStandaloneHtmlFallback(
+  userStory: UserStory,
+  spec: Spec
+): FrontendOutput {
+  const componentCards = spec.components
+    .map(
+      (c) =>
+        `<div class="card"><span class="badge">${c.type}</span><h2>${c.name}</h2><p>${c.description}</p></div>`
+    )
+    .join("\n    ");
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${spec.summary}</title>
+<style>
+  :root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#f1f5f9;--muted:#94a3b8;--accent:#6366f1}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem}
+  header h1{font-size:1.25rem;font-weight:600}
+  main{flex:1;padding:2rem;max-width:960px;margin:0 auto;width:100%}
+  .summary{color:var(--muted);font-size:.875rem;margin-bottom:1.5rem}
+  .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:1.25rem}
+  .card h2{font-size:1rem;font-weight:500;margin-bottom:.375rem}
+  .card p{color:var(--muted);font-size:.875rem;line-height:1.5}
+  .badge{display:inline-block;background:var(--accent);color:#fff;font-size:.7rem;padding:.1rem .45rem;border-radius:9999px;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<header><h1>${userStory.title}</h1></header>
+<main>
+  <p class="summary">${spec.summary}</p>
+  <div class="grid">
+    ${componentCards}
+  </div>
+</main>
+</body>
+</html>`;
+
+  return { html };
+}
+
 function resolveFrontAgentTimeoutMs(
   env: Record<string, string | undefined> = process.env
 ): number {
   const raw = env["FRONT_AGENT_TIMEOUT_MS"]?.trim();
-  if (!raw) return 60_000;
+  if (!raw) return 120_000;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     throw new Error("FRONT_AGENT_TIMEOUT_MS must be a positive finite number.");

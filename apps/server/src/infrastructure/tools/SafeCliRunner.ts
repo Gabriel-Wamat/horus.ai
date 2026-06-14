@@ -8,6 +8,7 @@ import {
 import {
   buildAllowlistedChildEnv,
   DEFAULT_INHERITED_CHILD_ENV_KEYS,
+  resolveWindowsExecutable,
 } from "../process/ChildProcessEnv.js";
 
 export type CliExecutionStatus =
@@ -106,6 +107,9 @@ export class SafeCliRunner {
     }
     const decision = await this.policy.evaluate(spec);
     if (!decision.allowed || !decision.normalized) {
+      console.log(
+        `[SafeCliRunner] rejected commandId=${spec.id} reason="${decision.reason ?? "command rejected"}"`
+      );
       return this.rejectedResult(
         spec,
         decision.reason ?? "command rejected",
@@ -117,6 +121,9 @@ export class SafeCliRunner {
       );
     }
 
+    console.log(
+      `[SafeCliRunner] running commandId=${spec.id} ${decision.normalized.executable} ${decision.normalized.args.slice(0, 4).join(" ")}`
+    );
     return this.spawnAndCollect(
       decision.normalized,
       start,
@@ -133,7 +140,7 @@ export class SafeCliRunner {
   ): Promise<CliExecutionResult> {
     let child: ReturnType<typeof spawn>;
     try {
-      child = spawn(spec.executable, spec.args, {
+      child = spawn(resolveWindowsExecutable(spec.executable), spec.args, {
         cwd: spec.cwd,
         env: this.buildChildEnv(spec.env),
         detached: true,
@@ -217,6 +224,9 @@ export class SafeCliRunner {
             : exitCode === 0
               ? "completed"
               : "failed";
+        console.log(
+          `[SafeCliRunner] finished commandId=${spec.id} status=${status} exitCode=${exitCode ?? "null"} durationMs=${nowMs() - start}`
+        );
         resolve({
           commandId: spec.id,
           executable: spec.executable,

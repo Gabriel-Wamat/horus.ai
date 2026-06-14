@@ -13,12 +13,14 @@ import type { StartWorkflowUseCase } from "../../../application/usecases/StartWo
 import type { ResumeWorkflowUseCase } from "../../../application/usecases/ResumeWorkflowUseCase.js";
 import type { GetWorkflowStatusUseCase } from "../../../application/usecases/GetWorkflowStatusUseCase.js";
 import type { RetryDecisionUseCase } from "../../../application/usecases/RetryDecisionUseCase.js";
+import type { CuratorReviewDecisionUseCase } from "../../../application/usecases/CuratorReviewDecisionUseCase.js";
 
 interface WorkflowRouteDeps {
   startUseCase: StartWorkflowUseCase;
   resumeUseCase: ResumeWorkflowUseCase;
   statusUseCase: GetWorkflowStatusUseCase;
   retryDecisionUseCase: RetryDecisionUseCase;
+  curatorReviewDecisionUseCase: CuratorReviewDecisionUseCase;
 }
 
 export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
@@ -65,6 +67,26 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
   router.post("/retry-decision", async (req: Request, res: Response) => {
     try {
       await deps.retryDecisionUseCase.execute(req.body);
+      res.status(204).send();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        res.status(400).json({ error: "Validation failed", issues: err.issues });
+        return;
+      }
+      if (err instanceof WorkflowResumeUnavailableError) {
+        res.status(409).json({
+          error: "Workflow checkpoint unavailable",
+          message: err.message,
+        });
+        return;
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/curator-review-decision", async (req: Request, res: Response) => {
+    try {
+      await deps.curatorReviewDecisionUseCase.execute(req.body);
       res.status(204).send();
     } catch (err) {
       if (err instanceof ZodError) {

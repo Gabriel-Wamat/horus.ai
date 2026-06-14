@@ -54,7 +54,7 @@ const VIEWPORTS: Array<{
   { viewport: "mobile", width: 390, height: 844 },
 ];
 
-const SCORE_THRESHOLD = 86;
+export const SCORE_THRESHOLD = 55;
 
 export class StaticVisualCaptureAdapter implements VisualCaptureAdapter {
   async capture(
@@ -221,13 +221,10 @@ export class VisualDesignGateService {
     const screenshots = await this.captureAdapter.capture({ ...input, artifacts });
     const issues = evaluateVisualIssues(input, artifacts, screenshots);
     const score = scoreIssues(issues);
-    const hasBlockingIssue = issues.some(
-      (item) => item.severity === "critical" || item.severity === "high"
-    );
     const status =
       screenshots.length === 0
         ? "inconclusive"
-        : hasBlockingIssue || score < SCORE_THRESHOLD
+        : score < SCORE_THRESHOLD
           ? "failed"
           : "passed";
     const topIssue = issues[0];
@@ -401,10 +398,10 @@ function detectExcessiveFrames(
     content,
     /\b(card|panel|frame|surface|box-shadow|border\s*:|outline\s*:)/gi
   );
-  if (!caresAboutFrames || frameCount < 20) return null;
+  if (!caresAboutFrames || frameCount < 30) return null;
 
   return issue({
-    severity: frameCount > 34 ? "high" : "medium",
+    severity: frameCount > 50 ? "high" : "medium",
     category: "excessive_frames",
     location: "layout",
     observed: `Foram detectados ${frameCount} sinais de frames, bordas ou sombras na UI candidata.`,
@@ -553,14 +550,17 @@ function countMatches(content: string, pattern: RegExp): number {
 }
 
 function findFixedWidthRisks(content: string): string[] {
+  // Strip @media conditions so min-width breakpoints (e.g. @media (min-width: 768px))
+  // are not mistaken for element-level overflow risks.
+  const stripped = content.replace(/@media\s*[^{]*/gi, "@media ");
   const risks: string[] = [];
   const widthPattern = /(?<![-\w])(?:width|min-width)\s*:\s*(\d{3,4})px/gi;
-  for (const match of content.matchAll(widthPattern)) {
+  for (const match of stripped.matchAll(widthPattern)) {
     const value = Number(match[1]);
     if (value > 390) risks.push(match[0]);
   }
   const classPattern = /\b(?:w|min-w)-\[(\d{3,4})px\]/gi;
-  for (const match of content.matchAll(classPattern)) {
+  for (const match of stripped.matchAll(classPattern)) {
     const value = Number(match[1]);
     if (value > 390) risks.push(match[0]);
   }

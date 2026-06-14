@@ -11,7 +11,10 @@ import type {
   ProjectFileContentResponse,
   ProjectFileEntry,
   SaveProjectFileRequest,
+  WorkflowState,
+  AgentResult,
 } from "@u-build/shared";
+import { getLatestSuccessfulAgentResult } from "@u-build/shared";
 import { projectFilesApi } from "../../api/projectFilesApi.js";
 import { CodeViewer } from "./components/CodeViewer.js";
 import { FileTabs } from "./components/FileTabs.js";
@@ -26,6 +29,163 @@ import "./styles/project-files.css";
 
 const projectFilesQueryClient = new QueryClient();
 
+interface WorkflowFile {
+  path: string;
+  content: string;
+  storyTitle: string;
+}
+
+function extractWorkflowFiles(state: WorkflowState): WorkflowFile[] {
+  const files: WorkflowFile[] = [];
+  for (const story of state.userStories) {
+    const results: AgentResult[] = state.agentResults[story.id] ?? [];
+    const frontResult = getLatestSuccessfulAgentResult(results, "front");
+    if (frontResult?.status !== "success") continue;
+    const changeSet = frontResult.output["codeChangeSet"] as {
+      operations: Array<{
+        targetPath: string;
+        afterContent: string | null;
+        changeType: string;
+      }>;
+    } | null | undefined;
+    if (!changeSet?.operations) continue;
+    for (const op of changeSet.operations) {
+      if (op.changeType !== "delete" && op.afterContent) {
+        files.push({
+          path: op.targetPath,
+          content: op.afterContent,
+          storyTitle: story.title,
+        });
+      }
+    }
+  }
+  return files;
+}
+
+function WorkflowFilesViewer({
+  files,
+  threadId,
+}: {
+  readonly files: WorkflowFile[];
+  readonly threadId?: string;
+}): JSX.Element {
+  const [activePath, setActivePath] = useState<string>(files[0]?.path ?? "");
+  const activeFile = files.find((f) => f.path === activePath) ?? files[0];
+
+  return (
+    <section className="project-files-workbench">
+      <aside className="project-files-sidebar-panel">
+        <div className="project-files-sidebar-head">
+          <strong>Arquivos gerados</strong>
+          <span>{files.length}</span>
+        </div>
+        <div style={{ overflowY: "auto", flex: 1 }}>
+          {files.map((f) => {
+            const name = f.path.split("/").pop() ?? f.path;
+            const isActive = activePath === f.path;
+            return (
+              <button
+                key={f.path}
+                type="button"
+                title={f.path}
+                onClick={() => setActivePath(f.path)}
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  padding: "6px 12px",
+                  textAlign: "left",
+                  background: isActive
+                    ? "var(--project-files-bd-active, rgba(20,199,123,0.12))"
+                    : "transparent",
+                  border: "none",
+                  borderLeft: isActive
+                    ? "2px solid var(--project-files-p, #14c77b)"
+                    : "2px solid transparent",
+                  cursor: "pointer",
+                  gap: 8,
+                  alignItems: "center",
+                  color: isActive
+                    ? "var(--project-files-t, #f1f4f2)"
+                    : "var(--project-files-t2, #a4adb3)",
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+
+      <main className="project-files-main-panel">
+        {activeFile ? (
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "6px 16px",
+                borderBottom: "1px solid var(--project-files-bd, #262c30)",
+                background: "var(--project-files-s2, #181d1f)",
+                flexShrink: 0,
+                minHeight: 36,
+              }}
+            >
+              <code
+                style={{
+                  fontSize: 11,
+                  color: "var(--project-files-t2, #a4adb3)",
+                  fontFamily: "monospace",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {activeFile.path}
+              </code>
+              {threadId && (
+                <a
+                  href={`/api/workflow/download/${threadId}`}
+                  download
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: 12,
+                    color: "var(--project-files-p, #14c77b)",
+                    textDecoration: "none",
+                    flexShrink: 0,
+                  }}
+                >
+                  Baixar ZIP
+                </a>
+              )}
+            </div>
+            <pre
+              style={{
+                flex: 1,
+                overflow: "auto",
+                margin: 0,
+                padding: "16px",
+                fontFamily: "monospace",
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: "var(--project-files-t, #f1f4f2)",
+                background: "var(--project-files-bg, #0b0e0c)",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {activeFile.content}
+            </pre>
+          </div>
+        ) : null}
+      </main>
+    </section>
+  );
+}
+
 function getProjectRunId(project?: ProjectFileBrowserProject): string | null {
   return project?.latestRunId ?? null;
 }
@@ -38,7 +198,11 @@ function fileQueryKey(
   return ["project-files", "file", projectId, runId, path];
 }
 
-function ProjectFilesPageContent(): JSX.Element {
+function ProjectFilesPageContent({
+  workflowState,
+}: {
+  readonly workflowState?: WorkflowState;
+}): JSX.Element {
   const queryClient = useQueryClient();
   const [dirtyPaths, setDirtyPaths] = useState<Set<string>>(() => new Set());
   const projectsQuery = useQuery({
@@ -277,27 +441,36 @@ function ProjectFilesPageContent(): JSX.Element {
   const fileError = fileQuery.error instanceof Error ? fileQuery.error : null;
   const treeEntries = treeQuery.data?.entries ?? [];
 
+  const workflowFiles = useMemo(
+    () => (workflowState ? extractWorkflowFiles(workflowState) : []),
+    [workflowState]
+  );
+
+  const showWorkflowFiles = !projectsQuery.isLoading && projects.length === 0 && workflowFiles.length > 0;
+
   return (
     <div className="project-files-page">
-      <ProjectFilesToolbar
-        projects={projects}
-        selectedProjectId={state.selectedProjectId}
-        selectedProject={selectedProject}
-        tree={treeQuery.data}
-        search={state.search}
-        isRefreshing={
-          projectsQuery.isFetching || treeQuery.isFetching
-        }
-        hasUnsavedFiles={dirtyPaths.size > 0}
-        onSelectProject={selectProject}
-        onChangeSearch={state.setSearch}
-        onRefresh={() => {
-          void projectsQuery.refetch();
-          void treeQuery.refetch();
-          if (state.activePath) void fileQuery.refetch();
-        }}
-        onDownloadProject={downloadProject}
-      />
+      {!showWorkflowFiles && (
+        <ProjectFilesToolbar
+          projects={projects}
+          selectedProjectId={state.selectedProjectId}
+          selectedProject={selectedProject}
+          tree={treeQuery.data}
+          search={state.search}
+          isRefreshing={
+            projectsQuery.isFetching || treeQuery.isFetching
+          }
+          hasUnsavedFiles={dirtyPaths.size > 0}
+          onSelectProject={selectProject}
+          onChangeSearch={state.setSearch}
+          onRefresh={() => {
+            void projectsQuery.refetch();
+            void treeQuery.refetch();
+            if (state.activePath) void fileQuery.refetch();
+          }}
+          onDownloadProject={downloadProject}
+        />
+      )}
 
       {projectError ? (
         <section className="project-files-page-state is-error">
@@ -309,6 +482,11 @@ function ProjectFilesPageContent(): JSX.Element {
           <span className="project-files-loading-dot" aria-hidden="true" />
           <h2>Carregando projetos</h2>
         </section>
+      ) : showWorkflowFiles ? (
+        <WorkflowFilesViewer
+          files={workflowFiles}
+          {...(workflowState?.threadId ? { threadId: workflowState.threadId } : {})}
+        />
       ) : projects.length === 0 ? (
         <section className="project-files-page-state">
           <h2>Nenhum projeto disponível</h2>
@@ -363,10 +541,16 @@ function ProjectFilesPageContent(): JSX.Element {
   );
 }
 
-export function ProjectFilesPage(): JSX.Element {
+export function ProjectFilesPage({
+  workflowState,
+}: {
+  readonly workflowState?: WorkflowState;
+} = {}): JSX.Element {
   return (
     <QueryClientProvider client={projectFilesQueryClient}>
-      <ProjectFilesPageContent />
+      <ProjectFilesPageContent
+        {...(workflowState ? { workflowState } : {})}
+      />
     </QueryClientProvider>
   );
 }

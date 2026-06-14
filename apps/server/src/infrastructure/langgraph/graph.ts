@@ -9,6 +9,7 @@ import { createFrontAgentNode } from "./nodes/frontAgentNode.js";
 import { createQaAgentNode } from "./nodes/qaAgentNode.js";
 import { createCuratorAgentNode } from "./nodes/curatorAgentNode.js";
 import { retryCheckpointNode } from "./nodes/retryCheckpointNode.js";
+import { curatorReviewCheckpointNode } from "./nodes/curatorReviewCheckpointNode.js";
 import {
   defaultLangGraphDependencies,
   type LangGraphDependencies,
@@ -23,6 +24,7 @@ const FRONT_AGENT = "frontAgent" as const;
 const QA_AGENT = "qaAgent" as const;
 const CURATOR_AGENT = "curatorAgent" as const;
 const RETRY_CHECKPOINT = "retryCheckpoint" as const;
+const CURATOR_REVIEW_CHECKPOINT = "curatorReviewCheckpoint" as const;
 
 /**
  * Routing pattern: Odin sets routingDecision; this function reads it
@@ -103,7 +105,16 @@ function routeFromStart(
  */
 function routeAfterCurator(
   state: typeof UBuildStateAnnotation.State
-): typeof SPEC_AGENT | typeof ODIN_AGENT | typeof RETRY_CHECKPOINT | typeof END {
+):
+  | typeof SPEC_AGENT
+  | typeof ODIN_AGENT
+  | typeof RETRY_CHECKPOINT
+  | typeof CURATOR_REVIEW_CHECKPOINT
+  | typeof END {
+  if (state.status === "awaiting_human" && state.pendingCuratorReview !== null) {
+    return CURATOR_REVIEW_CHECKPOINT;
+  }
+
   if (state.status === "completed") return ODIN_AGENT;
   if (
     state.status === "cancelled" ||
@@ -128,6 +139,19 @@ function routeAfterCurator(
   if (state.pendingRetryApproval !== null) return RETRY_CHECKPOINT;
 
   // Retry available → back to odinAgent (reflection loop)
+  return ODIN_AGENT;
+}
+
+function routeAfterCuratorReviewCheckpoint(
+  state: typeof UBuildStateAnnotation.State
+): typeof ODIN_AGENT | typeof END {
+  if (
+    state.status === "completed" ||
+    state.status === "cancelled" ||
+    state.status === "error"
+  ) {
+    return END;
+  }
   return ODIN_AGENT;
 }
 
@@ -181,6 +205,7 @@ export function createWorkflowGraph(
       nodeIsolation.wrap("curator_agent", createCuratorAgentNode(dependencies))
     )
     .addNode(RETRY_CHECKPOINT, retryCheckpointNode)
+    .addNode(CURATOR_REVIEW_CHECKPOINT, curatorReviewCheckpointNode)
 
     // Main pipeline
     .addConditionalEdges(START, routeFromStart, [SPEC_AGENT, ODIN_AGENT])
@@ -208,11 +233,18 @@ export function createWorkflowGraph(
       SPEC_AGENT,
       ODIN_AGENT,
       RETRY_CHECKPOINT,
+      CURATOR_REVIEW_CHECKPOINT,
       END,
     ])
 
     // HITL escalation: user decides whether to continue retrying
     .addConditionalEdges(RETRY_CHECKPOINT, routeAfterRetryCheckpoint, [
+      ODIN_AGENT,
+      END,
+    ])
+
+    // Low-score review: user confirms or requests adjustment
+    .addConditionalEdges(CURATOR_REVIEW_CHECKPOINT, routeAfterCuratorReviewCheckpoint, [
       ODIN_AGENT,
       END,
     ]);

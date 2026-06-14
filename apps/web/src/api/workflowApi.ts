@@ -88,6 +88,19 @@ export const workflowApi = {
     await requireOk(res, "Enviar decisão de retry");
   },
 
+  curatorReviewDecision: async (
+    threadId: string,
+    userStoryId: string,
+    accepted: boolean
+  ): Promise<void> => {
+    const res = await fetch(`${BASE}/workflow/curator-review-decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ threadId, userStoryId, accepted }),
+    });
+    await requireOk(res, "Enviar decisão de revisão do curator");
+  },
+
   getStatus: async (threadId: string): Promise<WorkflowState | null> => {
     const res = await fetch(`${BASE}/workflow/status/${threadId}`);
     if (res.status === 404) return null;

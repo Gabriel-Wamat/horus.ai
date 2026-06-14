@@ -37,6 +37,7 @@ import {
 import type {
   AgentExecutionLedgerSink,
   ChatProgressSink,
+  CuratorReviewDecisionOptions,
   ProjectConstructionRunSink,
   ResumeWorkflowOptions,
   RetryDecisionOptions,
@@ -55,6 +56,7 @@ import type {
 export type {
   AgentExecutionLedgerSink,
   ChatProgressSink,
+  CuratorReviewDecisionOptions,
   ProjectConstructionRunSink,
   ResumeWorkflowOptions,
   RetryDecisionOptions,
@@ -394,6 +396,28 @@ export class WorkflowOrchestrator {
     );
   }
 
+  async curatorReviewDecision(options: CuratorReviewDecisionOptions): Promise<void> {
+    await this.assertResumableCheckpoint(options.threadId, "curatorReviewCheckpoint");
+
+    const config = {
+      configurable: { thread_id: options.threadId },
+      streamMode: "updates" as const,
+    };
+
+    if (options.accepted) {
+      this.emitWorkflowEvent({
+        type: "status_changed",
+        threadId: options.threadId,
+        status: "running",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const command = new Command({ resume: { accepted: options.accepted } });
+
+    void this.runGraphStream(command, config, options.threadId, options.userStoryId);
+  }
+
   async getStatus(threadId: string) {
     return this.storage.load(threadId);
   }
@@ -429,6 +453,7 @@ export class WorkflowOrchestrator {
     );
     // Track retryCount locally to enrich retry_started events
     let trackedRetryCount = 0;
+    let lastCuratorFeedback: { score: number; notes: string } | undefined;
     let deliveryBlockedMessage: string | undefined;
 
     try {
@@ -499,6 +524,17 @@ export class WorkflowOrchestrator {
           const newCount = nodeUpdate?.["retryCount"] as number | undefined;
           if (newCount !== undefined) trackedRetryCount = newCount;
 
+          const curFeedbackMap = nodeUpdate?.["curatorFeedback"] as
+            | Record<string, { score?: number; notes?: string }>
+            | undefined;
+          const curFeedbackEntry = userStoryId ? curFeedbackMap?.[userStoryId] : undefined;
+          if (curFeedbackEntry) {
+            lastCuratorFeedback = {
+              score: curFeedbackEntry.score ?? 0,
+              notes: curFeedbackEntry.notes ?? "",
+            };
+          }
+
           const pending = nodeUpdate?.["pendingRetryApproval"] as
             | PendingRetryApproval
             | null
@@ -514,6 +550,25 @@ export class WorkflowOrchestrator {
               score: pending.score,
               notes: pending.notes,
               missingItems: pending.missingItems,
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          const pendingReview = nodeUpdate?.["pendingCuratorReview"] as
+            | { userStoryId: string; score: number; notes: string }
+            | null
+            | undefined;
+
+          if (pendingReview) {
+            const previewSessionId =
+              (await this.storage.load(threadId))?.previewSessionId ?? null;
+            this.emitWorkflowEvent({
+              type: "awaiting_curator_review",
+              threadId,
+              userStoryId: pendingReview.userStoryId,
+              score: pendingReview.score,
+              notes: pendingReview.notes,
+              previewSessionId: previewSessionId ?? null,
               timestamp: new Date().toISOString(),
             });
           }
@@ -542,13 +597,6 @@ export class WorkflowOrchestrator {
           const fixTarget =
             hasFront && hasQa ? "both" : hasFront ? "front" : "qa";
 
-          const curFeedback = nodeUpdate?.["curatorFeedback"] as
-            | Record<string, { score?: number; notes?: string }>
-            | undefined;
-          const feedbackEntry = userStoryId
-            ? curFeedback?.[userStoryId]
-            : undefined;
-
           if (userStoryId) {
             this.emitWorkflowEvent({
               type: "retry_started",
@@ -556,8 +604,8 @@ export class WorkflowOrchestrator {
               userStoryId,
               retryCount: trackedRetryCount,
               fixTarget,
-              score: feedbackEntry?.score ?? 0,
-              notes: feedbackEntry?.notes ?? "",
+              score: lastCuratorFeedback?.score ?? 0,
+              notes: lastCuratorFeedback?.notes ?? "",
               timestamp: new Date().toISOString(),
             });
           }

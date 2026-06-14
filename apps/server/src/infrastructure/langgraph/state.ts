@@ -142,6 +142,16 @@ export const UBuildStateAnnotation = Annotation.Root({
     reducer: (_, next) => next,
     default: () => null,
   }),
+
+  // Set by curator when it passes but score < SCORE_THRESHOLD; triggers human review
+  pendingCuratorReview: Annotation<{
+    userStoryId: string;
+    score: number;
+    notes: string;
+  } | null>({
+    reducer: (_, next) => next,
+    default: () => null,
+  }),
 });
 
 export type UBuildState = typeof UBuildStateAnnotation.State;

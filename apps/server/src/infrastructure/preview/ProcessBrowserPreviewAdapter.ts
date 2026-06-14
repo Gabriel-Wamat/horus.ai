@@ -16,6 +16,7 @@ import {
 import {
   buildAllowlistedChildEnv,
   DEFAULT_INHERITED_CHILD_ENV_KEYS,
+  resolveWindowsExecutable,
 } from "../process/ChildProcessEnv.js";
 
 interface ManagedPreviewProcess {
@@ -126,8 +127,13 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       });
     }
 
+    console.log(
+      `[ProcessBrowserPreviewAdapter] start sessionId=${session.id} projectId=${project.id} url=${previewUrl}`
+    );
+
     const existing = this.processes.get(session.id);
     if (existing && !existing.exited) {
+      console.log(`[ProcessBrowserPreviewAdapter] reusing existing process pid=${existing.child.pid ?? "?"}`);
       await this.waitForReadiness(previewUrl, existing, project);
       return {
         previewUrl,
@@ -151,7 +157,11 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     }
 
     const command = await this.resolveCommand(project);
+    console.log(
+      `[ProcessBrowserPreviewAdapter] spawning sessionId=${session.id} command="${command.executable} ${command.args.join(" ")}" cwd=${command.cwd}`
+    );
     const managed = this.spawnManagedProcess(session.id, command, project);
+    console.log(`[ProcessBrowserPreviewAdapter] spawned pid=${managed.child.pid ?? "?"} — waiting for readiness at ${previewUrl}`);
     try {
       await this.waitForReadiness(previewUrl, managed, project);
     } catch (err) {
@@ -164,6 +174,9 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       );
     }
 
+    console.log(
+      `[ProcessBrowserPreviewAdapter] ready sessionId=${session.id} url=${previewUrl} durationMs=${nowMs() - managed.startedAt}`
+    );
     return {
       previewUrl,
       processId: managed.child.pid ?? null,
@@ -174,6 +187,9 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   async stop(session: PreviewSession): Promise<void> {
     const managed = this.processes.get(session.id);
     if (!managed) return;
+    console.log(
+      `[ProcessBrowserPreviewAdapter] stopping sessionId=${session.id} pid=${managed.child.pid ?? "?"}`
+    );
     await this.stopManagedProcess(managed);
     this.processes.delete(session.id);
   }
@@ -203,7 +219,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     command: NormalizedCliCommandSpec,
     project: FrontendProject
   ): ManagedPreviewProcess {
-    const child = spawn(command.executable, command.args, {
+    const child = spawn(resolveWindowsExecutable(command.executable), command.args, {
       cwd: command.cwd,
       env: buildAllowlistedChildEnv(command.env, this.inheritedEnvKeys),
       detached: true,
@@ -234,11 +250,17 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       managed.exitCode = exitCode;
       managed.signal = signal;
       this.processes.delete(sessionId);
+      console.log(
+        `[ProcessBrowserPreviewAdapter] process exited sessionId=${sessionId} pid=${child.pid ?? "?"} exitCode=${exitCode ?? "null"} signal=${signal ?? "none"} durationMs=${nowMs() - managed.startedAt}`
+      );
     });
     child.once("error", (err) => {
       managed.exited = true;
       managed.stderrTail = appendTail(managed.stderrTail, Buffer.from(err.message), this.outputTailLimit);
       this.processes.delete(sessionId);
+      console.log(
+        `[ProcessBrowserPreviewAdapter] process error sessionId=${sessionId} pid=${child.pid ?? "?"} error="${err.message}"`
+      );
     });
 
     this.processes.set(sessionId, managed);
