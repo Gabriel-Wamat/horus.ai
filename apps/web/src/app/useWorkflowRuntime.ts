@@ -13,6 +13,7 @@ import type { RetryApprovalPayload } from "../components/RetryApproval.js";
 import type { CuratorReviewPayload } from "../components/CuratorReviewCheckpoint.js";
 
 const SESSION_THREAD_KEY = "horus_thread_id";
+const SESSION_CURATOR_REVIEW_KEY = "horus_curator_review";
 
 function readPersistedThreadId(): string | null {
   try { return sessionStorage.getItem(SESSION_THREAD_KEY); } catch { return null; }
@@ -22,6 +23,25 @@ function writePersistedThreadId(id: string | null): void {
   try {
     if (id) sessionStorage.setItem(SESSION_THREAD_KEY, id);
     else sessionStorage.removeItem(SESSION_THREAD_KEY);
+  } catch { /* ignore */ }
+}
+
+function readPersistedCuratorReview(threadId: string): CuratorReviewPayload | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_CURATOR_REVIEW_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { threadId: string; payload: CuratorReviewPayload };
+    return parsed.threadId === threadId ? parsed.payload : null;
+  } catch { return null; }
+}
+
+function writePersistedCuratorReview(threadId: string | null, payload: CuratorReviewPayload | null): void {
+  try {
+    if (threadId && payload) {
+      sessionStorage.setItem(SESSION_CURATOR_REVIEW_KEY, JSON.stringify({ threadId, payload }));
+    } else {
+      sessionStorage.removeItem(SESSION_CURATOR_REVIEW_KEY);
+    }
   } catch { /* ignore */ }
 }
 
@@ -119,8 +139,17 @@ export function useWorkflowRuntime({
   const [pendingSpec, setPendingSpec] = useState<{ userStoryId: string; spec: Spec } | null>(null);
   const [pendingRetry, setPendingRetry] = useState<RetryApprovalPayload | null>(null);
   const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
-  const [pendingCuratorReview, setPendingCuratorReview] = useState<CuratorReviewPayload | null>(null);
+  const [pendingCuratorReview, setPendingCuratorReview] = useState<CuratorReviewPayload | null>(
+    () => {
+      const tid = readPersistedThreadId();
+      return tid ? readPersistedCuratorReview(tid) : null;
+    }
+  );
   const [isCuratorReviewSubmitting, setIsCuratorReviewSubmitting] = useState(false);
+
+  useEffect(() => {
+    writePersistedCuratorReview(threadId, pendingCuratorReview);
+  }, [threadId, pendingCuratorReview]);
   const [isStartingWorkflow, setIsStartingWorkflow] = useState(false);
   const { events, isConnected } = useEventStream(threadId);
   const autoApproveBuildRef = useRef(false);
