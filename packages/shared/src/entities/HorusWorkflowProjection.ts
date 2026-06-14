@@ -259,6 +259,7 @@ export function resolveHorusWorkflowNodeFromEvent(
     return HORUS_NODE_BY_AGENT[event.agentName];
   }
   if (event.type === "awaiting_retry_approval") return "retryCheckpoint";
+  if (event.type === "awaiting_curator_review") return "curatorAgent";
   if (event.type === "retry_started") return "odinAgent";
   if (event.type === "recovery_decision") {
     return event.decision.requiresHumanApproval ? "retryCheckpoint" : "odinAgent";
@@ -301,6 +302,8 @@ export function titleForWorkflowEvent(event: WorkflowEvent): string {
       return `${event.commandId} aguarda aprovação`;
     case "awaiting_approval":
       return "Aguardando aprovação da spec";
+    case "awaiting_curator_review":
+      return "Aguardando revisão do curador";
     case "retry_started":
       return `Retry ${event.retryCount} iniciado`;
     case "awaiting_retry_approval":
@@ -326,6 +329,7 @@ export function summaryForWorkflowEvent(event: WorkflowEvent): string | undefine
   }
   if (event.type === "retry_started") return event.notes;
   if (event.type === "awaiting_retry_approval") return event.notes;
+  if (event.type === "awaiting_curator_review") return event.notes;
   if (event.type === "recovery_decision") {
     return event.decision.operatorMessage;
   }
@@ -475,6 +479,13 @@ export function loopMetadataForWorkflowEvent(event: WorkflowEvent): {
         eventType: "awaiting_approval",
         actorKind: "human",
         actorName: "Retry approval",
+      };
+    case "awaiting_curator_review":
+      return {
+        phase: "reviewing",
+        eventType: "awaiting_approval",
+        actorKind: "human",
+        actorName: "Curator review",
       };
     case "recovery_decision":
       return {

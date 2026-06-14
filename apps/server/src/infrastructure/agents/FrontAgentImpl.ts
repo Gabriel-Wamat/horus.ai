@@ -238,8 +238,20 @@ ${filesBlock}
       ),
       structuralPatchIntents: result.structuralPatchIntents.map(
         (intent, index) => ({
-          ...intent,
           id: intent.id ?? `front-structural-${index + 1}`,
+          kind: intent.kind,
+          targetPath: intent.targetPath,
+          namedImports: intent.namedImports,
+          targetSymbolId: intent.targetSymbolId ?? undefined,
+          targetSymbolName: intent.targetSymbolName ?? undefined,
+          targetSymbolKind: intent.targetSymbolKind ?? undefined,
+          position: intent.position ?? undefined,
+          content: intent.content ?? undefined,
+          newName: intent.newName ?? undefined,
+          importSource: intent.importSource ?? undefined,
+          defaultImport: intent.defaultImport ?? undefined,
+          namespaceImport: intent.namespaceImport ?? undefined,
+          rationale: intent.rationale ?? undefined,
         })
       ),
       inspectedFiles: codeContext.inspectedFiles,

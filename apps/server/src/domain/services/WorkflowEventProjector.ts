@@ -283,6 +283,18 @@ function projectWorkflowEventToChatMessage(
           missingItems: event.missingItems,
         },
       };
+    case "awaiting_curator_review":
+      return {
+        body: "Aguardando revisão do curador.",
+        eventType: "action_state",
+        visibility: "user",
+        dedupeKey: `awaiting_curator_review:${event.threadId}:${event.userStoryId}`,
+        metadata: {
+          userStoryId: event.userStoryId,
+          score: event.score,
+          previewSessionId: event.previewSessionId,
+        },
+      };
     case "recovery_decision":
       return {
         body: event.decision.operatorMessage,

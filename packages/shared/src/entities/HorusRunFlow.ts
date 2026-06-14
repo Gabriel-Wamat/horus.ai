@@ -72,6 +72,7 @@ export const HorusRunEventTypeSchema = z.enum([
   "awaiting_approval",
   "retry_started",
   "awaiting_retry_approval",
+  "awaiting_curator_review",
   "recovery_decision",
   "fallback_executed",
   "status_changed",

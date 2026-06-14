@@ -6,15 +6,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* \
   && corepack enable
 
-FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY apps/server/package.json apps/server/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY packages/shared/package.json packages/shared/package.json
-RUN pnpm install --frozen-lockfile
-
-FROM deps AS build
+FROM base AS build
 COPY . .
+RUN pnpm install --frozen-lockfile
 RUN pnpm build
 RUN pnpm --filter @u-build/server --prod deploy /prod/server
 
