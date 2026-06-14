@@ -162,6 +162,7 @@ export function useWorkflowRuntime({
           });
           break;
         case "awaiting_curator_review":
+          void workflowApi.getStatus(threadId).then(setWorkflowState);
           setPendingCuratorReview({
             userStoryId: event.userStoryId,
             score: event.score,
