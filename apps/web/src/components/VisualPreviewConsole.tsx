@@ -151,7 +151,34 @@ export function VisualPreviewConsole({
       );
   }, [workflowState]);
 
-  if (!isLoadingProjects && workflowHtmlArtifacts.length > 0 && !session) {
+  if (isLoadingProjects && workflowHtmlArtifacts.length === 0 && !session) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "calc(100vh - 82px)",
+          gap: 12,
+          color: "var(--t3, #6f7a80)",
+        }}
+      >
+        <svg
+          className="animate-spin"
+          style={{ width: 24, height: 24 }}
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <span style={{ fontSize: 13 }}>Carregando preview…</span>
+      </div>
+    );
+  }
+
+  if (workflowHtmlArtifacts.length > 0 && !session) {
     const activeId =
       selectedWorkflowStoryId || (workflowHtmlArtifacts[0]?.storyId ?? "");
     const activeArtifact =
