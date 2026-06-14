@@ -16,19 +16,19 @@ const SESSION_THREAD_KEY = "horus_thread_id";
 const SESSION_CURATOR_REVIEW_KEY = "horus_curator_review";
 
 function readPersistedThreadId(): string | null {
-  try { return sessionStorage.getItem(SESSION_THREAD_KEY); } catch { return null; }
+  try { return localStorage.getItem(SESSION_THREAD_KEY); } catch { return null; }
 }
 
 function writePersistedThreadId(id: string | null): void {
   try {
-    if (id) sessionStorage.setItem(SESSION_THREAD_KEY, id);
-    else sessionStorage.removeItem(SESSION_THREAD_KEY);
+    if (id) localStorage.setItem(SESSION_THREAD_KEY, id);
+    else localStorage.removeItem(SESSION_THREAD_KEY);
   } catch { /* ignore */ }
 }
 
 function readPersistedCuratorReview(threadId: string): CuratorReviewPayload | null {
   try {
-    const raw = sessionStorage.getItem(SESSION_CURATOR_REVIEW_KEY);
+    const raw = localStorage.getItem(SESSION_CURATOR_REVIEW_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { threadId: string; payload: CuratorReviewPayload };
     return parsed.threadId === threadId ? parsed.payload : null;
@@ -38,9 +38,9 @@ function readPersistedCuratorReview(threadId: string): CuratorReviewPayload | nu
 function writePersistedCuratorReview(threadId: string | null, payload: CuratorReviewPayload | null): void {
   try {
     if (threadId && payload) {
-      sessionStorage.setItem(SESSION_CURATOR_REVIEW_KEY, JSON.stringify({ threadId, payload }));
+      localStorage.setItem(SESSION_CURATOR_REVIEW_KEY, JSON.stringify({ threadId, payload }));
     } else {
-      sessionStorage.removeItem(SESSION_CURATOR_REVIEW_KEY);
+      localStorage.removeItem(SESSION_CURATOR_REVIEW_KEY);
     }
   } catch { /* ignore */ }
 }
@@ -122,7 +122,7 @@ export function useWorkflowRuntime({
     writePersistedThreadId(id);
   }, []);
 
-  // Restore workflow state on page refresh when threadId came from sessionStorage
+  // Restore workflow state on mount when threadId came from localStorage
   const restoredRef = useRef(false);
   useEffect(() => {
     if (restoredRef.current || !threadId) return;
