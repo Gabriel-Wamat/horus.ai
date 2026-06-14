@@ -14,6 +14,7 @@ import { StartWorkflowUseCase } from "../../application/usecases/StartWorkflowUs
 import { ResumeWorkflowUseCase } from "../../application/usecases/ResumeWorkflowUseCase.js";
 import { GetWorkflowStatusUseCase } from "../../application/usecases/GetWorkflowStatusUseCase.js";
 import { RetryDecisionUseCase } from "../../application/usecases/RetryDecisionUseCase.js";
+import { CuratorReviewDecisionUseCase } from "../../application/usecases/CuratorReviewDecisionUseCase.js";
 import { ListFrontendProjectsUseCase } from "../../application/usecases/ListFrontendProjectsUseCase.js";
 import { CreatePreviewSessionUseCase } from "../../application/usecases/CreatePreviewSessionUseCase.js";
 import { StartPreviewSessionUseCase } from "../../application/usecases/StartPreviewSessionUseCase.js";
@@ -308,6 +309,7 @@ export async function createApp(
   const resumeUseCase = new ResumeWorkflowUseCase(orchestrator);
   const statusUseCase = new GetWorkflowStatusUseCase(orchestrator);
   const retryDecisionUseCase = new RetryDecisionUseCase(orchestrator);
+  const curatorReviewDecisionUseCase = new CuratorReviewDecisionUseCase(orchestrator);
   const listProjectsUseCase = new ListFrontendProjectsUseCase(previewRuntime);
   const createSessionUseCase = new CreatePreviewSessionUseCase(previewRuntime);
   const startSessionUseCase = new StartPreviewSessionUseCase(previewRuntime);
@@ -393,6 +395,7 @@ export async function createApp(
       resumeUseCase,
       statusUseCase,
       retryDecisionUseCase,
+      curatorReviewDecisionUseCase,
     })
   );
   app.use(

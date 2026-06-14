@@ -9,6 +9,7 @@ import {
 import { useWorkspaceFolders } from "./app/useWorkspaceFolders.js";
 import { useWorkflowRuntime } from "./app/useWorkflowRuntime.js";
 import { RetryApproval } from "./components/RetryApproval.js";
+import { CuratorReviewCheckpoint } from "./components/CuratorReviewCheckpoint.js";
 import { ArtifactsPanel } from "./components/ArtifactsPanel.js";
 import { Shell } from "./components/Shell.js";
 import { LlmSettingsModal } from "./components/LlmSettingsModal.js";
@@ -218,6 +219,15 @@ export function App(): JSX.Element {
           isSubmitting={workflow.isRetrySubmitting}
         />
       )}
+      {workflow.pendingCuratorReview && workflow.threadId && (
+        <CuratorReviewCheckpoint
+          payload={workflow.pendingCuratorReview}
+          onAccept={() => workflow.handleCuratorReviewDecision(true)}
+          onRequestAdjustment={() => workflow.handleCuratorReviewDecision(false)}
+          onOpenPreview={() => setAppMode("preview")}
+          isSubmitting={workflow.isCuratorReviewSubmitting}
+        />
+      )}
       {workflow.workflowState?.status === "cancelled" && (
         <CancelledPanel onRestart={workflow.resetWorkflow} />
       )}
@@ -229,6 +239,7 @@ export function App(): JSX.Element {
   const hasActionPanels = Boolean(
     workflow.threadId ||
       workflow.pendingRetry ||
+      workflow.pendingCuratorReview ||
       workflow.workflowState?.status === "cancelled" ||
       workflow.workflowState?.status === "completed"
   );
@@ -238,9 +249,12 @@ export function App(): JSX.Element {
       <VisualPreviewConsole
         workspaceFolderId={workspace.selectedWorkspaceFolderId || undefined}
         userStoryId={workspace.selectedStoryId}
+        {...(workflow.workflowState ? { workflowState: workflow.workflowState } : {})}
       />
     ) : appMode === "files" ? (
-      <ProjectFilesPage />
+      <ProjectFilesPage
+        {...(workflow.workflowState ? { workflowState: workflow.workflowState } : {})}
+      />
     ) : appMode === "agents" ? (
       <AgentFlowPage workflowState={agentFlowState} events={workflow.events} />
     ) : appMode === "telemetry" ? (

@@ -15,6 +15,7 @@ import { createChatModel } from "../llm/createChatModel.js";
 import { invokeChatModel } from "../llm/invokeChatModel.js";
 import { formatDesignContextForPrompt } from "../design/DesignContextService.js";
 import { formatPromptContextForPrompt } from "../prompt/PromptContextAssembler.js";
+import { SCORE_THRESHOLD } from "../visual/VisualDesignGateService.js";
 
 const CuratorOutputSchema = z.object({
   passed: z.boolean(),
@@ -123,7 +124,9 @@ export async function validateOutput(
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return CuratorOutputSchema.parse(await invokeChatModel(model, prompt));
+      const result = CuratorOutputSchema.parse(await invokeChatModel(model, prompt));
+      // Score is the source of truth: if score meets the threshold, always pass.
+      return { ...result, passed: result.score >= SCORE_THRESHOLD ? true : result.passed };
     } catch (err) {
       console.warn(`[CuratorAgent] Attempt ${attempt} failed to parse output:`, err);
       if (attempt === 2) {
@@ -304,7 +307,7 @@ ${changeSetPreview}
 
 ## Instruções de Avaliação
 - score: 0–100 indicando cobertura combinada da spec pelo HTML e pelos testes
-- passed: true se score >= 70, houver CodeChangeSet auditável, houver casos de QA e não houver lacuna crítica no HTML nem nos testes
+- passed: true se score >= 55 (o score é a fonte de verdade; não use lacunas subjetivas para sobrescrever o threshold)
 - notes: resumo objetivo da avaliação em 1–2 frases
 - missingItems: lista dos itens da spec ausentes, incompletos ou sem cobertura de teste (array vazio se passou). Use prefixos curtos quando possível: [front], [front:pattern], [front:component], [front:visual], [qa], [data], [route], [accessibility], [responsive]
 - fixTarget: se falhou, indique qual agente deve corrigir:

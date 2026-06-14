@@ -200,5 +200,9 @@ function extractPendingCheckpoints(
 function isWorkflowCheckpointNodeName(
   value: unknown
 ): value is WorkflowCheckpointNode["nodeName"] {
-  return value === "hitlCheckpoint" || value === "retryCheckpoint";
+  return (
+    value === "hitlCheckpoint" ||
+    value === "retryCheckpoint" ||
+    value === "curatorReviewCheckpoint"
+  );
 }

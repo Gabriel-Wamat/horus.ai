@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type {
   LlmProviderCapability,
   LlmSettingsDraft,
@@ -10,6 +10,20 @@ import type {
 import { workflowApi } from "../api/workflowApi.js";
 import { useEventStream } from "../hooks/useEventStream.js";
 import type { RetryApprovalPayload } from "../components/RetryApproval.js";
+import type { CuratorReviewPayload } from "../components/CuratorReviewCheckpoint.js";
+
+const SESSION_THREAD_KEY = "horus_thread_id";
+
+function readPersistedThreadId(): string | null {
+  try { return sessionStorage.getItem(SESSION_THREAD_KEY); } catch { return null; }
+}
+
+function writePersistedThreadId(id: string | null): void {
+  try {
+    if (id) sessionStorage.setItem(SESSION_THREAD_KEY, id);
+    else sessionStorage.removeItem(SESSION_THREAD_KEY);
+  } catch { /* ignore */ }
+}
 
 export function useWorkflowRuntime({
   selectedWorkspaceFolderId,
@@ -62,6 +76,8 @@ export function useWorkflowRuntime({
   setPendingSpec: Dispatch<SetStateAction<{ userStoryId: string; spec: Spec } | null>>;
   pendingRetry: RetryApprovalPayload | null;
   isRetrySubmitting: boolean;
+  pendingCuratorReview: CuratorReviewPayload | null;
+  isCuratorReviewSubmitting: boolean;
   isStartingWorkflow: boolean;
   events: ReturnType<typeof useEventStream>["events"];
   isConnected: boolean;
@@ -75,16 +91,36 @@ export function useWorkflowRuntime({
   ) => Promise<void>;
   handleSpecApproval: (approved: boolean, editedSpec?: Spec) => Promise<void>;
   handleRetryDecision: (continueRetry: boolean) => Promise<void>;
+  handleCuratorReviewDecision: (accepted: boolean) => Promise<void>;
   resetWorkflow: () => void;
 } {
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadId, setThreadIdState] = useState<string | null>(readPersistedThreadId);
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
+
+  const setThreadId = useCallback((id: string | null): void => {
+    setThreadIdState(id);
+    writePersistedThreadId(id);
+  }, []);
+
+  // Restore workflow state on page refresh when threadId came from sessionStorage
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !threadId) return;
+    restoredRef.current = true;
+    void workflowApi.getStatus(threadId)
+      .then(setWorkflowState)
+      .catch(() => setThreadId(null));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [llmProviders, setLlmProviders] = useState<LlmProviderCapability[]>([]);
   const [llmProfile, setLlmProfile] = useState<LlmSettingsProfile | null>(null);
   const [isLoadingLlmProfile, setIsLoadingLlmProfile] = useState(false);
   const [pendingSpec, setPendingSpec] = useState<{ userStoryId: string; spec: Spec } | null>(null);
   const [pendingRetry, setPendingRetry] = useState<RetryApprovalPayload | null>(null);
   const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
+  const [pendingCuratorReview, setPendingCuratorReview] = useState<CuratorReviewPayload | null>(null);
+  const [isCuratorReviewSubmitting, setIsCuratorReviewSubmitting] = useState(false);
   const [isStartingWorkflow, setIsStartingWorkflow] = useState(false);
   const { events, isConnected } = useEventStream(threadId);
   const autoApproveBuildRef = useRef(false);
@@ -125,6 +161,14 @@ export function useWorkflowRuntime({
             missingItems: event.missingItems,
           });
           break;
+        case "awaiting_curator_review":
+          setPendingCuratorReview({
+            userStoryId: event.userStoryId,
+            score: event.score,
+            notes: event.notes,
+            previewSessionId: event.previewSessionId,
+          });
+          break;
         case "status_changed":
           if (
             event.status === "completed" ||
@@ -133,7 +177,10 @@ export function useWorkflowRuntime({
           ) {
             void workflowApi.getStatus(threadId).then(setWorkflowState);
           }
-          if (event.status === "running") setPendingRetry(null);
+          if (event.status === "running") {
+            setPendingRetry(null);
+            setPendingCuratorReview(null);
+          }
           break;
       }
     }
@@ -187,6 +234,7 @@ export function useWorkflowRuntime({
     setWorkflowState(null);
     setPendingSpec(null);
     setPendingRetry(null);
+    setPendingCuratorReview(null);
     processedCountRef.current = 0;
     setSelectedStoryId(stories[0]?.id ?? null);
     setStorySpecTab("spec");
@@ -236,6 +284,26 @@ export function useWorkflowRuntime({
     setPendingSpec(null);
   };
 
+  const handleCuratorReviewDecision = async (accepted: boolean): Promise<void> => {
+    if (!threadId || !pendingCuratorReview) return;
+
+    setIsCuratorReviewSubmitting(true);
+    try {
+      await workflowApi.curatorReviewDecision(
+        threadId,
+        pendingCuratorReview.userStoryId,
+        accepted
+      );
+      if (!accepted) {
+        const state = await workflowApi.getStatus(threadId);
+        setWorkflowState(state);
+      }
+      setPendingCuratorReview(null);
+    } finally {
+      setIsCuratorReviewSubmitting(false);
+    }
+  };
+
   const handleRetryDecision = async (continueRetry: boolean): Promise<void> => {
     if (!threadId || !pendingRetry) return;
 
@@ -255,6 +323,7 @@ export function useWorkflowRuntime({
   const resetWorkflow = (): void => {
     setThreadId(null);
     setPendingSpec(null);
+    setPendingCuratorReview(null);
     setWorkflowState(null);
     setStorySpecTab("story");
   };
@@ -297,12 +366,15 @@ export function useWorkflowRuntime({
     setPendingSpec,
     pendingRetry,
     isRetrySubmitting,
+    pendingCuratorReview,
+    isCuratorReviewSubmitting,
     isStartingWorkflow,
     events,
     isConnected,
     handleStart,
     handleSpecApproval,
     handleRetryDecision,
+    handleCuratorReviewDecision,
     resetWorkflow,
   };
 }

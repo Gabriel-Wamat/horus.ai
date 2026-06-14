@@ -94,6 +94,10 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
         : undefined;
     }
 
+    console.log(
+      `[frontAgentNode] context: codeContext=${codeContext ? `${codeContext.files.length} files` : "none"} snapshot=${projectSnapshot ? "yes" : "no"} projectId=${state.frontendProjectId ?? "none"} hasCuratorFeedback=${Boolean(curatorFeedback)}`
+    );
+
     const llmSettings = await deps.getRuntimeLlmSettings(state.threadId);
     const basePromptContext = deps.buildPromptContext
       ? await deps.buildPromptContext({
@@ -175,6 +179,11 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
     });
     const hasStructuralPatchIntents = expandedStructuralIntents.length > 0;
     const hasFileOperations = Boolean(frontendOutput.operations?.length);
+
+    console.log(
+      `[frontAgentNode] output path=${hasStructuralPatchIntents ? "structural-patch" : hasFileOperations ? "file-operations" : "html-standalone"} patches=${expandedStructuralIntents.length} ops=${frontendOutput.operations?.length ?? 0} htmlLen=${html.length}`
+    );
+
     const codeChangeSet =
       hasStructuralPatchIntents || hasFileOperations
         ? await buildFileCodeChangeSet({
@@ -206,6 +215,12 @@ export function createFrontAgentNode(deps: LangGraphDependencies) {
       hasStructuralPatchIntents,
       hasFileOperations,
     });
+
+    if (toolLoopResult) {
+      console.log(
+        `[frontAgentNode] tool loop status=${toolLoopResult.status} changedFiles=${toolLoopResult.changedFiles.length} [${toolLoopResult.changedFiles.join(", ")}]`
+      );
+    }
 
     if (
       toolLoopResult &&

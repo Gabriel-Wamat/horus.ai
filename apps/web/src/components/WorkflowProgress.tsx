@@ -172,6 +172,12 @@ function EventLabel({ event }: { event: WorkflowEvent }): JSX.Element {
           {event.retryCount} tentativas sem aprovação (score: {event.score}/100) — aguardando sua decisão
         </span>
       );
+    case "awaiting_curator_review":
+      return (
+        <span style={{ color: "var(--warn)" }}>
+          Curator aprovou com score baixo ({event.score}/100) — aguardando revisão humana
+        </span>
+      );
     case "error":
       return <span style={{ color: "var(--danger)" }}>Erro: {event.message}</span>;
     default:
@@ -188,7 +194,9 @@ export function WorkflowProgress({
   const errorMsg = hasError(events);
   const retryInfo = getRetryInfo(events);
   const subSteps = getImplementationSubSteps(events);
-  const isAwaiting = events.some((e) => e.type === "awaiting_retry_approval");
+  const isAwaiting = events.some(
+    (e) => e.type === "awaiting_retry_approval" || e.type === "awaiting_curator_review"
+  );
 
   const visibleEvents = events
     .filter((e) => e.type !== "status_changed" || e.status !== "idle")
@@ -284,7 +292,7 @@ export function WorkflowProgress({
               <div key={i} className="message" style={{ maxWidth: "100%" }}>
                 <div className="message-meta">
                   <span>
-                    {evt.type === "retry_started" || evt.type === "awaiting_retry_approval"
+                    {evt.type === "retry_started" || evt.type === "awaiting_retry_approval" || evt.type === "awaiting_curator_review"
                       ? "Retry"
                       : evt.type === "error"
                       ? "Error"
@@ -295,7 +303,7 @@ export function WorkflowProgress({
                 <div className="message-body" style={{ display: "flex", gap: 8 }}>
                   <span
                     className={`step-dot ${
-                      evt.type === "retry_started" || evt.type === "awaiting_retry_approval"
+                      evt.type === "retry_started" || evt.type === "awaiting_retry_approval" || evt.type === "awaiting_curator_review"
                         ? ""
                         : evt.type === "error"
                         ? "failed"
@@ -305,8 +313,8 @@ export function WorkflowProgress({
                       width: 7,
                       height: 7,
                       marginTop: 7,
-                      boxShadow: evt.type === "retry_started" || evt.type === "awaiting_retry_approval" ? "none" : undefined,
-                      background: evt.type === "retry_started" || evt.type === "awaiting_retry_approval" ? "var(--warn)" : undefined,
+                      boxShadow: evt.type === "retry_started" || evt.type === "awaiting_retry_approval" || evt.type === "awaiting_curator_review" ? "none" : undefined,
+                      background: evt.type === "retry_started" || evt.type === "awaiting_retry_approval" || evt.type === "awaiting_curator_review" ? "var(--warn)" : undefined,
                     }}
                   />
                   <EventLabel event={evt} />

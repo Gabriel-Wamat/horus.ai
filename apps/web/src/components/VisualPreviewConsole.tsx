@@ -4,7 +4,10 @@ import type {
   PreviewDeviceName,
   PreviewEvent,
   PreviewSession,
+  WorkflowState,
+  AgentResult,
 } from "@u-build/shared";
+import { getLatestSuccessfulAgentResult } from "@u-build/shared";
 import { previewApi } from "../api/previewApi.js";
 import { usePreviewEvents } from "../hooks/usePreviewEvents.js";
 import { ExecutionConsolePanel } from "./ExecutionConsolePanel.js";
@@ -25,9 +28,11 @@ import { usePreviewChatRuntime } from "../features/visual-preview/usePreviewChat
 export function VisualPreviewConsole({
   workspaceFolderId,
   userStoryId,
+  workflowState,
 }: {
   readonly workspaceFolderId: string | undefined;
   readonly userStoryId: string | null;
+  readonly workflowState?: WorkflowState;
 }): JSX.Element {
   const [projects, setProjects] = useState<FrontendProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -125,6 +130,102 @@ export function VisualPreviewConsole({
       .then(setSession)
       .catch(() => undefined);
   }, [latestEvent, session?.id]);
+
+  const [selectedWorkflowStoryId, setSelectedWorkflowStoryId] = useState("");
+
+  const workflowHtmlArtifacts = useMemo(() => {
+    if (!workflowState) return [];
+    return workflowState.userStories
+      .map((story) => {
+        const results: AgentResult[] = workflowState.agentResults[story.id] ?? [];
+        const frontResult = getLatestSuccessfulAgentResult(results, "front");
+        const html =
+          frontResult?.status === "success"
+            ? (frontResult.output["html"] as string | undefined) ?? null
+            : null;
+        return { storyId: story.id, storyTitle: story.title, html };
+      })
+      .filter(
+        (a): a is { storyId: string; storyTitle: string; html: string } =>
+          Boolean(a.html)
+      );
+  }, [workflowState]);
+
+  if (!isLoadingProjects && workflowHtmlArtifacts.length > 0 && !session) {
+    const activeId =
+      selectedWorkflowStoryId || (workflowHtmlArtifacts[0]?.storyId ?? "");
+    const activeArtifact =
+      workflowHtmlArtifacts.find((a) => a.storyId === activeId) ??
+      workflowHtmlArtifacts[0];
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "calc(100vh - 82px)",
+          overflow: "hidden",
+          background: "var(--bg, #0b0e0c)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 16px",
+            borderBottom: "1px solid var(--bd, #262c30)",
+            background: "var(--s1, #14181a)",
+            minHeight: 44,
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--t3, #6f7a80)",
+              flexShrink: 0,
+            }}
+          >
+            Preview HTML
+          </span>
+          {workflowHtmlArtifacts.length > 1 ? (
+            <div style={{ display: "flex", gap: 6, overflow: "hidden" }}>
+              {workflowHtmlArtifacts.map((a) => (
+                <button
+                  key={a.storyId}
+                  type="button"
+                  onClick={() => setSelectedWorkflowStoryId(a.storyId)}
+                  className={`inspector-tab${activeId === a.storyId ? " active" : ""}`}
+                >
+                  {a.storyTitle.length > 40
+                    ? `${a.storyTitle.slice(0, 40)}…`
+                    : a.storyTitle}
+                </button>
+              ))}
+            </div>
+          ) : (
+            activeArtifact && (
+              <span style={{ fontSize: 12, color: "var(--t2, #a4adb3)" }}>
+                {activeArtifact.storyTitle}
+              </span>
+            )
+          )}
+        </div>
+        {activeArtifact && (
+          <iframe
+            srcDoc={activeArtifact.html}
+            title={`Preview: ${activeArtifact.storyTitle}`}
+            sandbox="allow-scripts"
+            style={{ flex: 1, width: "100%", border: "none", background: "#fff" }}
+          />
+        )}
+      </div>
+    );
+  }
 
   const appendEvent = (event: PreviewEvent): void => {
     setTimeline((current) => mergeEvents(current, [event]));

@@ -72,6 +72,12 @@ export interface RetryDecisionOptions {
   continueRetry: boolean;
 }
 
+export interface CuratorReviewDecisionOptions {
+  threadId: string;
+  userStoryId: string;
+  accepted: boolean;
+}
+
 export interface WorkspaceArtifactStore {
   saveSpec(folderId: string, storyId: string, spec: Spec): Promise<Spec>;
 }

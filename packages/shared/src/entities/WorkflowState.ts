@@ -79,7 +79,7 @@ export const WorkspaceArtifactContextSchema = z.object({
 });
 
 export const WorkflowCheckpointNodeSchema = z.object({
-  nodeName: z.enum(["hitlCheckpoint", "retryCheckpoint"]),
+  nodeName: z.enum(["hitlCheckpoint", "retryCheckpoint", "curatorReviewCheckpoint"]),
   userStoryId: z.string().uuid().optional(),
   createdAt: z.string().datetime(),
 });

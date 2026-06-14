@@ -209,6 +209,15 @@ export const WorkflowEventSchema = z.discriminatedUnion("type", [
     timestamp: z.string().datetime(),
   }),
   z.object({
+    type: z.literal("awaiting_curator_review"),
+    threadId: z.string().uuid(),
+    userStoryId: z.string().uuid(),
+    score: z.number(),
+    notes: z.string(),
+    previewSessionId: z.string().uuid().nullable(),
+    timestamp: z.string().datetime(),
+  }),
+  z.object({
     type: z.literal("recovery_decision"),
     threadId: z.string().uuid(),
     userStoryId: z.string().uuid(),
@@ -429,6 +438,15 @@ export type WorkflowEvent =
       score: number;
       notes: string;
       missingItems: string[];
+      timestamp: string;
+    }
+  | {
+      type: "awaiting_curator_review";
+      threadId: string;
+      userStoryId: string;
+      score: number;
+      notes: string;
+      previewSessionId: string | null;
       timestamp: string;
     }
   | {

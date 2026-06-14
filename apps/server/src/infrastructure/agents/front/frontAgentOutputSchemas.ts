@@ -1,8 +1,7 @@
-import { StructuralPatchIntentSchema } from "@u-build/shared";
 import { z } from "zod";
 
 const FrontendWriteOperationPlanSchema = z.object({
-  operation: z.literal("write").default("write"),
+  operation: z.literal("write"),
   targetPath: z.string().trim().min(1),
   afterContent: z.string().min(1),
   rationale: z.string().trim().min(1),
@@ -11,7 +10,7 @@ const FrontendWriteOperationPlanSchema = z.object({
 const FrontendDeleteOperationPlanSchema = z.object({
   operation: z.literal("delete"),
   targetPath: z.string().trim().min(1),
-  afterContent: z.null().optional(),
+  afterContent: z.null(),
   rationale: z.string().trim().min(1),
 });
 
@@ -20,10 +19,54 @@ const FrontendOperationPlanSchema = z.union([
   FrontendDeleteOperationPlanSchema,
 ]);
 
-const FrontendStructuralPatchIntentSchema = StructuralPatchIntentSchema.omit({
-  id: true,
-}).extend({
-  id: z.string().trim().min(1).optional(),
+// Standalone schema compatible with OpenAI strict structured outputs.
+// All optional fields use .nullish() (= .optional().nullable()) because
+// OpenAI strict mode requires every non-required field to also accept null.
+const FrontendStructuralPatchIntentSchema = z.object({
+  id: z.string().trim().min(1).nullish(),
+  kind: z.enum([
+    "insert",
+    "replace",
+    "delete",
+    "rename_local",
+    "add_import",
+    "remove_import",
+    "update_export",
+  ]),
+  targetPath: z.string().trim().min(1),
+  targetSymbolId: z.string().trim().min(1).nullish(),
+  targetSymbolName: z.string().trim().min(1).nullish(),
+  targetSymbolKind: z
+    .enum([
+      "import",
+      "export",
+      "function",
+      "class",
+      "method",
+      "variable",
+      "component",
+      "hook",
+      "type",
+      "interface",
+      "unknown",
+    ])
+    .nullish(),
+  position: z
+    .enum([
+      "file_start",
+      "file_end",
+      "before_symbol",
+      "after_symbol",
+      "after_imports",
+    ])
+    .nullish(),
+  content: z.string().nullish(),
+  newName: z.string().trim().min(1).nullish(),
+  importSource: z.string().trim().min(1).nullish(),
+  namedImports: z.array(z.string().trim().min(1)).default([]),
+  defaultImport: z.string().trim().min(1).nullish(),
+  namespaceImport: z.string().trim().min(1).nullish(),
+  rationale: z.string().trim().min(1).nullish(),
 });
 
 export const CodeAwareFrontendOutputSchema = z
