@@ -30,10 +30,10 @@ const TestCaseSchema = z.object({
 
 const QaOutputSchema = z.object({
   testCases: z.array(TestCaseSchema),
-  previewSmoke: QaPreviewSmokeResultSchema.optional(),
 });
 
 export type QaOutput = z.infer<typeof QaOutputSchema> & {
+  previewSmoke?: z.infer<typeof QaPreviewSmokeResultSchema> | undefined;
   runtimeValidation?: RuntimeValidationEvidence | undefined;
 };
 

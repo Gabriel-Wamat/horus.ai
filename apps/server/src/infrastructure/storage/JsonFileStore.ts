@@ -70,7 +70,18 @@ export async function writeJsonFileAtomic(
 
   try {
     await fs.writeFile(tempPath, payload, "utf-8");
-    await fs.rename(tempPath, path);
+    try {
+      await fs.rename(tempPath, path);
+    } catch (renameErr) {
+      // Windows: rename over an existing file can fail with EPERM when the
+      // destination is held open; fall back to copy-then-unlink.
+      if ((renameErr as NodeJS.ErrnoException).code === "EPERM") {
+        await fs.copyFile(tempPath, path);
+        await fs.unlink(tempPath).catch(() => undefined);
+      } else {
+        throw renameErr;
+      }
+    }
   } catch (err) {
     await fs.unlink(tempPath).catch(() => undefined);
     throw err;
