@@ -24,6 +24,26 @@ const AgentDebugTraceResponseSchema = z.object({
   filter: z.record(z.string(), z.unknown()),
   generatedAt: z.string().datetime(),
 });
+const AgentRunEventStreamTypes = [
+  "node_started",
+  "node_completed",
+  "patch_proposed",
+  "patch_applied",
+  "validation_evidence",
+  "context_receipt",
+  "awaiting_approval",
+  "retry_started",
+  "awaiting_retry_approval",
+  "recovery_decision",
+  "fallback_executed",
+  "status_changed",
+  "tool_call_started",
+  "tool_call_finished",
+  "tool_call_blocked",
+  "command_output",
+  "command_approval_requested",
+  "error",
+] as const;
 
 interface ApiContract<T> {
   parse(input: unknown): T;
@@ -105,23 +125,7 @@ export const agentFlowApi = {
       }
       if (parsed.kind === "error") options.onError?.(parsed.message);
     };
-    const eventTypes = [
-      "node_started",
-      "node_completed",
-      "patch_proposed",
-      "patch_applied",
-      "validation_evidence",
-      "awaiting_approval",
-      "retry_started",
-      "awaiting_retry_approval",
-      "status_changed",
-      "tool_call_started",
-      "tool_call_finished",
-      "tool_call_blocked",
-      "command_output",
-      "error",
-    ];
-    for (const type of eventTypes) {
+    for (const type of AgentRunEventStreamTypes) {
       source.addEventListener(type, parse as EventListener);
     }
     source.onerror = () => {
@@ -129,7 +133,7 @@ export const agentFlowApi = {
     };
     return {
       close() {
-        for (const type of eventTypes) {
+        for (const type of AgentRunEventStreamTypes) {
           source.removeEventListener(type, parse as EventListener);
         }
         source.close();
@@ -299,18 +303,14 @@ type ParseFileOperationResult =
 function parseRunEventPayload(data: string): ParseRunEventResult {
   if (!data || data === "undefined") return { kind: "ignore" };
   try {
-    const parsed = JSON.parse(data) as Partial<HorusRunEventSnapshot>;
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      typeof parsed.id !== "string" ||
-      typeof parsed.threadId !== "string" ||
-      typeof parsed.sequence !== "number" ||
-      typeof parsed.type !== "string"
-    ) {
-      return { kind: "error", message: "Invalid agent run event payload contract." };
+    const parsed = HorusRunEventSnapshotSchema.safeParse(JSON.parse(data));
+    if (!parsed.success) {
+      return {
+        kind: "error",
+        message: `Invalid agent run event payload contract: ${parsed.error.message}`,
+      };
     }
-    return { kind: "event", event: parsed as HorusRunEventSnapshot };
+    return { kind: "event", event: parsed.data };
   } catch (err) {
     return {
       kind: "error",
@@ -322,20 +322,14 @@ function parseRunEventPayload(data: string): ParseRunEventResult {
 function parseFileOperationPayload(data: string): ParseFileOperationResult {
   if (!data || data === "undefined") return { kind: "ignore" };
   try {
-    const parsed = JSON.parse(data) as Partial<AgentFileOperationTelemetry>;
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      typeof parsed.id !== "string" ||
-      typeof parsed.threadId !== "string" ||
-      typeof parsed.sequence !== "number" ||
-      typeof parsed.path !== "string" ||
-      typeof parsed.operationType !== "string" ||
-      typeof parsed.status !== "string"
-    ) {
-      return { kind: "error", message: "Invalid agent file-operation payload contract." };
+    const parsed = AgentFileOperationTelemetrySchema.safeParse(JSON.parse(data));
+    if (!parsed.success) {
+      return {
+        kind: "error",
+        message: `Invalid agent file-operation payload contract: ${parsed.error.message}`,
+      };
     }
-    return { kind: "event", operation: parsed as AgentFileOperationTelemetry };
+    return { kind: "event", operation: parsed.data };
   } catch (err) {
     return {
       kind: "error",

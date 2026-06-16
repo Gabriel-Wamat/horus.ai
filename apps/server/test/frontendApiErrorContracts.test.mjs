@@ -71,6 +71,19 @@ test("agent flow API validates JSON content type and shared response contracts",
   );
 
   assert.equal(source.includes("return response.json() as Promise<T>"), false);
+  assert.equal(
+    source.includes("JSON.parse(data) as Partial<HorusRunEventSnapshot>"),
+    false
+  );
+  assert.equal(
+    source.includes("JSON.parse(data) as Partial<AgentFileOperationTelemetry>"),
+    false
+  );
+  assert.equal(source.includes("event: parsed as HorusRunEventSnapshot"), false);
+  assert.equal(
+    source.includes("operation: parsed as AgentFileOperationTelemetry"),
+    false
+  );
   assert.match(source, /expected application\/json/);
   assert.match(source, /parseApiContract/);
   assert.match(source, /HorusRunLocatorSchema/);
@@ -78,6 +91,11 @@ test("agent flow API validates JSON content type and shared response contracts",
   assert.match(source, /HorusRunEventSnapshotSchema/);
   assert.match(source, /AgentFileOperationTelemetrySchema/);
   assert.match(source, /AgentDebugTraceEntrySchema/);
+  assert.match(source, /AgentRunEventStreamTypes/);
+  assert.match(source, /"context_receipt"/);
+  assert.match(source, /"command_approval_requested"/);
+  assert.match(source, /"recovery_decision"/);
+  assert.match(source, /"fallback_executed"/);
 });
 
 test("project files API validates JSON content type and shared response contracts", async () => {
