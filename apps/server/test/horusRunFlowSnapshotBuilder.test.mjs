@@ -80,6 +80,72 @@ function workflowEvent(event, sequence) {
   return mapWorkflowEvent(WorkflowEventSchema.parse(event), sequence);
 }
 
+test("workflow event projection preserves UI-facing run event contract fields", () => {
+  const threadId = "44444444-4444-4444-8444-444444444444";
+  const approval = workflowEvent(
+    {
+      type: "command_approval_requested",
+      threadId,
+      agentName: "qa",
+      agentProfileId: "qa_agent",
+      toolName: "run_validation_command",
+      commandId: "build-root-build",
+      taskId: "task-build",
+      approvalReason: "Operator approval required.",
+      policyReason: "Package manager install needs approval.",
+      risk: "medium",
+      userStoryId: userStory.id,
+      timestamp: "2026-05-30T10:02:00.000Z",
+    },
+    1
+  );
+  const recovery = workflowEvent(
+    {
+      type: "recovery_decision",
+      threadId,
+      userStoryId: userStory.id,
+      gateId: "qa-build",
+      gateType: "type_check",
+      evidenceStatus: "failed",
+      decision: {
+        errorCode: "qa_validation_failed",
+        failureClass: "qa_gate",
+        severity: "high",
+        retryable: true,
+        fixTarget: "front",
+        recoveryAction: "retry_agent",
+        retryReason: "Type check can be repaired by the front agent.",
+        maxAttempts: 3,
+        requiresHumanApproval: false,
+        operatorMessage: "Retry front agent with type-check evidence.",
+        diagnostics: {},
+      },
+      timestamp: "2026-05-30T10:03:00.000Z",
+    },
+    2
+  );
+  const status = workflowEvent(
+    {
+      type: "status_changed",
+      threadId,
+      status: "running",
+      timestamp: "2026-05-30T10:04:00.000Z",
+    },
+    3
+  );
+
+  assert.equal(approval.toolName, "run_validation_command");
+  assert.equal(approval.commandId, "build-root-build");
+  assert.equal(approval.taskId, "task-build");
+  assert.equal(approval.policyReason, "Package manager install needs approval.");
+  assert.equal(approval.approvalReason, "Operator approval required.");
+  assert.equal(approval.risk, "medium");
+  assert.deepEqual(approval.commandIds, ["build-root-build"]);
+  assert.equal(recovery.decision?.retryable, true);
+  assert.equal(recovery.decision?.recoveryAction, "retry_agent");
+  assert.equal(status.status, "running");
+});
+
 test("HorusRunFlowSnapshotBuilder groups operation timeline by operational session", async () => {
   const threadId = "44444444-4444-4444-8444-444444444444";
   const operationalSessionId = "33333333-3333-4333-8333-333333333333";
