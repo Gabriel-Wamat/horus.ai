@@ -67,6 +67,7 @@ export function createAgentRunFlowRouter({
       if (!(await sendRunNotFoundIfMissing(snapshotBuilder, threadId, res))) {
         return;
       }
+      const replay = await snapshotBuilder.listEventsAfter(threadId, since);
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
@@ -78,17 +79,35 @@ export function createAgentRunFlowRouter({
         res.write(`data: ${JSON.stringify(data)}\n\n`);
       };
 
-      const replay = await snapshotBuilder.listEventsAfter(threadId, since);
       for (const event of replay) send(event.type, event);
 
       let liveSequence = replay.reduce(
         (max, event) => Math.max(max, event.sequence),
         since
       );
-      const unsubscribe = eventStream.subscribe(threadId, (event) => {
+      let unsubscribe: (() => void) | undefined;
+      try {
+        unsubscribe = eventStream.subscribe(threadId, (event) => {
+          liveSequence += 1;
+          send(event.type, mapWorkflowEvent(event, liveSequence));
+        });
+      } catch (err) {
         liveSequence += 1;
-        send(event.type, mapWorkflowEvent(event, liveSequence));
-      });
+        send(
+          "error",
+          mapWorkflowEvent(
+            {
+              type: "error",
+              threadId,
+              message: errorMessage(err),
+              timestamp: new Date().toISOString(),
+            },
+            liveSequence
+          )
+        );
+        res.end();
+        return;
+      }
       req.on("close", unsubscribe);
     } catch (err) {
       next(err);
@@ -117,6 +136,7 @@ export function createAgentRunFlowRouter({
       if (!(await sendRunNotFoundIfMissing(snapshotBuilder, threadId, res))) {
         return;
       }
+      const replay = await snapshotBuilder.listFileOperationsAfter(threadId, since);
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
@@ -128,25 +148,32 @@ export function createAgentRunFlowRouter({
         res.write(`data: ${JSON.stringify(data)}\n\n`);
       };
 
-      const replay = await snapshotBuilder.listFileOperationsAfter(threadId, since);
       for (const operation of replay) send(operation);
 
       let liveSequence = replay.reduce(
         (max, operation) => Math.max(max, operation.sequence),
         since
       );
-      const unsubscribe = eventStream.subscribe(threadId, (event) => {
-        const operations = mapWorkflowEventToFileOperations(event, liveSequence + 1);
-        for (const operation of operations) {
-          liveSequence += 1;
-          send(
-            AgentFileOperationTelemetrySchema.parse({
-              ...operation,
-              sequence: liveSequence,
-            })
-          );
-        }
-      });
+      let unsubscribe: (() => void) | undefined;
+      try {
+        unsubscribe = eventStream.subscribe(threadId, (event) => {
+          const operations = mapWorkflowEventToFileOperations(event, liveSequence + 1);
+          for (const operation of operations) {
+            liveSequence += 1;
+            send(
+              AgentFileOperationTelemetrySchema.parse({
+                ...operation,
+                sequence: liveSequence,
+              })
+            );
+          }
+        });
+      } catch (err) {
+        liveSequence += 1;
+        send(buildFileOperationStreamError(threadId, liveSequence, err));
+        res.end();
+        return;
+      }
       req.on("close", unsubscribe);
     } catch (err) {
       next(err);
@@ -188,4 +215,30 @@ function nonnegativeIntegerQuery(value: unknown, fallback: number): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) return fallback;
   return parsed;
+}
+
+function buildFileOperationStreamError(
+  threadId: string,
+  sequence: number,
+  err: unknown
+): ReturnType<typeof AgentFileOperationTelemetrySchema.parse> {
+  const message = errorMessage(err);
+  return AgentFileOperationTelemetrySchema.parse({
+    id: `${threadId}:${sequence}:file_operation_stream_error`,
+    threadId,
+    sequence,
+    workflowSequence: null,
+    operationalSequence: null,
+    sourceEventId: null,
+    path: "<agent-run-file-operation-stream>",
+    operationType: "unknown",
+    status: "failed",
+    errorMessage: message,
+    summary: "Agent file-operation stream failed.",
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

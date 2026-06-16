@@ -48,7 +48,19 @@ export function createEventRouter(
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     };
 
-    const unsubscribe = events.subscribe(threadId, sendEvent);
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = events.subscribe(threadId, sendEvent);
+    } catch (err) {
+      sendEvent({
+        type: "error",
+        threadId,
+        message: errorMessage(err),
+        timestamp: new Date().toISOString(),
+      });
+      res.end();
+      return;
+    }
 
     sendEvent({
       type: "status_changed",
@@ -58,9 +70,13 @@ export function createEventRouter(
     });
 
     req.on("close", () => {
-      unsubscribe();
+      unsubscribe?.();
     });
   });
 
   return router;
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
