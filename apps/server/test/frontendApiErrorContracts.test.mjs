@@ -108,3 +108,28 @@ test("project files API validates JSON content type and shared response contract
   assert.match(source, /ProjectFileContentResponseSchema/);
   assert.match(source, /SaveProjectFileResponseSchema/);
 });
+
+test("workflow API validates workspace response contracts before exposing state", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
+    "utf8"
+  );
+
+  const forbiddenWorkflowWorkspaceCasts = [
+    "const body = (await res.json()) as { folders: WorkspaceFolder[] }",
+    "const body = (await res.json()) as { folder: WorkspaceFolder }",
+    "const body = (await res.json()) as { userStories: UserStory[] }",
+    "const body = (await res.json()) as { userStory: UserStory }",
+    "const body = (await res.json()) as { spec: Spec }",
+  ];
+
+  for (const fragment of forbiddenWorkflowWorkspaceCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /readWorkflowJson/);
+  assert.match(source, /WorkspaceFolderSchema/);
+  assert.match(source, /UserStorySchema/);
+  assert.match(source, /SpecSchema/);
+  assert.match(source, /WorkspaceUserStoriesResponseSchema/);
+});
