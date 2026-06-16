@@ -15,6 +15,7 @@ const forbiddenFragments = [
   "C:" + windowsSeparator + "Users",
   "C:" + windowsSeparator + windowsSeparator + "Users",
   ["host", "docker", "internal"].join("."),
+  ["github.com", "Gabriel-Wamat", "horus.git"].join("/"),
 ];
 
 test("versioned repository files use portable paths and hosts", async () => {

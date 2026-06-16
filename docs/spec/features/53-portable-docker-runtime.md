@@ -422,7 +422,7 @@ execution_plan:
     files_to_change:
       - "docker-compose.yml"
       - ".env.docker.example"
-    expected_output: "docker compose up app starts API/web with named file-mode volume."
+    expected_output: "HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> docker compose up app starts API/web with named file-mode volume."
 
   - step: 5
     agent: "infra_specialist"

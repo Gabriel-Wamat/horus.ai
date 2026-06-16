@@ -14,7 +14,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    throw new Error(await readApiErrorDetail(response));
   }
   return response.json() as Promise<T>;
 }
@@ -181,6 +181,20 @@ function buildRunsPath(options: {
   if (options.query) params.set("q", options.query);
   const query = params.toString();
   return `/api/agent-runs${query ? `?${query}` : ""}`;
+}
+
+async function readApiErrorDetail(response: Response): Promise<string> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await response.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? response.statusText;
+    return `Request failed with status ${response.status}: ${detail}`;
+  }
+  const body = await response.text().catch(() => "");
+  const detail = body.trim() || response.statusText || "sem detalhe retornado";
+  return `Request failed with status ${response.status}: ${detail}`;
 }
 
 function parseRunEventPayload(data: string): HorusRunEventSnapshot | null {

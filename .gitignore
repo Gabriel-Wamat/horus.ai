@@ -59,6 +59,7 @@ apps/server/test/*
 !apps/server/test/visualDesignGateProfessional.test.mjs
 !apps/server/test/horusChatResponseStyle.test.mjs
 !apps/server/test/horusRunFlowSnapshotBuilder.test.mjs
+!apps/server/test/httpApiContract.test.mjs
 !apps/server/test/portableRuntimeConfig.test.mjs
 !apps/server/test/workspaceFolderPortability.test.mjs
 !apps/server/test/scriptRuntimeUrlConfig.test.mjs

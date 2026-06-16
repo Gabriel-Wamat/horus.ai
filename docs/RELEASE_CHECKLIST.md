@@ -4,8 +4,8 @@
 
 - `pnpm verify:ci` passes locally or in CI.
 - `node --test apps/server/test/*.test.mjs` passes after `@u-build/server` build.
-- `docker compose config` renders without warnings.
-- `docker compose up -d --build --wait` reaches healthy `api` and `web`.
+- `HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> docker compose config` renders without warnings.
+- `HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> docker compose up -d --build --wait` reaches healthy `api` and `web`.
 - `pnpm verify:docker` passes against the explicit `HORUS_DOCKER_BASE_URL`.
 - `pnpm security:secrets` reports no high-confidence secrets.
 
