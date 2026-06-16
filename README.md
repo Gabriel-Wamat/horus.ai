@@ -195,7 +195,7 @@ cp .env.example .env
 Run:
 
 ```bash
-docker compose up --build
+HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> docker compose up --build
 ```
 
 Default Docker endpoints:
@@ -216,7 +216,7 @@ desktops, and team demos.
 Override host/container ports without editing Compose:
 
 ```bash
-HORUS_WEB_HOST_PORT=18080 HORUS_API_HOST_PORT=13001 docker compose up --build
+HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> HORUS_WEB_HOST_PORT=18080 HORUS_API_HOST_PORT=13001 docker compose up --build
 HORUS_DOCKER_BASE_URL=http://<host-reachable-from-your-browser>:18080 pnpm verify:docker
 ```
 
@@ -243,15 +243,15 @@ docker compose down -v
 Use this sequence on a fresh machine:
 
 ```bash
-git clone https://github.com/Gabriel-Wamat/horus.git
-cd horus
+git clone https://github.com/Gabriel-Wamat/horus.ai.git
+cd horus.ai
 corepack prepare pnpm@9.15.0 --activate || npm install -g pnpm@9.15.0
 pnpm install --frozen-lockfile
 pnpm verify:ci
 cp .env.example .env
-# edit .env and set OPENAI_API_KEY
-docker compose up --build
-pnpm verify:docker
+# edit .env and set OPENAI_API_KEY plus HORUS_PUBLIC_HOST
+HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> docker compose up --build
+HORUS_DOCKER_BASE_URL=http://<host-reachable-from-your-browser>:8080 pnpm verify:docker
 ```
 
 Expected result:

@@ -70,9 +70,14 @@ export function useExecutionTaskRows(
         } else {
           timer = window.setTimeout(poll, 3_000);
         }
-      } catch {
+      } catch (err) {
         if (!controller.signal.aborted) {
-          setTasks((current) => (current.length === 0 ? current : []));
+          if (err instanceof ExecutionTaskEndpointUnavailableError) {
+            setTasks((current) => (current.length === 0 ? current : []));
+          } else {
+            console.warn("execution_task_poll_failed", err);
+            timer = window.setTimeout(poll, 3_000);
+          }
         }
       }
     };
@@ -177,8 +182,9 @@ export function useExecutionTaskOutputs(
         if (entries.some(([, , active]) => active)) {
           timer = window.setTimeout(poll, 1_200);
         }
-      } catch {
+      } catch (err) {
         if (!controller.signal.aborted) {
+          console.warn("execution_task_output_poll_failed", err);
           timer = window.setTimeout(poll, 2_000);
         }
       }
@@ -250,7 +256,7 @@ async function fetchTaskList(
   if (response.status === 404) {
     throw new ExecutionTaskEndpointUnavailableError("Execution task endpoint unavailable");
   }
-  if (!response.ok) return [];
+  await requireExecutionTaskOk(response, "Listar execution tasks");
   const body = (await response.json()) as { tasks?: ExecutionTaskSnapshot[] };
   return body.tasks ?? [];
 }
@@ -267,7 +273,7 @@ async function fetchTaskSnapshot(
     { cache: "no-store", signal }
   );
   if (response.status === 404) return null;
-  if (!response.ok) return null;
+  await requireExecutionTaskOk(response, "Consultar execution task");
   return response.json() as Promise<ExecutionTaskSnapshot>;
 }
 
@@ -287,9 +293,30 @@ async function fetchTaskOutputTail(input: {
     )}/output?stream=${input.stream}&offset=${offset}&limit=${limit}`,
     { cache: "no-store", signal: input.signal }
   );
-  if (!response.ok) return "";
+  await requireExecutionTaskOk(response, "Ler output da execution task");
   const body = (await response.json()) as { chunk?: string };
   return body.chunk ?? "";
+}
+
+async function requireExecutionTaskOk(
+  response: Response,
+  action: string
+): Promise<void> {
+  if (response.ok) return;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await response.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? response.statusText;
+    throw new Error(`${action} falhou (${response.status}): ${detail}`);
+  }
+  const body = await response.text().catch(() => "");
+  throw new Error(
+    `${action} falhou (${response.status}): ${
+      body.trim() || response.statusText || "sem detalhe retornado"
+    }`
+  );
 }
 
 function isTaskActive(status: string): boolean {

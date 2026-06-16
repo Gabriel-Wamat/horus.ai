@@ -1,4 +1,5 @@
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -491,9 +492,80 @@ export async function createApp(
     })
   );
 
+  app.use("/api", createApiNotFoundHandler());
   mountWebAppIfConfigured(app, env);
+  app.use(createApiErrorHandler());
 
   return app;
+}
+
+interface ApiErrorResponse {
+  error: string;
+  message: string;
+  path: string;
+}
+
+interface HttpStatusLikeError {
+  status?: unknown;
+  statusCode?: unknown;
+}
+
+export function createApiNotFoundHandler(): express.RequestHandler {
+  return (req: Request, res: Response) => {
+    res.status(404).json({
+      error: "api_route_not_found",
+      message: "API route not found",
+      path: req.originalUrl,
+    } satisfies ApiErrorResponse);
+  };
+}
+
+export function createApiErrorHandler(): express.ErrorRequestHandler {
+  return (
+    err: unknown,
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): void => {
+    if (!req.path.startsWith("/api")) {
+      next(err);
+      return;
+    }
+    if (res.headersSent) {
+      next(err);
+      return;
+    }
+
+    const status = readHttpErrorStatus(err);
+    res.status(status).json({
+      error: status >= 500 ? "internal_server_error" : "api_request_failed",
+      message: status >= 500 ? "Internal server error" : readErrorMessage(err),
+      path: req.originalUrl,
+    } satisfies ApiErrorResponse);
+  };
+}
+
+function readHttpErrorStatus(err: unknown): number {
+  if (!isRecord(err)) return 500;
+  const candidate =
+    readStatusNumber((err as HttpStatusLikeError).status) ??
+    readStatusNumber((err as HttpStatusLikeError).statusCode);
+  return candidate ?? 500;
+}
+
+function readStatusNumber(value: unknown): number | undefined {
+  if (!Number.isInteger(value)) return undefined;
+  const status = value as number;
+  return status >= 400 && status <= 599 ? status : undefined;
+}
+
+function readErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message.trim().length > 0) return err.message;
+  return "API request failed";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function mountWebAppIfConfigured(

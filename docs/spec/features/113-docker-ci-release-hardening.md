@@ -214,7 +214,7 @@ validation_protocol:
       cwd: "<REPOSITORY_ROOT>"
       purpose: "Run Docker smoke."
       success_condition: "exit code 0"
-    - command: "docker compose up --build"
+    - command: "HORUS_PUBLIC_HOST=<host-reachable-from-your-browser> docker compose up --build"
       cwd: "<REPOSITORY_ROOT>"
       purpose: "Manual operator proof when needed."
       success_condition: "services healthy and documented URLs reachable"

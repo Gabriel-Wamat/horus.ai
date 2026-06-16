@@ -47,6 +47,9 @@ function parseArgs(argv) {
     const arg = argv[index];
     const next = argv[index + 1];
 
+    if (arg === "--") {
+      continue;
+    }
     if (arg === "--project") {
       parsed.project = readNext(arg, next);
       index += 1;
@@ -181,15 +184,37 @@ function ensureArtifactRepository({ project, region, repository }) {
 }
 
 function submitBuild({ project, image }) {
-  run("gcloud", [
-    "builds",
-    "submit",
-    ".",
-    "--tag",
-    image,
-    "--project",
-    project,
-  ]);
+  const tempDir = mkdtempSync(join(tmpdir(), "horus-gcp-build-"));
+  const configFile = join(tempDir, "cloudbuild.yaml");
+  const config = [
+    "steps:",
+    "- name: gcr.io/cloud-builders/docker",
+    "  args:",
+    "  - build",
+    "  - --target",
+    "  - server-runtime",
+    "  - -t",
+    `  - ${image}`,
+    "  - .",
+    "images:",
+    `- ${image}`,
+    "",
+  ].join("\n");
+
+  try {
+    writeFileSync(configFile, config, "utf8");
+    run("gcloud", [
+      "builds",
+      "submit",
+      ".",
+      "--config",
+      configFile,
+      "--project",
+      project,
+    ]);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 function deployCloudRun({
