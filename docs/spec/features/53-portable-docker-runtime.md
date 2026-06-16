@@ -500,7 +500,7 @@ environment_contract:
       required_when: "Frontend and API are served from different origins"
       secret: false
     - name: "HORUS_WEB_PREVIEW_HOST"
-      default_rule: "Use host reachable from server container or documented host.docker.internal strategy."
+      default_rule: "Use an explicitly configured host reachable from the server container."
       secret: false
     - name: "HORUS_WEB_PREVIEW_PORT"
       default_rule: "Compose variable with no source hardcode."
@@ -523,7 +523,7 @@ preview_runtime_rules:
     - "HORUS_WEB_PREVIEW_URL must be configurable."
     - "Generated preview port defaults must avoid colliding with app server port."
   forbidden:
-    - "Hardcoding host.docker.internal in source code."
+    - "Hardcoding a Docker Desktop host gateway in source code."
     - "Hardcoding <HORUS_PUBLIC_HOST> for browser-facing URLs."
 ```
 
