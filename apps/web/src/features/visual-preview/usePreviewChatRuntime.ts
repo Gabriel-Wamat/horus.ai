@@ -96,9 +96,15 @@ export function usePreviewChatRuntime({
           const events = await previewApi.listTimeline(nextSession.id);
           onPreviewSessionResolved(nextSession, events);
         })
-        .catch(() => undefined);
+        .catch((err) => {
+          onError(
+            err instanceof Error
+              ? err.message
+              : "Falha ao atualizar sessão de preview."
+          );
+        });
     },
-    [onPreviewSessionResolved]
+    [onError, onPreviewSessionResolved]
   );
 
   const syncChatMessagesFromServer = useCallback(

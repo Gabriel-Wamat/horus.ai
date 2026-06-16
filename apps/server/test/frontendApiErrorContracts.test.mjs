@@ -11,6 +11,9 @@ const clientFiles = [
   "apps/web/src/api/projectFilesApi.ts",
   "apps/web/src/api/agentSkillsApi.ts",
   "apps/web/src/features/agent-flow-map/utils/agentFlowApi.ts",
+  "apps/web/src/app/useWorkflowRuntime.ts",
+  "apps/web/src/components/VisualPreviewConsole.tsx",
+  "apps/web/src/features/visual-preview/usePreviewChatRuntime.ts",
   "apps/web/src/features/visual-preview/workflowProgress.ts",
   "apps/web/src/features/visual-preview/useWorkflowFileOperations.ts",
   "apps/web/src/components/execution-console/useExecutionTaskOutputs.ts",
@@ -24,6 +27,9 @@ const forbiddenFragments = [
   "if (!res.ok) return []",
   "if (!res.ok) return null",
   "if (!res.ok) return \"\"",
+  ".catch(() => setLlmProviders([]))",
+  ".catch(() => setLlmProfile(null))",
+  ".catch(() => undefined)",
 ];
 
 test("frontend API clients do not silently coerce HTTP failures to empty values", async () => {

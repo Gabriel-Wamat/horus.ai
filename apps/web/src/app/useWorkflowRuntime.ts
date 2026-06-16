@@ -97,13 +97,27 @@ export function useWorkflowRuntime({
       workflowApi
         .listLlmProviders()
         .then((result) => setLlmProviders(result.providers))
-        .catch(() => setLlmProviders([])),
+        .catch((err) => {
+          setLlmProviders([]);
+          setWorkspaceFolderError(
+            err instanceof Error
+              ? err.message
+              : "Falha ao carregar providers LLM."
+          );
+        }),
       workflowApi
         .getLlmSettings()
         .then(setLlmProfile)
-        .catch(() => setLlmProfile(null)),
+        .catch((err) => {
+          setLlmProfile(null);
+          setWorkspaceFolderError(
+            err instanceof Error
+              ? err.message
+              : "Falha ao carregar configuração LLM."
+          );
+        }),
     ]).finally(() => setIsLoadingLlmProfile(false));
-  }, []);
+  }, [setWorkspaceFolderError]);
 
   useEffect(() => {
     if (!threadId) return;
