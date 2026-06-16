@@ -6,7 +6,7 @@
 - `node --test apps/server/test/*.test.mjs` passes after `@u-build/server` build.
 - `docker compose config` renders without warnings.
 - `docker compose up -d --build --wait` reaches healthy `api` and `web`.
-- `pnpm verify:docker` passes against `http://127.0.0.1:8080`.
+- `pnpm verify:docker` passes against the explicit `HORUS_DOCKER_BASE_URL`.
 - `pnpm security:secrets` reports no high-confidence secrets.
 
 ## Persistence And Migrations
@@ -19,7 +19,7 @@
 
 ## Runtime Smoke
 
-- Open the web app at `http://localhost:8080`.
+- Open the web app at the configured `HORUS_DOCKER_BASE_URL`.
 - Start a project construction run from specs.
 - Confirm project appears in the file tree immediately.
 - Confirm preview session starts and `/api/preview/projects` returns 200.

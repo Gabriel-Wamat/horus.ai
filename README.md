@@ -121,17 +121,21 @@ API: http://<HORUS_API_PROXY_HOST>:<HORUS_API_PROXY_PORT>
 Web: http://<HORUS_WEB_DEV_HOST>:<HORUS_WEB_DEV_PORT>
 ```
 
-With the default `.env.example` values, those resolve to:
+Set the host values to the browser-facing hostname or IP for the machine running
+Horus:
 
 ```text
-API: http://127.0.0.1:3001
-Web: http://127.0.0.1:5173
+HORUS_PUBLIC_HOST=<host-reachable-from-your-browser>
+HORUS_API_PROXY_HOST=<host-reachable-from-your-browser>
+HORUS_WEB_DEV_HOST=0.0.0.0
+HORUS_WEB_PREVIEW_HOST=0.0.0.0
+HORUS_WEB_PREVIEW_PUBLIC_HOST=<host-reachable-from-your-browser>
 ```
 
 Health check:
 
 ```bash
-curl "http://${HORUS_API_PROXY_HOST:-127.0.0.1}:${HORUS_API_PROXY_PORT:-3001}/health"
+curl "http://${HORUS_API_PROXY_HOST}:${HORUS_API_PROXY_PORT}/health"
 ```
 
 ## Validation
@@ -197,27 +201,29 @@ docker compose up --build
 Default Docker endpoints:
 
 ```text
-Web UI: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>
-API through web proxy: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>/api
-Health: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>/health
-Ready: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>/ready
-Direct API: http://<HORUS_DOCKER_HOST>:<HORUS_API_HOST_PORT>
+Web UI: <HORUS_DOCKER_BASE_URL>
+API through web proxy: <HORUS_DOCKER_BASE_URL>/api
+Health: <HORUS_DOCKER_BASE_URL>/health
+Ready: <HORUS_DOCKER_BASE_URL>/ready
+Direct API: http://<HORUS_PUBLIC_HOST>:<HORUS_API_HOST_PORT>
 ```
 
-With defaults, `HORUS_DOCKER_HOST=127.0.0.1`,
-`HORUS_WEB_HOST_PORT=8080`, and `HORUS_API_HOST_PORT=3001`.
+Set `HORUS_DOCKER_BASE_URL` to the browser-facing web URL before running the
+Docker smoke script. The Compose default web host port is `8080`, but the host
+must be explicit because it changes across local machines, Windows/WSL, remote
+desktops, and team demos.
 
 Override host/container ports without editing Compose:
 
 ```bash
 HORUS_WEB_HOST_PORT=18080 HORUS_API_HOST_PORT=13001 docker compose up --build
-HORUS_WEB_HOST_PORT=18080 pnpm verify:docker
+HORUS_DOCKER_BASE_URL=http://<host-reachable-from-your-browser>:18080 pnpm verify:docker
 ```
 
 Smoke check:
 
 ```bash
-pnpm verify:docker
+HORUS_DOCKER_BASE_URL=http://<host-reachable-from-your-browser>:8080 pnpm verify:docker
 ```
 
 Stop the stack:
@@ -255,7 +261,7 @@ Expected result:
 - secret scan passes
 - production build passes
 - Docker stack becomes healthy
-- `pnpm verify:docker` succeeds against `http://${HORUS_DOCKER_HOST:-127.0.0.1}:${HORUS_WEB_HOST_PORT:-8080}`
+- `pnpm verify:docker` succeeds against `HORUS_DOCKER_BASE_URL`
 
 ## Troubleshooting
 
