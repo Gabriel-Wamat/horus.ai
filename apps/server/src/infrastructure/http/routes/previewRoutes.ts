@@ -1,5 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import { promises as fs } from "node:fs";
+import { extname, join, relative, sep } from "node:path";
 import { ZodError } from "zod";
 import {
   CreatePreviewSessionInputSchema,
@@ -21,6 +23,7 @@ import {
   FrontendProjectRootError,
 } from "../../preview/FileFrontendProjectRegistry.js";
 import { PreviewSessionNotFoundError } from "../../preview/FilePreviewSessionStore.js";
+import type { FrontendProjectRepository } from "../../repositories/contracts.js";
 
 interface PreviewRouteDeps {
   listProjectsUseCase: ListFrontendProjectsUseCase;
@@ -33,6 +36,7 @@ interface PreviewRouteDeps {
   listTimelineUseCase: ListPreviewTimelineUseCase;
   createInstructionDraftUseCase: CreateVisualInstructionDraftUseCase;
   eventStream: IPreviewEventStream;
+  projectRegistry: FrontendProjectRepository;
 }
 
 export function createPreviewRouter(deps: PreviewRouteDeps): Router {
@@ -154,7 +158,72 @@ export function createPreviewRouter(deps: PreviewRouteDeps): Router {
     }
   });
 
+  router.get("/projects/:projectId/static", (req: Request, res: Response) => {
+    void serveStaticProjectFile(req, res, deps.projectRegistry, "index.html");
+  });
+
+  router.get("/projects/:projectId/static/*", (req: Request, res: Response) => {
+    const requestedPath = req.params["0"] ?? "index.html";
+    void serveStaticProjectFile(req, res, deps.projectRegistry, requestedPath);
+  });
+
   return router;
+}
+
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".mjs": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+};
+
+function isInsideProjectRoot(rootPath: string, filePath: string): boolean {
+  const rel = relative(rootPath, filePath);
+  return !rel.startsWith("..") && !rel.includes(`..${sep}`);
+}
+
+async function serveStaticProjectFile(
+  req: Request,
+  res: Response,
+  registry: FrontendProjectRepository,
+  requestedPath: string
+): Promise<void> {
+  const projectId = (req.params["projectId"] as string | undefined) ?? "";
+  let project;
+  try {
+    project = await registry.getProject(projectId);
+  } catch {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  const normalizedPath = requestedPath.replace(/^\/+/, "") || "index.html";
+  const filePath = join(project.rootPath, normalizedPath);
+
+  if (!isInsideProjectRoot(project.rootPath, filePath)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  try {
+    const data = await fs.readFile(filePath);
+    const mime = MIME_TYPES[extname(filePath).toLowerCase()] ?? "application/octet-stream";
+    res.setHeader("Content-Type", mime);
+    res.send(data);
+  } catch {
+    res.status(404).json({ error: "File not found" });
+  }
 }
 
 function handlePreviewRouteError(err: unknown, res: Response): void {

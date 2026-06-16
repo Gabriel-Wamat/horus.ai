@@ -17,6 +17,7 @@ export function PreviewToolbar({
   route,
   isActing,
   isConnected,
+  canStart,
   onStart,
   onStop,
   onReload,
@@ -26,6 +27,7 @@ export function PreviewToolbar({
   readonly route: string;
   readonly isActing: boolean;
   readonly isConnected: boolean;
+  readonly canStart?: boolean;
   readonly onStart: () => void;
   readonly onStop: () => void;
   readonly onReload: () => void;
@@ -45,7 +47,8 @@ export function PreviewToolbar({
         <button
           className="primary-button preview-action-button"
           type="button"
-          disabled={busy || running}
+          disabled={busy || running || canStart === false}
+          title={canStart === false ? "Nenhum projeto de frontend disponível" : undefined}
           onClick={onStart}
         >
           <PreviewIcon name="play" />

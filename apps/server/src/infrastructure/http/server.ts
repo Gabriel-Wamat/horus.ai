@@ -424,6 +424,7 @@ export async function createApp(
       listTimelineUseCase,
       createInstructionDraftUseCase,
       eventStream: previewEventStream,
+      projectRegistry: repositories.frontendProjects,
     })
   );
   app.use(

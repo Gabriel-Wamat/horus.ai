@@ -161,6 +161,11 @@ export class PreviewRuntimeManager {
       await this.registry.getProject(session.projectId),
       await this.registry.listProjects()
     );
+
+    if (project.projectKind === "legacy_static") {
+      return this.startStaticSession(session, project);
+    }
+
     const now = new Date().toISOString();
     const starting = await this.store.saveSession({
       ...session,
@@ -225,6 +230,32 @@ export class PreviewRuntimeManager {
         runtimeEvidence,
       }
     );
+    return { session: updated, event };
+  }
+
+  private async startStaticSession(
+    session: PreviewSession,
+    project: FrontendProject
+  ): Promise<PreviewActionResult> {
+    this.projectHealth.assertStartable(project);
+    const now = new Date().toISOString();
+    const staticUrl = `/api/preview/projects/${project.id}/static/`;
+    const updated = await this.store.saveSession({
+      ...session,
+      status: "running",
+      previewUrl: staticUrl,
+      processId: null,
+      startedAt: session.startedAt ?? now,
+      stoppedAt: null,
+      updatedAt: now,
+      errorMessage: null,
+    });
+    await this.recordEvent(updated, "preview_started", "Preview HTML estático iniciado", {
+      previewUrl: staticUrl,
+    });
+    const event = await this.recordEvent(updated, "preview_ready", "Preview HTML estático pronto", {
+      previewUrl: staticUrl,
+    });
     return { session: updated, event };
   }
 

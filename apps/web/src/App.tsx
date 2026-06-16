@@ -249,6 +249,7 @@ export function App(): JSX.Element {
       <VisualPreviewConsole
         workspaceFolderId={workspace.selectedWorkspaceFolderId || undefined}
         userStoryId={workspace.selectedStoryId}
+        previewSessionId={workflow.pendingCuratorReview?.previewSessionId ?? null}
         {...(workflow.workflowState ? { workflowState: workflow.workflowState } : {})}
       />
     ) : appMode === "files" ? (

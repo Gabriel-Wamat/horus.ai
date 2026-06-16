@@ -5,9 +5,11 @@ import { PreviewIcon } from "./PreviewIcons.js";
 export function PreviewCanvas({
   session,
   refreshToken,
+  htmlDoc,
 }: {
   readonly session: PreviewSession | null;
   readonly refreshToken?: string | null;
+  readonly htmlDoc?: string | null;
 }): JSX.Element {
   const status = session?.status ?? "waiting";
   const previewUrl =
@@ -15,6 +17,7 @@ export function PreviewCanvas({
   const frameUrl =
     previewUrl && refreshToken ? withRefreshToken(previewUrl, refreshToken) : previewUrl;
   const frameSession = previewUrl && session ? session : null;
+  const showStaticHtml = !frameSession && htmlDoc;
 
   return (
     <section className="preview-canvas" aria-label="Canvas do preview">
@@ -36,6 +39,15 @@ export function PreviewCanvas({
             />
           </div>
         </div>
+      ) : showStaticHtml ? (
+        <iframe
+          key={htmlDoc}
+          className="preview-frame"
+          title="Preview HTML"
+          srcDoc={htmlDoc}
+          sandbox="allow-scripts"
+          style={{ width: "100%", height: "100%", border: "none", background: "#fff" }}
+        />
       ) : (
         <div className="preview-empty-state">
           <div className={`preview-empty-icon status-${status}`}>

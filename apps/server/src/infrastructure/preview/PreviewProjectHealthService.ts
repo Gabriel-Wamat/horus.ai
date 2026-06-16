@@ -264,8 +264,6 @@ export class PreviewProjectHealthService {
     if (rootExists && !manifestProjectId && projectKind === "generated") {
       addReason(reasons, "manifest_missing");
     }
-    if (!project.previewUrl) addReason(reasons, "preview_url_missing");
-    if (!hasPreviewCommand(project)) addReason(reasons, "preview_command_missing");
 
     const legacyStatic =
       rootExists &&
@@ -274,6 +272,10 @@ export class PreviewProjectHealthService {
       ((await fileExists(join(project.rootPath, "index.html"))) ||
         (await fileExists(join(project.rootPath, "src", "index.html"))));
     if (legacyStatic) addReason(reasons, "legacy_static");
+
+    // Legacy static projects are served directly — no dev command or preview URL required
+    if (!legacyStatic && !project.previewUrl) addReason(reasons, "preview_url_missing");
+    if (!legacyStatic && !hasPreviewCommand(project)) addReason(reasons, "preview_command_missing");
 
     const appFingerprint = rootExists
       ? await this.fingerprintProject(project.rootPath)
