@@ -198,6 +198,45 @@ test("agent skills API validates catalog response contracts before exposing stat
   assert.match(source, /AgentSkillBindingsResponseSchema/);
 });
 
+test("execution console validates execution task route contracts before exposing state", async () => {
+  const hookSource = await readFile(
+    join(
+      repositoryRoot,
+      "apps/web/src/components/execution-console/useExecutionTaskOutputs.ts"
+    ),
+    "utf8"
+  );
+  const panelSource = await readFile(
+    join(repositoryRoot, "apps/web/src/components/ExecutionConsolePanel.tsx"),
+    "utf8"
+  );
+
+  const forbiddenExecutionTaskCasts = [
+    "const body = (await response.json()) as { tasks?: ExecutionTaskSnapshot[] }",
+    "return response.json() as Promise<ExecutionTaskSnapshot>",
+    "const body = (await response.json()) as { chunk?: string }",
+    "return response.json() as Promise<ExecutionTaskRouteTask>",
+    "readExecutionTaskRouteError",
+  ];
+
+  for (const fragment of forbiddenExecutionTaskCasts) {
+    assert.equal(
+      hookSource.includes(fragment) || panelSource.includes(fragment),
+      false,
+      fragment
+    );
+  }
+
+  assert.match(hookSource, /ShellCommandResultSchema/);
+  assert.match(hookSource, /ExecutionTaskSnapshotSchema/);
+  assert.match(hookSource, /ExecutionTaskListResponseSchema/);
+  assert.match(hookSource, /ExecutionTaskOutputResponseSchema/);
+  assert.match(hookSource, /readExecutionTaskJson/);
+  assert.match(panelSource, /ExecutionTaskSnapshotSchema/);
+  assert.match(panelSource, /readExecutionTaskJson/);
+  assert.match(panelSource, /requireExecutionTaskOk/);
+});
+
 test("workflow API validates workspace response contracts before exposing state", async () => {
   const source = await readFile(
     join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),

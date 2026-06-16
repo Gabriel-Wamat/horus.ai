@@ -2,9 +2,13 @@ import { useCallback, useMemo, useState, type JSX } from "react";
 import type { AgentFileOperationTelemetry, FrontendProject } from "@u-build/shared";
 import type { PreviewChatMessage } from "./PreviewConversationPanel.js";
 import {
+  ExecutionTaskSnapshotSchema,
   executionTaskStatusLabel,
+  readExecutionTaskJson,
+  requireExecutionTaskOk,
   useExecutionTaskRows,
   useExecutionTaskOutputs,
+  type ExecutionTaskSnapshot,
   type TerminalRow,
 } from "./execution-console/useExecutionTaskOutputs.js";
 import {
@@ -28,12 +32,6 @@ import {
   shortId,
 } from "./execution-console/projections.js";
 import type { WorkflowProgressEvent } from "../features/visual-preview/workflowProgress.js";
-
-interface ExecutionTaskRouteTask {
-  taskId: string;
-  status: string;
-  startedAt?: string;
-}
 
 export function ExecutionConsolePanel({
   isCollapsed,
@@ -75,7 +73,7 @@ export function ExecutionConsolePanel({
     [workflowEvents]
   );
   const [retriedTasks, setRetriedTasks] = useState<
-    Map<string, ExecutionTaskRouteTask>
+    Map<string, ExecutionTaskSnapshot>
   >(() => new Map());
   const [executionTaskActionError, setExecutionTaskActionError] = useState<
     string | null
@@ -282,33 +280,31 @@ async function killExecutionTask(projectId: string, taskId: string): Promise<voi
     )}/kill`,
     { method: "POST" }
   );
-  if (!response.ok) {
-    throw new Error(await readExecutionTaskRouteError(response, "Parar execution task"));
-  }
+  await requireExecutionTaskOk(response, "Parar execution task");
 }
 
 async function retryExecutionTaskRequest(
   projectId: string,
   taskId: string
-): Promise<ExecutionTaskRouteTask> {
+): Promise<ExecutionTaskSnapshot> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/execution-tasks/${encodeURIComponent(
       taskId
     )}/retry`,
     { method: "POST" }
   );
-  if (!response.ok) {
-    throw new Error(
-      await readExecutionTaskRouteError(response, "Reexecutar execution task")
-    );
-  }
-  return response.json() as Promise<ExecutionTaskRouteTask>;
+  await requireExecutionTaskOk(response, "Reexecutar execution task");
+  return readExecutionTaskJson(
+    response,
+    "Reexecutar execution task",
+    ExecutionTaskSnapshotSchema
+  );
 }
 
 async function approveExecutionTaskRequest(
   projectId: string,
   taskId: string
-): Promise<ExecutionTaskRouteTask> {
+): Promise<ExecutionTaskSnapshot> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/execution-tasks/${encodeURIComponent(
       taskId
@@ -322,28 +318,10 @@ async function approveExecutionTaskRequest(
       }),
     }
   );
-  if (!response.ok) {
-    throw new Error(
-      await readExecutionTaskRouteError(response, "Aprovar execution task")
-    );
-  }
-  return response.json() as Promise<ExecutionTaskRouteTask>;
-}
-
-async function readExecutionTaskRouteError(
-  response: Response,
-  action: string
-): Promise<string> {
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    const body = (await response.json().catch(() => null)) as
-      | { message?: string; error?: string }
-      | null;
-    const detail = body?.message ?? body?.error ?? response.statusText;
-    return `${action} falhou (${response.status}): ${detail}`;
-  }
-  const body = await response.text().catch(() => "");
-  return `${action} falhou (${response.status}): ${
-    body.trim() || response.statusText || "sem detalhe retornado"
-  }`;
+  await requireExecutionTaskOk(response, "Aprovar execution task");
+  return readExecutionTaskJson(
+    response,
+    "Aprovar execution task",
+    ExecutionTaskSnapshotSchema
+  );
 }
