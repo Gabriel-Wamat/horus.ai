@@ -1,5 +1,6 @@
 import {
   ProjectConstructionRunSchema,
+  resolvePreviewPublicHost,
   StartProjectConstructionInputSchema,
   type FrontendProject,
   type HorusProjectConfig,
@@ -13,6 +14,7 @@ import {
   type UserStory,
   type WorkspaceArtifactContext,
 } from "@u-build/shared";
+import { hostname } from "node:os";
 import { v4 as uuidv4 } from "uuid";
 import type {
   FrontendProjectRepository,
@@ -118,12 +120,16 @@ function resolveGeneratedPreviewHosts(
       "HOST",
     ]) ?? "0.0.0.0";
   const publicHost =
-    readEnvValue(env, [
-      "HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST",
-      "HORUS_PUBLIC_HOST",
-      "HORUS_WEB_PREVIEW_PUBLIC_HOST",
-      "HORUS_DOCKER_HOST",
-    ]) ?? bindHost;
+    resolvePreviewPublicHost({
+      configuredPublicHost: readEnvValue(env, [
+        "HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST",
+        "HORUS_PUBLIC_HOST",
+        "HORUS_WEB_PREVIEW_PUBLIC_HOST",
+        "HORUS_DOCKER_HOST",
+      ]),
+      bindHost,
+      runtimeHostname: hostname(),
+    });
   return { bindHost, publicHost };
 }
 

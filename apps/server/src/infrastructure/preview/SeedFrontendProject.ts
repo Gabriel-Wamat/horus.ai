@@ -1,8 +1,10 @@
 import { promises as fs } from "node:fs";
+import { hostname } from "node:os";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   FrontendProjectSchema,
+  resolvePreviewPublicHost,
   type FrontendProject,
   type PreviewCommand,
 } from "@u-build/shared";
@@ -64,11 +66,15 @@ function resolvePreviewHosts(
       "HOST",
     ]) ?? "0.0.0.0";
   const publicHost =
-    readOptionalEnv(env, [
-      "HORUS_WEB_PREVIEW_PUBLIC_HOST",
-      "HORUS_PUBLIC_HOST",
-      "HORUS_DOCKER_HOST",
-    ]) ?? bindHost;
+    resolvePreviewPublicHost({
+      configuredPublicHost: readOptionalEnv(env, [
+        "HORUS_WEB_PREVIEW_PUBLIC_HOST",
+        "HORUS_PUBLIC_HOST",
+        "HORUS_DOCKER_HOST",
+      ]),
+      bindHost,
+      runtimeHostname: hostname(),
+    });
   return { bindHost, publicHost };
 }
 

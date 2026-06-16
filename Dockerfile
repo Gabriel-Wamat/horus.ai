@@ -22,7 +22,9 @@ FROM base AS server-runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
+ENV HORUS_WEB_DIST_DIR=apps/web/dist
 COPY --from=build /prod/server /app
+COPY --from=build /app/apps/web/dist /app/apps/web/dist
 COPY skills/agents /app/skills/agents
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

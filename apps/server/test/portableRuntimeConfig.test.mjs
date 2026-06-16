@@ -3,12 +3,46 @@ import { mkdtemp, mkdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
+import {
+  isWildcardBindHost,
+  resolvePreviewPublicHost,
+} from "../../../packages/shared/dist/index.js";
 import { ProjectDefaultContractBuilder } from "../dist/infrastructure/project/ProjectDefaultContractBuilder.js";
 import {
   FileFrontendProjectRegistry,
 } from "../dist/infrastructure/preview/FileFrontendProjectRegistry.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
+
+test("preview public host policy does not publish wildcard bind hosts", () => {
+  assert.equal(
+    resolvePreviewPublicHost({
+      configuredPublicHost: "preview.team.example",
+      bindHost: "0.0.0.0",
+      runtimeHostname: "runtime-host",
+    }),
+    "preview.team.example"
+  );
+  assert.equal(
+    resolvePreviewPublicHost({
+      bindHost: "0.0.0.0",
+      runtimeHostname: "runtime-host",
+    }),
+    "runtime-host"
+  );
+  assert.equal(
+    resolvePreviewPublicHost({
+      bindHost: "preview-bind.example",
+    }),
+    "preview-bind.example"
+  );
+  assert.equal(isWildcardBindHost("0.0.0.0"), true);
+  assert.equal(isWildcardBindHost("preview-bind.example"), false);
+  assert.throws(
+    () => resolvePreviewPublicHost({ bindHost: "0.0.0.0" }),
+    /Preview public host could not be resolved/
+  );
+});
 
 test("default project contract uses portable inspection executables", async () => {
   const projectRoot = await mkdtemp(join(tmpdir(), "horus-contract-"));

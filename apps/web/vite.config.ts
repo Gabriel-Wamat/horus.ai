@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { hostname } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,7 +10,7 @@ const webDevHost = readEnv("HORUS_WEB_DEV_HOST", "0.0.0.0");
 const webDevPort = readPort("HORUS_WEB_DEV_PORT", 5173);
 const apiProxyTarget =
   process.env["HORUS_API_PROXY_TARGET"] ??
-  `http://${readEnv("HORUS_API_PROXY_HOST", readEnv("HORUS_PUBLIC_HOST", "0.0.0.0"))}:${readPort(
+  `http://${readEnv("HORUS_API_PROXY_HOST", readEnv("HORUS_PUBLIC_HOST", hostname()))}:${readPort(
     "HORUS_API_PROXY_PORT",
     3001
   )}`;

@@ -1,5 +1,40 @@
 import { z } from "zod";
 
+export interface ResolvePreviewPublicHostInput {
+  configuredPublicHost?: string | null | undefined;
+  bindHost: string;
+  runtimeHostname?: string | null | undefined;
+}
+
+export function resolvePreviewPublicHost(
+  input: ResolvePreviewPublicHostInput
+): string {
+  const configured = firstNonEmpty([
+    input.configuredPublicHost,
+    isWildcardBindHost(input.bindHost) ? input.runtimeHostname : input.bindHost,
+    input.runtimeHostname,
+  ]);
+  if (!configured) {
+    throw new Error(
+      "Preview public host could not be resolved. Set HORUS_PUBLIC_HOST or a preview-specific public host."
+    );
+  }
+  return configured;
+}
+
+export function isWildcardBindHost(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return normalized === "0.0.0.0" || normalized === "::" || normalized === "[::]";
+}
+
+function firstNonEmpty(values: Array<string | null | undefined>): string | undefined {
+  for (const value of values) {
+    const normalized = value?.trim();
+    if (normalized && normalized.length > 0) return normalized;
+  }
+  return undefined;
+}
+
 export const PreviewDeviceNameSchema = z.enum(["pc", "phone", "tablet"]);
 
 export const PreviewDeviceSchema = z.object({

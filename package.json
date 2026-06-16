@@ -24,6 +24,7 @@
     "verify:docker": "node scripts/docker-smoke.mjs",
     "verify:llm-providers": "node scripts/llm-provider-smoke.mjs",
     "verify:production-smoke": "node scripts/production-hardening-smoke.mjs",
+    "infra:deploy:gcp": "node infra/gcp/deploy-cloud-run.mjs",
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {

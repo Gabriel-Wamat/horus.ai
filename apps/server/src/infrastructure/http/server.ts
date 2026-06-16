@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { readCorsOrigin } from "./corsPolicy.js";
 import {
   createSecurityBoundaryMiddleware,
@@ -489,7 +491,30 @@ export async function createApp(
     })
   );
 
+  mountWebAppIfConfigured(app, env);
+
   return app;
+}
+
+function mountWebAppIfConfigured(
+  app: express.Application,
+  env: Record<string, string | undefined>
+): void {
+  const configuredWebDistDir = env["HORUS_WEB_DIST_DIR"]?.trim();
+  if (!configuredWebDistDir) return;
+
+  const webDistDir = resolve(configuredWebDistDir);
+  const indexFile = resolve(webDistDir, "index.html");
+  if (!existsSync(indexFile)) return;
+
+  app.use(express.static(webDistDir));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      next();
+      return;
+    }
+    res.sendFile(indexFile);
+  });
 }
 
 function withCurrentAbortSignal(
