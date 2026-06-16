@@ -6,31 +6,49 @@ import { mergeByIdAndSequence } from "../../../hooks/mergeEvents.js";
 
 const STREAM_STATUSES = new Set(["running", "awaiting_human"]);
 
-export function useRunFlowEvents(run: HorusRunSnapshot | null): HorusRunEventSnapshot[] {
+export interface UseRunFlowEventsResult {
+  events: HorusRunEventSnapshot[];
+  error: string | null;
+}
+
+export function useRunFlowEvents(run: HorusRunSnapshot | null): UseRunFlowEventsResult {
   const [streamedEvents, setStreamedEvents] = useState<HorusRunEventSnapshot[]>([]);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     setStreamedEvents([]);
+    setStreamError(null);
   }, [run?.threadId]);
 
   useEffect(() => {
     if (!run || !STREAM_STATUSES.has(run.status)) return;
     const sinceSequence = Math.max(0, ...run.events.map((event) => event.sequence));
-    const stream = agentFlowApi.streamRunEvents(run.threadId, sinceSequence, (event) => {
-      setStreamedEvents((current) => mergeEvents(current, [event]));
-      void queryClient.invalidateQueries({
-        queryKey: ["agent-flow-run", run.threadId],
-        exact: true,
-      });
-      void queryClient.invalidateQueries({ queryKey: ["agent-flow-runs"] });
-    });
+    const stream = agentFlowApi.streamRunEvents(
+      run.threadId,
+      sinceSequence,
+      (event) => {
+        setStreamError(null);
+        setStreamedEvents((current) => mergeEvents(current, [event]));
+        void queryClient.invalidateQueries({
+          queryKey: ["agent-flow-run", run.threadId],
+          exact: true,
+        });
+        void queryClient.invalidateQueries({ queryKey: ["agent-flow-runs"] });
+      },
+      { onError: setStreamError }
+    );
     return () => stream.close();
   }, [queryClient, run]);
 
-  return useMemo(
+  const events = useMemo(
     () => mergeEvents(run?.events ?? [], streamedEvents),
     [run?.events, streamedEvents]
+  );
+
+  return useMemo(
+    () => ({ events, error: streamError }),
+    [events, streamError]
   );
 }
 
