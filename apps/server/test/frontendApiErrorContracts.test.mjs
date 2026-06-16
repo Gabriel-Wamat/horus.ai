@@ -98,6 +98,36 @@ test("agent flow API validates JSON content type and shared response contracts",
   assert.match(source, /"fallback_executed"/);
 });
 
+test("generic SSE hook requires caller-owned event contracts", async () => {
+  const hookSource = await readFile(
+    join(repositoryRoot, "apps/web/src/hooks/useSseStream.ts"),
+    "utf8"
+  );
+  const workflowSource = await readFile(
+    join(repositoryRoot, "apps/web/src/hooks/useEventStream.ts"),
+    "utf8"
+  );
+  const previewSource = await readFile(
+    join(repositoryRoot, "apps/web/src/hooks/usePreviewEvents.ts"),
+    "utf8"
+  );
+  const workflowEventContractSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/ports/IEventStream.ts"),
+    "utf8"
+  );
+
+  assert.equal(hookSource.includes("JSON.parse(event.data) as TEvent"), false);
+  assert.match(hookSource, /parseEvent: \(payload: unknown\) => TEvent/);
+  assert.match(hookSource, /parseEvent\(JSON\.parse\(event\.data\)\)/);
+  assert.match(workflowSource, /parseWorkflowEvent/);
+  assert.match(previewSource, /PreviewEventSchema\.parse/);
+  assert.match(
+    workflowEventContractSource,
+    /export type WorkflowEvent = z\.output<typeof WorkflowEventSchema>/
+  );
+  assert.match(workflowEventContractSource, /export function parseWorkflowEvent/);
+});
+
 test("project files API validates JSON content type and shared response contracts", async () => {
   const source = await readFile(
     join(repositoryRoot, "apps/web/src/api/projectFilesApi.ts"),

@@ -1,4 +1,4 @@
-import type { WorkflowEvent } from "@u-build/shared";
+import { parseWorkflowEvent, type WorkflowEvent } from "@u-build/shared";
 import { useSseStream, type UseSseStreamResult } from "./useSseStream.js";
 
 export function useEventStream(
@@ -8,5 +8,6 @@ export function useEventStream(
     url: threadId ? `/api/events/${threadId}` : null,
     errorMessage: "SSE connection lost",
     logPrefix: "useEventStream",
+    parseEvent: parseWorkflowEvent,
   });
 }
