@@ -93,6 +93,28 @@ export interface RecordSnapshotResultInput {
 const MANIFEST_DIRNAME = ".horus";
 const MANIFEST_FILENAME = "index-manifest.json";
 
+export class ProjectIndexManifestReadError extends Error {
+  constructor(
+    readonly filePath: string,
+    message: string,
+    readonly originalCause?: unknown
+  ) {
+    super(`Failed to read project index manifest ${filePath}: ${message}`);
+    this.name = "ProjectIndexManifestReadError";
+  }
+}
+
+export class ProjectIndexManifestWriteError extends Error {
+  constructor(
+    readonly filePath: string,
+    message: string,
+    readonly originalCause?: unknown
+  ) {
+    super(`Failed to write project index manifest ${filePath}: ${message}`);
+    this.name = "ProjectIndexManifestWriteError";
+  }
+}
+
 export class ProjectIndexManifestStore {
   async read(projectRootPath: string): Promise<ProjectIndexManifestRecord | null> {
     const filePath = manifestPath(projectRootPath);
@@ -103,10 +125,16 @@ export class ProjectIndexManifestStore {
     if (raw === null) return null;
     try {
       const parsed = JSON.parse(raw) as ProjectIndexManifestRecord;
-      if (parsed?.version !== 1) return null;
+      if (parsed?.version !== 1) {
+        throw new ProjectIndexManifestReadError(
+          filePath,
+          "unsupported manifest version"
+        );
+      }
       return parsed;
-    } catch {
-      return null;
+    } catch (err) {
+      if (err instanceof ProjectIndexManifestReadError) throw err;
+      throw new ProjectIndexManifestReadError(filePath, toErrorMessage(err), err);
     }
   }
 
@@ -147,13 +175,27 @@ async function writeManifest(
   record: ProjectIndexManifestRecord
 ): Promise<void> {
   const filePath = manifestPath(projectRootPath);
-  await fs.mkdir(dirname(filePath), { recursive: true }).catch(() => undefined);
   const payload = `${JSON.stringify(record, null, 2)}\n`;
-  await fs.writeFile(filePath, payload, "utf-8").catch(() => undefined);
+  try {
+    await fs.mkdir(dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, payload, "utf-8");
+  } catch (err) {
+    throw new ProjectIndexManifestWriteError(filePath, toErrorMessage(err), err);
+  }
 }
 
 function dedupe(values: readonly string[]): string[] {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function toErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return "unknown error";
+  }
 }
 
 export const defaultProjectIndexManifestStore = new ProjectIndexManifestStore();
