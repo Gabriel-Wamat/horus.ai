@@ -1,17 +1,21 @@
-import type {
-  UserStory,
-  Spec,
-  HumanFeedback,
-  WorkflowState,
-  LlmProviderCapability,
-  LlmSettingsDraft,
-  LlmSettingsProfile,
-  LlmSettingsReference,
-  WorkspaceFolder,
-  ProjectConstructionRun,
-  ProjectWorkspace,
-  FrontendProject,
-  PreviewSession,
+import { z } from "zod";
+import {
+  SpecSchema,
+  UserStorySchema,
+  WorkspaceFolderSchema,
+  type UserStory,
+  type Spec,
+  type HumanFeedback,
+  type WorkflowState,
+  type LlmProviderCapability,
+  type LlmSettingsDraft,
+  type LlmSettingsProfile,
+  type LlmSettingsReference,
+  type WorkspaceFolder,
+  type ProjectConstructionRun,
+  type ProjectWorkspace,
+  type FrontendProject,
+  type PreviewSession,
 } from "@u-build/shared";
 
 const BASE = "/api";
@@ -31,6 +35,50 @@ export class WorkflowApiError extends Error {
     this.name = "WorkflowApiError";
   }
 }
+
+const WorkspaceArtifactRevisionSchema = z.object({
+  activeRevision: z.number().int().positive(),
+  revisions: z.array(
+    z.object({
+      revision: z.number().int().positive(),
+      file: z.string().trim().min(1),
+      createdAt: z.string().datetime(),
+    })
+  ),
+});
+
+const WorkspaceSpecArtifactSchema = z.object({
+  specId: z.string().trim().min(1),
+  spec: SpecSchema.optional(),
+  revision: WorkspaceArtifactRevisionSchema,
+});
+
+const WorkspaceUserStoryArtifactSchema = z.object({
+  story: UserStorySchema,
+  revision: WorkspaceArtifactRevisionSchema,
+  specs: z.array(WorkspaceSpecArtifactSchema),
+});
+
+const WorkspaceFoldersResponseSchema = z.object({
+  folders: z.array(WorkspaceFolderSchema),
+});
+
+const WorkspaceFolderResponseSchema = z.object({
+  folder: WorkspaceFolderSchema,
+});
+
+const WorkspaceUserStoriesResponseSchema = z.object({
+  userStories: z.array(UserStorySchema),
+  artifacts: z.array(WorkspaceUserStoryArtifactSchema).optional(),
+});
+
+const WorkspaceUserStoryResponseSchema = z.object({
+  userStory: UserStorySchema,
+});
+
+const WorkspaceSpecResponseSchema = z.object({
+  spec: SpecSchema,
+});
 
 async function requireOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;
@@ -55,6 +103,48 @@ async function requireOk(res: Response, action: string): Promise<void> {
     res.status,
     body
   );
+}
+
+interface WorkflowApiContract<T> {
+  parse(input: unknown): T;
+}
+
+async function readWorkflowJson<T>(
+  res: Response,
+  action: string,
+  contract: WorkflowApiContract<T>
+): Promise<T> {
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new WorkflowApiError(
+      `${action} falhou: contrato inválido da API, esperado application/json e recebido ${
+        contentType || "content-type ausente"
+      }.`,
+      res.status,
+      null
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await res.json();
+  } catch (err) {
+    throw new WorkflowApiError(
+      `${action} falhou: JSON inválido retornado pela API (${errorMessage(err)}).`,
+      res.status,
+      null
+    );
+  }
+
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new WorkflowApiError(
+      `${action} falhou: payload fora do contrato esperado (${errorMessage(err)}).`,
+      res.status,
+      payload
+    );
+  }
 }
 
 export interface StartWorkflowResponse {
@@ -128,7 +218,11 @@ export const workflowApi = {
   listWorkspaceFolders: async (): Promise<WorkspaceFolder[]> => {
     const res = await fetch(`${BASE}/workspace/folders`, { cache: "no-store" });
     await requireOk(res, "Listar pastas do workspace");
-    const body = (await res.json()) as { folders: WorkspaceFolder[] };
+    const body = await readWorkflowJson(
+      res,
+      "Listar pastas do workspace",
+      WorkspaceFoldersResponseSchema
+    );
     return body.folders;
   },
 
@@ -139,7 +233,11 @@ export const workflowApi = {
       body: JSON.stringify({ name }),
     });
     await requireOk(res, "Criar pasta do workspace");
-    const body = (await res.json()) as { folder: WorkspaceFolder };
+    const body = await readWorkflowJson(
+      res,
+      "Criar pasta do workspace",
+      WorkspaceFolderResponseSchema
+    );
     return body.folder;
   },
 
@@ -148,7 +246,11 @@ export const workflowApi = {
       cache: "no-store",
     });
     await requireOk(res, "Listar user stories do workspace");
-    const body = (await res.json()) as { userStories: UserStory[] };
+    const body = await readWorkflowJson(
+      res,
+      "Listar user stories do workspace",
+      WorkspaceUserStoriesResponseSchema
+    );
     return body.userStories;
   },
 
@@ -159,13 +261,11 @@ export const workflowApi = {
       cache: "no-store",
     });
     await requireOk(res, "Listar artefatos do workspace");
-    const body = (await res.json()) as {
-      userStories: UserStory[];
-      artifacts?: Array<{
-        story: UserStory;
-        specs: Array<{ spec?: Spec }>;
-      }>;
-    };
+    const body = await readWorkflowJson(
+      res,
+      "Listar artefatos do workspace",
+      WorkspaceUserStoriesResponseSchema
+    );
     const specsByStoryId: Record<string, Spec> = {};
     for (const artifact of body.artifacts ?? []) {
       const specs = Array.isArray(artifact.specs) ? artifact.specs : [];
@@ -188,7 +288,11 @@ export const workflowApi = {
       }
     );
     await requireOk(res, "Atualizar user story do workspace");
-    const body = (await res.json()) as { userStory: UserStory };
+    const body = await readWorkflowJson(
+      res,
+      "Atualizar user story do workspace",
+      WorkspaceUserStoryResponseSchema
+    );
     return body.userStory;
   },
 
@@ -217,7 +321,11 @@ export const workflowApi = {
       }
     );
     await requireOk(res, "Atualizar spec do workspace");
-    const body = (await res.json()) as { spec: Spec };
+    const body = await readWorkflowJson(
+      res,
+      "Atualizar spec do workspace",
+      WorkspaceSpecResponseSchema
+    );
     return body.spec;
   },
 
@@ -286,3 +394,7 @@ export const workflowApi = {
     await requireOk(res, "Remover provider LLM");
   },
 } as const;
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
