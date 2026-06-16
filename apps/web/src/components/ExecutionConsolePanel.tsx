@@ -41,6 +41,7 @@ export function ExecutionConsolePanel({
   workflowThreadId,
   workflowEvents,
   fileOperations,
+  fileOperationsError,
   chatMessages,
   onToggleCollapsed,
 }: {
@@ -49,6 +50,7 @@ export function ExecutionConsolePanel({
   readonly workflowThreadId: string | null;
   readonly workflowEvents: WorkflowProgressEvent[];
   readonly fileOperations: AgentFileOperationTelemetry[];
+  readonly fileOperationsError: string | null;
   readonly chatMessages: PreviewChatMessage[];
   readonly onToggleCollapsed: () => void;
 }): JSX.Element {
@@ -75,6 +77,9 @@ export function ExecutionConsolePanel({
   const [retriedTasks, setRetriedTasks] = useState<
     Map<string, ExecutionTaskRouteTask>
   >(() => new Map());
+  const [executionTaskActionError, setExecutionTaskActionError] = useState<
+    string | null
+  >(null);
   const executionProjectId = selectedProject?.projectWorkspaceId ?? null;
   const effectiveTerminalRows = useMemo(
     () =>
@@ -109,9 +114,12 @@ export function ExecutionConsolePanel({
       const taskId = row.taskId;
       setKillingTaskIds((current) => new Set(current).add(taskId));
       try {
+        setExecutionTaskActionError(null);
         await killExecutionTask(projectId, taskId);
       } catch (err) {
-        console.warn("execution_task_kill_failed", err);
+        setExecutionTaskActionError(
+          err instanceof Error ? err.message : "Falha ao parar execution task."
+        );
       } finally {
         setKillingTaskIds((current) => {
           const next = new Set(current);
@@ -135,10 +143,13 @@ export function ExecutionConsolePanel({
       const taskId = row.taskId;
       setRetryingTaskIds((current) => new Set(current).add(taskId));
       try {
+        setExecutionTaskActionError(null);
         const task = await retryExecutionTaskRequest(projectId, taskId);
         setRetriedTasks((current) => new Map(current).set(row.id, task));
       } catch (err) {
-        console.warn("execution_task_retry_failed", err);
+        setExecutionTaskActionError(
+          err instanceof Error ? err.message : "Falha ao reexecutar execution task."
+        );
       } finally {
         setRetryingTaskIds((current) => {
           const next = new Set(current);
@@ -156,10 +167,13 @@ export function ExecutionConsolePanel({
       const taskId = row.taskId;
       setApprovingTaskIds((current) => new Set(current).add(taskId));
       try {
+        setExecutionTaskActionError(null);
         const task = await approveExecutionTaskRequest(projectId, taskId);
         setRetriedTasks((current) => new Map(current).set(row.id, task));
       } catch (err) {
-        console.warn("execution_task_approval_failed", err);
+        setExecutionTaskActionError(
+          err instanceof Error ? err.message : "Falha ao aprovar execution task."
+        );
       } finally {
         setApprovingTaskIds((current) => {
           const next = new Set(current);
@@ -230,11 +244,15 @@ export function ExecutionConsolePanel({
           events={visibleEvents}
         />
         <ExecutionContextSection rows={contextRows} />
-        <ExecutionFilesSection files={latestFiles} />
+        <ExecutionFilesSection
+          files={latestFiles}
+          error={fileOperationsError}
+        />
         <ExecutionTerminalSection
           rows={canonicalTerminalRows}
           commandCount={canonicalTerminalRows.length}
           followedTasks={followedTasks}
+          actionError={executionTaskActionError}
           selectedProjectId={executionProjectId}
           killingTaskIds={killingTaskIds}
           retryingTaskIds={retryingTaskIds}
@@ -264,7 +282,7 @@ async function killExecutionTask(projectId: string, taskId: string): Promise<voi
     { method: "POST" }
   );
   if (!response.ok) {
-    throw new Error(`Execution task kill failed: ${taskId}`);
+    throw new Error(await readExecutionTaskRouteError(response, "Parar execution task"));
   }
 }
 
@@ -279,7 +297,9 @@ async function retryExecutionTaskRequest(
     { method: "POST" }
   );
   if (!response.ok) {
-    throw new Error(`Execution task retry failed: ${taskId}`);
+    throw new Error(
+      await readExecutionTaskRouteError(response, "Reexecutar execution task")
+    );
   }
   return response.json() as Promise<ExecutionTaskRouteTask>;
 }
@@ -302,7 +322,27 @@ async function approveExecutionTaskRequest(
     }
   );
   if (!response.ok) {
-    throw new Error(`Execution task approval failed: ${taskId}`);
+    throw new Error(
+      await readExecutionTaskRouteError(response, "Aprovar execution task")
+    );
   }
   return response.json() as Promise<ExecutionTaskRouteTask>;
+}
+
+async function readExecutionTaskRouteError(
+  response: Response,
+  action: string
+): Promise<string> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await response.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? response.statusText;
+    return `${action} falhou (${response.status}): ${detail}`;
+  }
+  const body = await response.text().catch(() => "");
+  return `${action} falhou (${response.status}): ${
+    body.trim() || response.statusText || "sem detalhe retornado"
+  }`;
 }
