@@ -1,0 +1,99 @@
+{
+  "id": "c08d48bd-f67c-44af-8b9d-3efde24d2c0f",
+  "userStoryId": "a9c1f600-0148-43ef-9fa6-eff0ddd06610",
+  "version": 1,
+  "summary": "Painel de Relatórios e Configurações de provider com CRUD de configurações seguras e visual de métricas por período, integrado ao shell existente.",
+  "technicalApproach": "Pattern: form-crud-tool. Frontend React + TypeScript (preservar arquitetura). Página com duas tabs: Relatórios e Configurações. Usar componentes existentes do design system local (botões, inputs, cards, tabelas) via adapters injetáveis; fallback para componentes presentes na base (ex.: /src/components). Form de provider implementado como controlled form com estados: pristine, dirty, testing, valid, invalid, saving, saved. Chave sensível armazenada no model apenas como flag presente/absent e valor mascarado no UI; nunca renderizar plaintext. Teste de conexão faz POST ao adapter de API; resposta é normalizada por um service que valida shape e atualiza estado. Relatórios buscam métricas paginadas e comparativas via API; tabela de eventos com export endpoint (gera URL/stream conforme contrato). Garantir responsividade (mobile-first, breakpoint 600/960px), acessibilidade (labels ARIA, foco visível, contrastes AA), tratamento de loading/empty/error/success e prevenção de overflow de texto (ellipsis + tooltip).",
+  "components": [
+    {
+      "name": "ProviderSettingsForm",
+      "type": "ui",
+      "description": "Formulário CRUD para escolher provider, modelo, endpoint e chave (mascarada), controlar estados (pristine/dirty/testing/valid/invalid/saving/saved) e mostrar metadados de última alteração; expõe onSave, onTest callbacks e validação inline.",
+      "dependencies": [
+        "SettingsService",
+        "ApiAdapter",
+        "LocalModel"
+      ]
+    },
+    {
+      "name": "ReportsPanel",
+      "type": "ui",
+      "description": "Visualização de métricas por período, comparação com período anterior, controlador de período, tabela de eventos relevantes com paginação, filtros e botão de export; lida com loading/empty/error.",
+      "dependencies": [
+        "ReportsService",
+        "ApiAdapter",
+        "ExportService"
+      ]
+    },
+    {
+      "name": "SettingsService",
+      "type": "service",
+      "description": "Orquestra leitura/escrita de configurações via ApiAdapter, preserva forma do model, aplica mascaramento de chaves, gerencia estados de form e testes de conexão, emite eventos para UI.",
+      "dependencies": [
+        "ApiAdapter",
+        "LocalModel"
+      ]
+    },
+    {
+      "name": "ReportsService",
+      "type": "service",
+      "description": "Consulta endpoints de métricas e eventos, normaliza respostas para componentes UI (timeseries, aggregates, table rows), calcula comparação com período anterior e prepara payload de export.",
+      "dependencies": [
+        "ApiAdapter"
+      ]
+    },
+    {
+      "name": "ApiAdapter",
+      "type": "api",
+      "description": "Boundary injetável que implementa contratos HTTP reais do backend (GET/POST/PUT). Deve ser substituível em testes/endpoints diferentes sem mudança nos serviços.",
+      "dependencies": [
+        "HttpClient",
+        "AuthBoundary"
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "GET",
+      "path": "/api/providers/:id/config",
+      "description": "Buscar configuração de provider (sem retornar o valor em texto da chave; campo 'hasKey': boolean, 'maskedKey': string)."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/providers/:id/config",
+      "description": "Atualizar configuração de provider; aceita body com provider, model, endpoint, chave opcional (se presente substitui) e metadata; retorna saved resource metadata."
+    },
+    {
+      "method": "POST",
+      "path": "/api/providers/:id/test-connection",
+      "description": "Testar conexão com provider; recebe credenciais (chave opcional) e retorna {status: 'ok'|'failed', details:string}."
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/metrics",
+      "description": "Buscar métricas agregadas por período (query params start,end,granularity) e comparação; retorna timeseries e aggregates."
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/events",
+      "description": "Buscar tabela de eventos com paginação e filtros (providerId,start,end,page,size). Returns rows and total."
+    }
+  ],
+  "dataModels": [
+    "ProviderConfig { id:string, provider:string, model:string, endpoint:string, hasKey:boolean, maskedKey?:string, metadata:{updatedBy:string, updatedAt:string} }",
+    "TestConnectionResult { status:'ok'|'failed', details?:string }",
+    "MetricsResponse { aggregates:{metricName:string,value:number}[], timeseries:{ts:number,value:number}[] }",
+    "EventsPage { rows:{id:string,timestamp:string,level:string,message:string,context:any}[], total:number, page:number, size:number }"
+  ],
+  "acceptanceCriteria": [
+    "Relatórios: ao selecionar período, ReportsPanel realiza GET /api/reports/metrics e exibe aggregates e gráfico/tiles com loading->data or empty; comparação com período anterior calculada e exibida numericamente (positivo/negativo)",
+    "Tabela de eventos: chamada GET /api/reports/events com paginação; estado loading, empty (exibe call-to-action sem erro) e error (exibe mensagem e retry) cobertos",
+    "Export: ao clicar Export, ReportsPanel invoca ExportService que solicita backend (pode ser pre-signed URL) e inicia download; se contrato não suportar download imediato, componente deve mostrar link gerado/preview",
+    "Configurações load: ProviderSettingsForm faz GET /api/providers/:id/config e popula campos; chave nunca aparece em texto puro (maskedKey ou hasKey boolean)",
+    "Editar/Salvar: ao alterar form fica dirty; salvar dispara PUT /api/providers/:id/config, mostra estado saving->saved ou error; após saved atualiza metadata visível",
+    "Teste de conexão: botão Test aciona POST /api/providers/:id/test-connection, muda estado testing e exibe resultado valid/invalid com mensagem detalhada",
+    "Estados do form: UI apresenta indicadores claros para pristine, dirty, testing, valid, invalid, saving, saved (visuais e textuais) verificáveis por QA",
+    "Segurança de chave: campo de chave só permite ver/transient copy via ação explícita (ex: 'Reveal' control) e auditoria deve registrar presença/alteração, nunca retornar plain key ao client UI (server contrato) em GETs normais; campo mostra 'Presente'/'Ausente' quando apropriado; copy limitado e auditado (emitir event)"
+  ],
+  "generatedAt": "2026-05-27T05:53:17.207Z"
+}

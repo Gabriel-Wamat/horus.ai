@@ -39,6 +39,7 @@ import type { WorkflowCodeChangeSetApplier } from "../../domain/services/Workflo
 import {
   applyExactIncrementalEdit,
   applyLineRangeReplacement,
+  buildMinimalLineRangeReplacement,
   sliceFileContentByLineRange,
 } from "./ProjectAgentFileEditOperations.js";
 
@@ -193,6 +194,20 @@ const WriteFileOutputSchema = WriteFileToolResultSchema;
 const EditFileInputSchema = ProjectIdInputSchema.merge(IncrementalEditInputSchema);
 
 const EditFileOutputSchema = IncrementalEditResultSchema;
+
+const RewriteFileInputSchema = ProjectIdInputSchema.extend({
+  path: z.string().trim().min(1),
+  content: z.string(),
+  expectedContentHash: z.string().trim().min(16).optional(),
+  expectedMtimeMs: z.number().nonnegative().optional(),
+  baseVersion: ProjectFileVersionSchema.optional(),
+  reason: z.string().trim().min(1).optional(),
+});
+
+const RewriteFileOutputSchema = IncrementalEditResultSchema.extend({
+  startLine: z.number().int().positive().nullable().default(null),
+  endLine: z.number().int().positive().nullable().default(null),
+});
 
 const ReplaceFileRangeInputSchema = ProjectIdInputSchema.extend({
   path: z.string().trim().min(1),
@@ -850,6 +865,87 @@ export function registerProjectAgentTools(deps: RegisterProjectAgentToolsDeps): 
         additions: operation.actualDiffStats.addedLines,
         deletions: operation.actualDiffStats.removedLines,
         diff: operation.actualDiff,
+      };
+    },
+  });
+
+  deps.registry.register({
+    toolName: "rewrite_file",
+    mutatesState: true,
+    inputSchema: RewriteFileInputSchema,
+    outputSchema: RewriteFileOutputSchema,
+    handler: async (input, context): Promise<IncrementalEditResult & {
+      startLine: number | null;
+      endLine: number | null;
+    }> => {
+      const file = await deps.fileBrowser.getFileContent({
+        projectId: input.projectId,
+        path: input.path,
+        ...(input.runId ? { runId: input.runId } : {}),
+        ...(context.projectRootOverride
+          ? { projectRootOverride: context.projectRootOverride }
+          : {}),
+        maxBytes: 2_000_000,
+      });
+      if (file.binary) throw new Error(`rewrite_file blocked binary_file for ${input.path}.`);
+      if (file.truncated) {
+        throw new Error(`rewrite_file blocked truncated_file for ${input.path}.`);
+      }
+      if (file.content === null || !file.version) {
+        throw new Error(`rewrite_file requires readable text content for ${input.path}.`);
+      }
+
+      const replacement = buildMinimalLineRangeReplacement({
+        currentContent: file.content,
+        nextContent: input.content,
+      });
+      if (!replacement) {
+        return {
+          path: input.path,
+          changed: false,
+          newVersionHash: file.version.hash,
+          replacementCount: 0,
+          additions: 0,
+          deletions: 0,
+          diff: "",
+          startLine: null,
+          endLine: null,
+        };
+      }
+
+      const edit = applyLineRangeReplacement({
+        path: input.path,
+        currentContent: file.content,
+        startLine: replacement.startLine,
+        endLine: replacement.endLine,
+        replacement: replacement.replacement,
+      });
+      const applied = await applyProjectFileMutation(deps, {
+        projectId: input.projectId,
+        runId: input.runId,
+        projectRootOverride: context.projectRootOverride,
+        operation: {
+          targetPath: input.path,
+          changeType: "update",
+          beforeContent: file.content,
+          afterContent: edit.nextContent,
+          baseVersion: input.baseVersion ?? file.version,
+          expectedContentHash: input.expectedContentHash,
+          expectedMtimeMs: input.expectedMtimeMs,
+          reason: input.reason ?? "Agent tool rewrite_file",
+        },
+      });
+      const operation = firstAppliedOperation(applied, input.path);
+      return {
+        path: operation.relativePath,
+        changed: operation.afterVersion?.hash !== file.version.hash,
+        newVersionHash: operation.afterVersion?.hash ?? file.version.hash,
+        replacementCount: 1,
+        additions: operation.actualDiffStats.addedLines,
+        deletions: operation.actualDiffStats.removedLines,
+        diff: operation.actualDiff,
+        startLine: replacement.startLine,
+        endLine: replacement.endLine,
       };
     },
   });

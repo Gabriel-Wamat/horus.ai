@@ -1,0 +1,28 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "storyId": "11111111-1111-4111-8111-111111111111",
+  "specId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "revision": 1,
+  "savedAt": "2026-05-26T12:45:58.343Z",
+  "spec": {
+    "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "version": 1,
+    "summary": "Spec inexistente",
+    "technicalApproach": "Nao deve criar spec via PATCH.",
+    "components": [
+      {
+        "name": "MissingSpecProbe",
+        "type": "ui",
+        "description": "Probe valida contrato de PATCH.",
+        "dependencies": []
+      }
+    ],
+    "apiEndpoints": [],
+    "dataModels": [],
+    "acceptanceCriteria": [
+      "Rejeita upsert"
+    ],
+    "generatedAt": "2026-05-26T10:01:00.000Z"
+  }
+}

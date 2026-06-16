@@ -53,6 +53,8 @@ export interface ContextReceiptRow {
   selectedFiles: string[];
   omittedFiles: number;
   selectedBytes: number;
+  contextChannels: string[];
+  retrievalStatus: string;
   channels: string[];
   reasons: string[];
 }

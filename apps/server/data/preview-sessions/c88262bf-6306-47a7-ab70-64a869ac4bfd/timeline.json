@@ -1,0 +1,41 @@
+[
+  {
+    "id": "dee3559c-dd6c-478c-8cfe-e9309ebd367f",
+    "type": "preview_created",
+    "sessionId": "c88262bf-6306-47a7-ab70-64a869ac4bfd",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T16:17:58.795Z",
+    "status": "waiting",
+    "message": "Preview session created",
+    "data": {
+      "route": "/",
+      "device": "pc"
+    }
+  },
+  {
+    "id": "699c7d6c-c900-4bb6-b613-733ea3ab3d42",
+    "type": "preview_started",
+    "sessionId": "c88262bf-6306-47a7-ab70-64a869ac4bfd",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T16:17:59.103Z",
+    "status": "running",
+    "message": "Preview session started",
+    "data": {
+      "previewUrl": "http://localhost:5174/",
+      "processId": 15966,
+      "commandId": "preview:11111111-1111-4111-8111-111111111116",
+      "executable": "pnpm",
+      "args": [
+        "--filter",
+        "@u-build/web",
+        "dev"
+      ],
+      "cwd": "/Users/wamat/Desktop/horus.ai/apps/web",
+      "stdoutTail": "",
+      "stderrTail": "",
+      "exitCode": null,
+      "signal": null,
+      "durationMs": 289
+    }
+  }
+]

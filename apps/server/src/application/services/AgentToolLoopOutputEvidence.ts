@@ -48,6 +48,7 @@ export async function recordToolOutputEvidence(
 
   if (
     toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
     toolName === "replace_file_range" ||
     toolName === "write_file" ||
     toolName === "save_file" ||

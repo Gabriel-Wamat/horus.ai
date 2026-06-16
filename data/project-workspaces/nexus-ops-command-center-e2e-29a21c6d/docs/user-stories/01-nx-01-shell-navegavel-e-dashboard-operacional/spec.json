@@ -1,0 +1,94 @@
+{
+  "id": "44b4932c-b484-4eec-b8d8-ca932500b288",
+  "userStoryId": "c1be66e7-2d4c-4b80-827f-498c340aa739",
+  "version": 1,
+  "summary": "Shell navegável tipo Command Center com sidebar persistente e dashboard operacional dark, responsivo e filtrável sem reload de página.",
+  "technicalApproach": "Pattern: operational-dashboard. Implementar em React + TypeScript preservando arquitetura existente (componentes funcionais, hooks, contexto de rota). Shell com SidebarRail (persistente em desktop, colapsável em mobile), Topbar contextual com filtros globais e Breadcrumbs/RouteIndicator; rota cliente via react-router (ou adapter de roteamento injetável). Dashboard composto por KPICards, Lista de Incidentes e QueuePanel; cada bloco gerencia estados: loading, empty, error, success. Data flow via injectable adapters (Boundary Service) que expõem fetchContracts (GET /api/ops/summary, /incidents, /assets, /automations, /reports); não usar mocks em runtime. CSS-in-TS ou tokens existentes; tema dark baseado em cinzas, um único accent para primary/actions; truncamento com text-overflow/word-break controlado. Responsividade: sidebar->rail->drawer, grids fluidos; acessibilidade: landmarks, aria-current em navegação, foco visível, contraste mínimo WCAG AA para texto, testes de teclado e leitores de tela.",
+  "components": [
+    {
+      "name": "ShellRouter",
+      "type": "ui",
+      "description": "Container de aplicação que injeta SidebarRail, Topbar e Outlet de rota; mantém estado de collapsed nav, filtros globais e breadcrumbs.",
+      "dependencies": [
+        "GlobalFilterService",
+        "RouteIndicator"
+      ]
+    },
+    {
+      "name": "SidebarRail",
+      "type": "ui",
+      "description": "Navegação persistente com itens para Dashboard, Incidentes, Ativos, Automações, Relatórios e Configurações; exibe estados collapsed/expanded e indica rota ativa com aria-current.",
+      "dependencies": [
+        "ShellRouter"
+      ]
+    },
+    {
+      "name": "TopbarFilters",
+      "type": "ui",
+      "description": "Controles globais de período, severidade e equipe; espelha filtros ativos visualmente (chips/tokens) e propaga mudanças ao GlobalFilterService.",
+      "dependencies": [
+        "GlobalFilterService"
+      ]
+    },
+    {
+      "name": "DashboardPanel",
+      "type": "ui",
+      "description": "Composição de KPICards, IncidentsList e QueuePanel; cada subcomponente aceita adapters para dados e exibe loading/empty/error/success.",
+      "dependencies": [
+        "OpsApiService",
+        "TopbarFilters"
+      ]
+    },
+    {
+      "name": "OpsApiService",
+      "type": "service",
+      "description": "Adapter injetável para consumir contratos backend reais; expõe métodos tipados para summary, incidents, assets, automations, reports com cancelation/timeout e transformação mínima de respostas.",
+      "dependencies": [
+        "NetworkAdapter",
+        "models"
+      ]
+    },
+    {
+      "name": "GlobalFilterService",
+      "type": "model",
+      "description": "Estado observável (Context/Store) com período, severidade e equipe; serializa para query params de rota sem recarregar página.",
+      "dependencies": [
+        "ShellRouter"
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "GET",
+      "path": "/api/ops/summary",
+      "description": "Retorna KPIs: incidentCount, slaAtRisk, automationsRunning, criticalAssetsCount, reviewQueueCount; aceita query params period,severity,team."
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/incidents",
+      "description": "Lista paginada de incidentes com filtros (period,severity,team); resposta inclui total, items[] com id,title,status,severity,asset,assignedTeam,createdAt."
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/assets",
+      "description": "Lista de ativos críticos e status; aceita filters."
+    }
+  ],
+  "dataModels": [
+    "OpsSummary: { incidentCount:number, slaAtRisk:number, automationsRunning:number, criticalAssetsCount:number, reviewQueueCount:number }",
+    "IncidentListResponse: { total:number, items: Incident[] }",
+    "Incident: { id:string, title:string, status:string, severity:string, assetId?:string, assignedTeam?:string, createdAt:string }",
+    "Asset: { id:string, name:string, critical:boolean, status:string }"
+  ],
+  "acceptanceCriteria": [
+    "Shell responsivo com SidebarRail, Topbar e Outlet; navegação entre 6 áreas sem full page reload (SPA) verificável por mudança de rota e sem recarregar contexto de Sidebar/Topbar.",
+    "Dashboard exibe KPICards para incidentCount, slaAtRisk, automationsRunning, criticalAssetsCount e reviewQueueCount; cada card aceita estados: loading (skeleton), empty (placeholder), error (retry action) e success (valor).",
+    "IncidentsList e QueuePanel representam loading/empty/error/success e truncam títulos longos com ellipsis; testes manuais devem inserir strings > 3 linhas e confirmar truncamento sem overflow.",
+    "TopbarFilters possui controles para periodo,severity,equipe; filtros aplicados atualizam GlobalFilterService, adicionam query params na URL e mostram chips visuais sem quebrar layout em desktop (>=1024px) ou mobile (<=480px).",
+    "Tema dark aplicado: background/ surface em escala de cinzas, strokes sutis; apenas um accent para primary/action e positive state; contraste mínimo WCAG AA para texto normal e 3:1 para UI components.",
+    "Navegação destaca rota ativa com aria-current e breadcrumbs ou indicador de rota; todos os controles navegáveis via teclado e foco visível.",
+    "Responsividade: sidebar colapsa para rail/drawer em telas pequenas; layout não quebra horizontalmente e elementos reflow sem overlap.",
+    "Endpoints listados são consumidos via OpsApiService injetável; falha de rede exibe estado error com CTA retry e não quebra layout."
+  ],
+  "generatedAt": "2026-05-27T05:48:16.896Z"
+}

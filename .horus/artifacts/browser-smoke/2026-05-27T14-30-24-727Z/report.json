@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "baseUrl": "http://localhost:5174",
+  "apiBaseUrl": "http://localhost:3000",
+  "artifactDir": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z",
+  "startedAt": "2026-05-27T14:30:24.728Z",
+  "screenshots": {
+    "defaultPreview": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/01-default-preview.png",
+    "runningPreview": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/02-running-preview.png",
+    "allProjects": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/03-all-projects.png",
+    "blockedProject": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/04-blocked-project.png"
+  },
+  "checks": {
+    "health": {
+      "status": "ok"
+    },
+    "visibleProjects": [
+      {
+        "id": "47ac45cd-dfb8-462f-b387-b7f03235cf73",
+        "name": "project-manager-beautiful-ui-spec59-status",
+        "visibility": "visible",
+        "lifecycleStatus": "published",
+        "healthStatus": "healthy"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111116",
+        "name": "user_stories",
+        "visibility": "visible",
+        "lifecycleStatus": "published",
+        "healthStatus": "warning"
+      }
+    ],
+    "canonicalProject": {
+      "id": "47ac45cd-dfb8-462f-b387-b7f03235cf73",
+      "name": "project-manager-beautiful-ui-spec59-status",
+      "healthStatus": "healthy"
+    },
+    "invalidProject": {
+      "id": "29544aba-0d43-4e21-a985-6c1dcfaa0bbd",
+      "name": "project-manager-beautiful-ui-spec59-final",
+      "visibility": "hidden",
+      "lifecycleStatus": "superseded",
+      "healthStatus": "warning",
+      "healthReasons": [
+        "superseded_by_canonical",
+        "preview_url_collision"
+      ]
+    },
+    "defaultSelector": {
+      "optionTexts": [
+        "project-manager-beautiful-ui-spec59-status",
+        "user_stories"
+      ],
+      "optionValues": [
+        "47ac45cd-dfb8-462f-b387-b7f03235cf73",
+        "11111111-1111-4111-8111-111111111116"
+      ]
+    },
+    "runningPreview": {
+      "projectId": "47ac45cd-dfb8-462f-b387-b7f03235cf73",
+      "frameBox": {
+        "x": 569,
+        "y": 212,
+        "width": 660,
+        "height": 641
+      },
+      "iframeSrc": "http://127.0.0.1:5184/"
+    },
+    "blockedProject": {
+      "projectId": "29544aba-0d43-4e21-a985-6c1dcfaa0bbd",
+      "visibleError": true
+    }
+  },
+  "warnings": [],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "finishedAt": "2026-05-27T14:30:26.593Z"
+}

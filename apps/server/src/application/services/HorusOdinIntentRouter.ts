@@ -339,6 +339,10 @@ const PREVIEW_RELOAD_WORDS = new Set([
   "recarregue",
   "reinicie",
   "atualize",
+  "atualizar",
+  "atualizou",
+  "atualizada",
+  "atualizado",
   "refresh",
   "reload",
 ]);
@@ -368,7 +372,12 @@ const CODE_EDIT_WORDS = new Set([
   "altere",
   "ajuste",
   "troque",
+  "trocar",
+  "trocada",
+  "trocado",
   "mude",
+  "mudanca",
+  "mudancas",
   "renomeie",
   "remova",
   "retire",
@@ -420,6 +429,13 @@ const CODE_TARGET_WORDS = new Set([
   "css",
   "estilo",
   "cor",
+  "cores",
+  "verde",
+  "amarelo",
+  "azul",
+  "vermelho",
+  "identidade",
+  "visual",
   "tema",
   "espacamento",
   "margem",
@@ -605,6 +621,13 @@ function matchPreviewAction(
     return "stop";
   }
   if (hasAnyWord(words, PREVIEW_RELOAD_WORDS)) {
+    return "reload";
+  }
+  if (
+    containsPhrase(words, ["nao", "atualizou"]) ||
+    containsPhrase(words, ["nao", "atualiza"]) ||
+    containsPhrase(words, ["nao", "recarregou"])
+  ) {
     return "reload";
   }
   if (hasAnyWord(words, PREVIEW_START_WORDS)) {

@@ -20,8 +20,6 @@ const SKIP_PATH_PATTERNS = [
   /^\.git\//,
   /^\.turbo\//,
   /^\.pnpm-store\//,
-  /^\.horus\//,
-  /^data\//,
   /^output\//,
   /^coverage\//,
   /^apps\/docs\/\.next\//,

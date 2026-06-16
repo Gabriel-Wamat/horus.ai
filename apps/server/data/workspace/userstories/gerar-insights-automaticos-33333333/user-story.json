@@ -1,0 +1,17 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "savedAt": "2026-05-26T14:32:23.118Z",
+  "story": {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "title": "Gerar insights automáticos",
+    "description": "Como analista, quero receber insights automáticos sobre riscos, oportunidades e eventos relevantes encontrados nos documentos.",
+    "acceptanceCriteria": [
+      "O sistema gera uma lista de insights por empresa",
+      "Cada insight mostra fonte e justificativa",
+      "Insights são classificados por tipo e relevância"
+    ],
+    "priority": "medium",
+    "labels": [],
+    "createdAt": "2026-05-26T10:10:00.000Z"
+  }
+}

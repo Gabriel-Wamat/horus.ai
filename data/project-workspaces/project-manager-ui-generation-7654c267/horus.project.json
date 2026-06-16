@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "projectId": "3719b801-e9d1-4644-94d1-1d61579e38a6",
+  "projectName": "project-manager-ui-generation",
+  "rootPathPolicy": {
+    "writeRoots": [
+      ".",
+      "src"
+    ],
+    "deniedPaths": [
+      ".env",
+      ".git",
+      "node_modules",
+      "dist",
+      "build",
+      ".turbo",
+      "coverage"
+    ],
+    "generatedPaths": [
+      "dist",
+      "build",
+      ".turbo",
+      "coverage"
+    ]
+  },
+  "stack": {
+    "frontend": "react",
+    "language": "typescript",
+    "packageManager": "npm"
+  },
+  "entrypoints": [
+    "index.html",
+    "src/main.tsx",
+    "src/App.tsx"
+  ],
+  "commandCatalog": [
+    {
+      "id": "install-root-dependencies",
+      "label": "Install dependencies",
+      "executable": "npm",
+      "args": [
+        "install"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 120000
+    },
+    {
+      "id": "test-root-test",
+      "label": "test root",
+      "executable": "npm",
+      "args": [
+        "test"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "build-root-build",
+      "label": "build root",
+      "executable": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "type-check-root-type-check",
+      "label": "type-check root",
+      "executable": "npm",
+      "args": [
+        "run",
+        "type-check"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "run-root-dev",
+      "label": "dev root",
+      "executable": "npm",
+      "args": [
+        "run",
+        "dev"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 120000
+    }
+  ],
+  "architecture": {
+    "summary": "Horus generated project. Agents must use this manifest as orientation and then inspect real source files before making code claims or changes.",
+    "sourceRoots": [
+      "src"
+    ],
+    "routeFiles": [
+      "src/main.tsx",
+      "src/App.tsx",
+      "index.html"
+    ],
+    "componentRoots": [
+      "src/components",
+      "src/features"
+    ]
+  },
+  "designSystem": {
+    "referenceFiles": [
+      "ID_VISUAL.md",
+      "src/styles/tokens.css",
+      "src/index.css"
+    ],
+    "notes": [
+      "Follow the Horus visual identity when a local design reference exists.",
+      "Keep operational interfaces dense, calm and predictable."
+    ]
+  },
+  "agentRules": {
+    "codingStyle": [
+      "Prefer existing project patterns over new abstractions.",
+      "Read the affected source files before proposing changes."
+    ],
+    "uiStyle": [
+      "Use project typography, spacing and colors consistently.",
+      "Avoid decorative UI that does not support the workflow."
+    ],
+    "forbiddenPatterns": [
+      "Do not hardcode fake runtime behavior.",
+      "Do not bypass write-root, command or tool policies.",
+      "Do not claim code evidence without reading source files."
+    ],
+    "testingExpectations": [
+      "Run validation command ids: test-root-test"
+    ]
+  },
+  "security": {
+    "denyPaths": [
+      ".env",
+      ".git",
+      "node_modules",
+      "dist",
+      "build",
+      ".turbo",
+      "coverage"
+    ],
+    "secretPatterns": [
+      "api[_-]?key",
+      "secret",
+      "token",
+      "password",
+      "private[_-]?key"
+    ],
+    "rulesCannotGrantPermissions": true
+  },
+  "lastValidatedAt": null,
+  "updatedAt": "2026-05-27T18:24:21.933Z"
+}

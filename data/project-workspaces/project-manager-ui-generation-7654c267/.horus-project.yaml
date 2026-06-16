@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "projectName": "project-manager-ui-generation",
+  "projectStack": "typescript-react",
+  "baseRef": "main",
+  "writeRoots": [
+    ".",
+    "src"
+  ],
+  "commandCatalog": [
+    {
+      "id": "install-root-dependencies",
+      "label": "Install dependencies",
+      "executable": "npm",
+      "args": [
+        "install"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 120000
+    },
+    {
+      "id": "test-root-test",
+      "label": "test root",
+      "executable": "npm",
+      "args": [
+        "test"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "build-root-build",
+      "label": "build root",
+      "executable": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "type-check-root-type-check",
+      "label": "type-check root",
+      "executable": "npm",
+      "args": [
+        "run",
+        "type-check"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "run-root-dev",
+      "label": "dev root",
+      "executable": "npm",
+      "args": [
+        "run",
+        "dev"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 120000
+    }
+  ],
+  "testRunnerIds": [
+    "test-root-test"
+  ],
+  "bootstrapCommandIds": [
+    "install-root-dependencies"
+  ],
+  "roleProfiles": {
+    "backend_specialist": {
+      "allowedCommandIds": [
+        "install-root-dependencies",
+        "test-root-test",
+        "build-root-build",
+        "type-check-root-type-check",
+        "run-root-dev"
+      ],
+      "defaultValidationCommandIds": [
+        "test-root-test"
+      ]
+    },
+    "frontend_specialist": {
+      "allowedCommandIds": [
+        "install-root-dependencies",
+        "test-root-test",
+        "build-root-build",
+        "type-check-root-type-check",
+        "run-root-dev"
+      ],
+      "defaultValidationCommandIds": [
+        "test-root-test"
+      ]
+    },
+    "qa_specialist": {
+      "allowedCommandIds": [
+        "install-root-dependencies",
+        "test-root-test",
+        "build-root-build",
+        "type-check-root-type-check",
+        "run-root-dev"
+      ],
+      "defaultValidationCommandIds": [
+        "test-root-test"
+      ]
+    },
+    "curator": {
+      "allowedCommandIds": [
+        "install-root-dependencies",
+        "test-root-test",
+        "build-root-build",
+        "type-check-root-type-check",
+        "run-root-dev"
+      ],
+      "defaultValidationCommandIds": [
+        "test-root-test"
+      ]
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 Horus.AI is an autonomous multi-agent interface generation system. It receives user stories, transforms them into technical specifications (SDDs), coordinates implementation and quality control agents, validates the generated work through a curator, and exposes the resulting project, preview, files, and execution evidence.
 
-This public repository is intentionally minimal. It contains only the source and operational files required to install, build, run, and reproduce the project.
+This branch is a reproducibility snapshot of the local Horus workspace. It includes the application source, operational specs, selected runtime data, generated project workspaces, local guidance files, and evidence artifacts needed to inspect the project close to its local machine state.
 
 ## Repository Contents
 
@@ -13,9 +13,13 @@ packages/shared/  Shared Zod schemas and TypeScript contracts
 skills/agents/    Runtime skills loaded by the Horus agents
 docker/           nginx template for the containerized local web app
 scripts/          Operational scripts required by install/build/smoke checks
+docs/spec/        Historical and active implementation specifications
+spec/             Local implementation specs used during agentic development
+data/             Versioned local runtime snapshot and generated project workspaces
+.horus/artifacts/ Browser smoke reports and preview evidence images
 ```
 
-The repository must not include local runtime state, logs, generated builds, documentation folders, internal specs, test folders, screenshots, OpenClaude baselines, experimental UI prototypes, or Markdown files other than this README and agent skill bundles under `skills/agents`.
+The snapshot still excludes secrets, `.env` files, local package dependencies, build outputs, caches, nested Git repositories, and machine-specific LLM credential stores.
 
 ## System Flow
 
@@ -94,7 +98,7 @@ GROQ_API_KEY=<your-groq-key>
 
 Set `LLM_MODEL` only when you want to override the provider default.
 
-Never commit `.env`, `.env.*.local`, `.horus/`, `data/`, logs, generated workspaces, or build output.
+Never commit `.env`, `.env.*.local`, API keys, LLM credential stores, package dependencies, nested `.git` folders, logs, caches, or build output. Runtime data and generated project workspaces are versioned only when they are part of an explicit reproducibility snapshot.
 
 ## Local Development
 

@@ -1,0 +1,337 @@
+[
+  {
+    "id": "c2e9776b-3f51-49dd-bde2-b82f6b53cb52",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Rode o projeto.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:08:27.894Z"
+  },
+  {
+    "id": "6c25ab81-5ef6-45a9-9925-a1a38d02c7ef",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus reconheceu o pedido de execução do projeto. A ponte com o runtime de preview será implementada pela SPEC 23.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:08:27.897Z"
+  },
+  {
+    "id": "f4709676-e288-456c-8cd8-3a6434792e3d",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Explique rapidamente o contexto desta user story.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:18:05.554Z"
+  },
+  {
+    "id": "b4d395f2-6a71-4f7b-966a-cc73d413e00f",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus reconheceu um pedido explícito de spec. A geração deve seguir o fluxo de specs sem tratar toda mensagem comum como user story.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:18:05.556Z"
+  },
+  {
+    "id": "a2dba408-4854-4b70-adce-98623ef42c08",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Explique o objetivo desta tela.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:19:26.693Z"
+  },
+  {
+    "id": "f64dae58-6419-4b37-9af9-462afa62a405",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus recebeu sua pergunta e preservou o contexto isolado deste chat. A etapa de resposta com leitura de código/memória será implementada pela SPEC 21.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:19:26.695Z"
+  },
+  {
+    "id": "f6e7865a-3923-42bd-ac4b-7e2fe2b63bb0",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Ajuste esse botão para ficar mais claro.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:24:45.703Z"
+  },
+  {
+    "id": "aa89d598-3e1e-40ba-aa4e-08e1e3a16318",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus registrou o pedido de alteração no contexto deste chat. O roteamento para Front, QA e Curator será implementado pela SPEC 22.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:24:45.706Z"
+  },
+  {
+    "id": "3980bd42-7292-4dc2-b54e-95c140e1d0c5",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "olá",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:30:01.653Z"
+  },
+  {
+    "id": "d167cfeb-6c33-45ad-ba85-6aa5c738c1e6",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus precisa de mais contexto para decidir se deve responder, executar o projeto, gerar spec ou acionar agentes.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:30:01.657Z"
+  },
+  {
+    "id": "81143d8b-9c3c-4dff-ba94-de61a8cafca7",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "olá",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:32:14.176Z"
+  },
+  {
+    "id": "e430ff68-f40f-4304-9845-f6cbb44c406c",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus precisa de mais contexto para decidir se deve responder, executar o projeto, gerar spec ou acionar agentes.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:32:14.179Z"
+  },
+  {
+    "id": "b1ce99d0-b8e7-4ce6-84c5-df54686cd23a",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Explique o objetivo da tela de preview.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:34:36.440Z"
+  },
+  {
+    "id": "383001e2-b364-4b44-b443-c4e3d5994f67",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus analisou o chat isolado desta user story e o projeto selecionado. User story ativa: Processar empresa pelo ticker. Spec ativa: Spec inexistente. Arquivos consultados: package.json, src/main.tsx, src/App.tsx, src/index.css, vite.config.ts, tsconfig.json, src/api/previewApi.ts, src/components/PreviewCanvas.tsx, src/components/PreviewConversationPanel.tsx, src/components/PreviewTimeline.tsx, index.html. Resultados prévios de agentes neste contexto: 0.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:34:36.446Z"
+  },
+  {
+    "id": "0a023e32-7c28-4359-8318-68d9de8ca04e",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Ajuste o botão de enviar para ficar mais claro.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:41:53.607Z"
+  },
+  {
+    "id": "ff051eac-8cd7-4676-b9eb-fe33da169f29",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus iniciou o modo executor para esta alteração. Thread f680ce64 acionada com Front, QA e Curator usando o contexto isolado deste chat.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "f680ce64-7a15-4f2a-91f3-97bbaeb79012"
+    },
+    "createdAt": "2026-05-26T14:41:53.627Z"
+  },
+  {
+    "id": "e82ef894-ccb1-4628-861a-05db3d66d94c",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "Ajuste o botão de enviar para ficar mais claro no modo executor.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "f680ce64-7a15-4f2a-91f3-97bbaeb79012"
+    },
+    "createdAt": "2026-05-26T14:43:52.085Z"
+  },
+  {
+    "id": "3b17ba7e-af6c-4328-a465-5602cbad5357",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus iniciou o modo executor para esta alteração. Thread a307e5e2 acionada com Front, QA e Curator usando o contexto isolado deste chat.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:43:52.111Z"
+  },
+  {
+    "id": "c9106fea-c4c5-4ec7-bf9e-a7ebf501ee3c",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "A execução dos agentes falhou: Multiple errors occurred during superstep 2. See the \"errors\" field of this exception for more details.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:43:52.111Z"
+  },
+  {
+    "id": "d7296e24-090f-4a46-9242-9dd03409f0c2",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "olá",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:52:54.109Z"
+  },
+  {
+    "id": "ace2ae07-e038-45a2-af00-03380d5888cb",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus precisa de mais contexto para decidir se deve responder, executar o projeto, gerar spec ou acionar agentes.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:52:54.112Z"
+  },
+  {
+    "id": "7b5d029a-4075-44ca-b34c-d8bf9ea41474",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "explique o projeto",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:55:52.455Z"
+  },
+  {
+    "id": "17d81589-9752-4f8d-b80b-a07980cb0ce3",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus analisou o chat isolado desta user story e o projeto selecionado. User story ativa: Processar empresa pelo ticker. Spec ativa: Spec inexistente. Arquivos consultados: package.json, src/main.tsx, src/App.tsx, src/index.css, vite.config.ts, tsconfig.json, index.html, src/api/horusChatApi.ts, src/api/previewApi.ts, src/api/workflowApi.ts, src/components/PreviewCanvas.tsx. Resultados prévios de agentes neste contexto: 1.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:55:52.460Z"
+  },
+  {
+    "id": "2215ce58-77c2-4559-a4d5-a6275639851a",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "user",
+    "body": "j",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:56:03.400Z"
+  },
+  {
+    "id": "329a3dd3-eb39-4827-b0fe-d8675734a34d",
+    "sessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "role": "agent",
+    "body": "Horus precisa de mais contexto para decidir se deve responder, executar o projeto, gerar spec ou acionar agentes.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7"
+    },
+    "createdAt": "2026-05-26T14:56:03.403Z"
+  }
+]

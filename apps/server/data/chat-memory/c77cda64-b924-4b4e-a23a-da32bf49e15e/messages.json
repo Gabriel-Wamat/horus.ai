@@ -1,0 +1,14 @@
+[
+  {
+    "id": "7888a623-0266-4fa6-a92b-8859440e6f37",
+    "sessionId": "c77cda64-b924-4b4e-a23a-da32bf49e15e",
+    "role": "user",
+    "body": "Ajuste a história para deixar o erro de ticker inválido mais claro.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1"
+    },
+    "createdAt": "2026-05-26T12:19:30.409Z"
+  }
+]

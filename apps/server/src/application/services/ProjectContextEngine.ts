@@ -279,7 +279,23 @@ async function buildProjectIndexSummary(input: {
   const symbols = structural?.symbols ?? [];
   const importCount = symbols.filter((symbol) => symbol.kind === "import").length;
   const exportCount = symbols.filter((symbol) => symbol.kind === "export").length;
-  const chunks = structural?.semanticMatches ?? [];
+  const semanticChunks = structural?.semanticMatches ?? [];
+  const chunks = mergeIndexChunks([
+    ...symbols.map((symbol) => ({
+      path: symbol.path,
+      kind: symbol.kind,
+      startLine: symbol.startLine,
+      endLine: symbol.endLine,
+      symbolNames: [symbol.name],
+    })),
+    ...semanticChunks.map((chunk) => ({
+      path: chunk.path,
+      kind: chunk.kind,
+      startLine: chunk.startLine,
+      endLine: chunk.endLine,
+      symbolNames: chunk.symbolNames,
+    })),
+  ]);
   const contentSignature = sha256(
     JSON.stringify({
       files: files.map((file) => [file.path, file.contentHash]),
@@ -291,6 +307,9 @@ async function buildProjectIndexSummary(input: {
         chunk.symbolNames,
       ]),
     })
+  );
+  const merkleRoot = merkleHash(
+    files.map((file) => sha256(`${file.path}\0${file.contentHash}`))
   );
   return {
     files,
@@ -317,8 +336,8 @@ async function buildProjectIndexSummary(input: {
       symbolNames: chunk.symbolNames,
     })),
     embeddings: {
-      enabled: chunks.length > 0,
-      embeddedChunkCount: chunks.length,
+      enabled: semanticChunks.length > 0,
+      embeddedChunkCount: semanticChunks.length,
     },
     graph: {
       status: structural
@@ -337,6 +356,7 @@ async function buildProjectIndexSummary(input: {
     freshness: {
       status: "fresh",
       contentSignature,
+      merkleRoot,
       checkedAt: input.checkedAt,
     },
     retrievalFusion: [
@@ -384,7 +404,19 @@ function buildCacheKey(input: {
   return `project-context:snapshot:${sha256(payload)}`;
 }
 
-const MAX_MTIME_SCAN_PER_ROOT = 200;
+const MAX_MTIME_SCAN_PER_ROOT = 500;
+const MAX_MTIME_SCAN_DEPTH = 8;
+const MTIME_SCAN_IGNORED_NAMES = new Set([
+  ".git",
+  ".horus",
+  ".next",
+  ".turbo",
+  ".vite",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+]);
 
 async function maxEditableRootMtime(
   projectRootPath: string,
@@ -395,27 +427,7 @@ async function maxEditableRootMtime(
   for (const root of roots) {
     try {
       const absolute = join(projectRootPath, root);
-      const stat = await fs.stat(absolute).catch(() => null);
-      if (!stat) continue;
-      if (stat.isFile()) {
-        max = Math.max(max, stat.mtimeMs);
-        continue;
-      }
-      // Walk shallow children — full tree walks are too expensive per turn.
-      const entries = await fs
-        .readdir(absolute, { withFileTypes: true })
-        .catch(() => []);
-      let scanned = 0;
-      for (const entry of entries) {
-        if (scanned >= MAX_MTIME_SCAN_PER_ROOT) break;
-        if (entry.name.startsWith(".")) continue;
-        if (entry.name === "node_modules") continue;
-        const entryPath = join(absolute, entry.name);
-        const entryStat = await fs.stat(entryPath).catch(() => null);
-        if (!entryStat) continue;
-        max = Math.max(max, entryStat.mtimeMs);
-        scanned += 1;
-      }
+      max = Math.max(max, await maxMtimeUnderPath(absolute));
     } catch {
       // Best-effort cache key — never block snapshot build on stat failures.
     }
@@ -423,8 +435,99 @@ async function maxEditableRootMtime(
   return Math.floor(max / 1000) * 1000; // Bucket to 1s to avoid micro-churn.
 }
 
+async function maxMtimeUnderPath(rootPath: string): Promise<number> {
+  let max = 0;
+  let scanned = 0;
+  const pending: Array<{ path: string; depth: number }> = [
+    { path: rootPath, depth: 0 },
+  ];
+  while (pending.length > 0 && scanned < MAX_MTIME_SCAN_PER_ROOT) {
+    const current = pending.shift()!;
+    const stat = await fs.stat(current.path).catch(() => null);
+    if (!stat) continue;
+    max = Math.max(max, stat.mtimeMs);
+    scanned += 1;
+    if (!stat.isDirectory() || current.depth >= MAX_MTIME_SCAN_DEPTH) continue;
+    const entries = await fs
+      .readdir(current.path, { withFileTypes: true })
+      .catch(() => []);
+    for (const entry of entries) {
+      if (shouldSkipMtimeEntry(entry.name)) continue;
+      pending.push({
+        path: join(current.path, entry.name),
+        depth: current.depth + 1,
+      });
+    }
+  }
+  return max;
+}
+
+function shouldSkipMtimeEntry(name: string): boolean {
+  return MTIME_SCAN_IGNORED_NAMES.has(name);
+}
+
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function mergeIndexChunks(
+  chunks: readonly {
+    readonly path: string;
+    readonly kind: string;
+    readonly startLine: number;
+    readonly endLine: number;
+    readonly symbolNames: readonly string[];
+  }[]
+): {
+  path: string;
+  kind: string;
+  startLine: number;
+  endLine: number;
+  symbolNames: string[];
+}[] {
+  const byIdentity = new Map<
+    string,
+    {
+      path: string;
+      kind: string;
+      startLine: number;
+      endLine: number;
+      symbolNames: string[];
+    }
+  >();
+  for (const chunk of chunks) {
+    const key = `${chunk.path}\0${chunk.kind}\0${chunk.startLine}\0${chunk.endLine}`;
+    const existing = byIdentity.get(key);
+    byIdentity.set(key, {
+      path: chunk.path,
+      kind: chunk.kind,
+      startLine: chunk.startLine,
+      endLine: chunk.endLine,
+      symbolNames: [
+        ...new Set([...(existing?.symbolNames ?? []), ...chunk.symbolNames]),
+      ],
+    });
+  }
+  return [...byIdentity.values()].sort((left, right) =>
+    `${left.path}:${left.startLine}:${left.kind}`.localeCompare(
+      `${right.path}:${right.startLine}:${right.kind}`
+    )
+  );
+}
+
+function merkleHash(leaves: readonly string[]): string {
+  if (leaves.length === 0) return sha256("empty");
+  let level = [...leaves].sort();
+  while (level.length > 1) {
+    const next: string[] = [];
+    for (let index = 0; index < level.length; index += 2) {
+      const left = level[index]!;
+      const right = level[index + 1] ?? left;
+      next.push(sha256(`${left}\0${right}`));
+    }
+    level = next;
+  }
+  return level[0]!;
 }
 
 function mergeRuntimeHints(

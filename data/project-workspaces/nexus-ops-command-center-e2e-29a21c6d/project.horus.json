@@ -1,0 +1,10 @@
+{
+  "name": "nexus-ops-command-center-e2e",
+  "bootstrapMode": "generated_from_horus",
+  "frontendStack": "typescript-react",
+  "frontendEntrypoints": [
+    "index.html",
+    "src/main.tsx",
+    "src/App.tsx"
+  ]
+}

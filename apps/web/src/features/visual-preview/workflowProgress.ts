@@ -113,6 +113,8 @@ export interface WorkflowProgressEvent {
       selectedBytes: number;
       omittedFiles: number;
     };
+    contextChannels: string[];
+    retrievalStatus?: "matched" | "partial" | "no_match" | "blocked";
     retrievalChannels: string[];
     runtimeHints: Array<{ kind: string; source: string; message: string; path?: string }>;
     diffHints: Array<{ path: string; changeType?: string; summary?: string }>;

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type {
   AgentContextDiffHintReceipt,
+  AgentContextChannel,
   AgentContextReceipt,
   AgentContextRetrievalChannel,
   AgentContextRuntimeHintReceipt,
@@ -77,6 +78,8 @@ export class AgentContextReceiptService {
         selectedBytes: codeContext?.totalBytes ?? 0,
         omittedFiles: omittedFilesCount,
       },
+      contextChannels: buildContextChannels(input, codeContext),
+      retrievalStatus: codeContext?.retrievalStatus ?? "partial",
       retrievalChannels,
       hashes: Object.fromEntries(
         selectedFiles
@@ -89,6 +92,38 @@ export class AgentContextReceiptService {
       generatedAt,
     });
   }
+}
+
+function buildContextChannels(
+  input: BuildAgentContextReceiptInput,
+  codeContext: CodeContextBundle | undefined
+): AgentContextChannel[] {
+  const channels: AgentContextChannel[] = [
+    "persistent_instructions",
+    "user_story_spec",
+  ];
+  if (input.snapshot?.inspection) {
+    channels.push("repo_structure");
+  }
+  if (codeContext?.structuralContext?.symbols.length) {
+    channels.push("ast_symbols");
+  }
+  if (codeContext?.files.length) {
+    channels.push("relevant_files");
+  }
+  if (input.codeChangeSet?.operations.length) {
+    channels.push("diff");
+  }
+  if (input.snapshot?.runtimeHints.length) {
+    channels.push("runtime_errors");
+  }
+  if (input.agentProfileId === "qa_agent" || input.agentProfileId === "curator_agent") {
+    channels.push("tests");
+  }
+  if (input.agentProfileId === "odin_agent" || input.agentProfileId === "curator_agent") {
+    channels.push("decisions");
+  }
+  return dedupe(channels);
 }
 
 function buildSnapshotId(

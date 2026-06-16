@@ -64,6 +64,7 @@ export interface HorusChatToolAgentInput {
   message: string;
   context: ChatAgentContextBundle;
   intentKind?: HorusChatIntent["kind"];
+  previewSessionId?: string;
   project?: FrontendProject;
   codeContext?: CodeContextBundle;
   llmSettings?: LlmSettings;
@@ -175,6 +176,16 @@ const CHAT_TOOL_SPECS: ChatToolSpec[] = [
     }),
   },
   {
+    name: "rewrite_file",
+    description:
+      "Rewrite an existing text file with the full desired content after read_file. Prefer this over edit_file when a broad component/CSS/theme change makes exact oldString fragile. Runtime computes a minimal diff and enforces read-before-write/version checks.",
+    schema: z.object({
+      path: z.string(),
+      content: z.string(),
+      reason: z.string().optional(),
+    }),
+  },
+  {
     name: "replace_file_range",
     description:
       "Replace a contiguous 1-based line range in an existing text file. You MUST read_file first, preferably with startLine/endLine around the target. Use replacement='' to delete duplicated or invalid lines.",
@@ -192,6 +203,15 @@ const CHAT_TOOL_SPECS: ChatToolSpec[] = [
     schema: z.object({
       path: z.string(),
       reason: z.string().optional(),
+    }),
+  },
+  {
+    name: "inspect_preview",
+    description:
+      "Inspect the active preview after visual or layout changes. The runtime injects previewSessionId when a preview is active.",
+    schema: z.object({
+      filePath: z.string().optional(),
+      diffId: z.string().optional(),
     }),
   },
   {
@@ -287,6 +307,9 @@ export class HorusChatToolAgent implements HorusChatToolAgentResponder {
           agentProfileId: this.profileId,
           projectId: toolProjectId,
           maxToolCalls: DEFAULT_MAX_TOOL_CALLS,
+          ...(input.previewSessionId
+            ? { previewSessionId: input.previewSessionId }
+            : {}),
           ...(input.signal ? { signal: input.signal } : {}),
           onShellOutput(event) {
             shellOutputSink?.(event);
@@ -909,10 +932,16 @@ uma ferramenta, leia o resultado e continue até concluir. Ferramentas disponív
 - write_file: criar arquivo novo. Sobrescrever exige leitura prévia.
 - edit_file: alterar arquivo existente. SEMPRE leia o arquivo com read_file antes
   de editar; oldString deve casar exatamente com o conteúdo atual.
+- rewrite_file: reescrever um arquivo existente com o conteúdo final desejado.
+  Use quando a mudança for ampla, visual ou estrutural e oldString/line range
+  forem frágeis. SEMPRE leia o arquivo inteiro ou trecho suficiente antes; o
+  runtime calcula diff mínimo e valida versão.
 - replace_file_range: substituir/remover uma faixa de linhas quando o erro de
   build aponta linhas ou quando há blocos duplicados/truncados. SEMPRE leia o
   trecho primeiro com read_file startLine/endLine.
 - delete_file: remover arquivo. SEMPRE leia o arquivo antes.
+- inspect_preview: checar a preview ativa depois de mudanças visuais/layout
+  quando houver previewSessionId no contexto.
 - run_validation_command / run_command: validar e executar comandos governados.
   run_command aceita command apenas para diagnósticos simples permitidos ou
   executable/args para chamadas diretas. Pipes, redirecionamento, substituição de
@@ -935,6 +964,8 @@ Regras de execução:
 - Antes de editar, leia o arquivo. Faça mudanças mínimas e coerentes com a spec ativa.
 - Depois de alterar código, rode validação quando houver comando aplicável. Se
   falhar, leia a linha do erro, corrija e valide de novo até passar ou atingir o limite.
+- Depois de alteração visual/layout, recarregue/valide e use inspect_preview
+  quando disponível. Não trate type-check sozinho como prova visual suficiente.
 - Para diagnóstico de CLI, prefira commandId registrado ou executable/args. Se
   usar command, mantenha uma chamada simples aceita pela política do runtime.
 - Para servidores dev/watchers ou comandos longos, use run_command com
@@ -978,6 +1009,7 @@ active_spec_summary: ${context.activeSpec?.summary ?? "sem spec ativa"}
 selected_project_name: ${project?.name ?? "nenhum"}
 selected_project_root: ${project?.rootPath ?? "nenhum"}
 selected_project_workspace_id: ${project?.projectWorkspaceId ?? "nenhum"}
+active_preview_session_id: ${input.previewSessionId ?? "nenhum"}
 
 # Comandos registrados do projeto
 ${commandCatalog}

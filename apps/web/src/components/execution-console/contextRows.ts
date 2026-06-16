@@ -22,6 +22,8 @@ export function selectContextReceiptRows(
         ),
         omittedFiles: receipt.budget.omittedFiles,
         selectedBytes: receipt.budget.selectedBytes,
+        contextChannels: receipt.contextChannels ?? [],
+        retrievalStatus: receipt.retrievalStatus ?? "partial",
         channels: receipt.retrievalChannels,
         reasons: receipt.selectionReasons
           .slice(0, 4)

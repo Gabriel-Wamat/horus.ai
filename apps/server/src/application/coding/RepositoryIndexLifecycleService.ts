@@ -67,6 +67,10 @@ export class RepositoryIndexLifecycleService {
         ]),
       })
     );
+    const merkleRoot = merkleHash([
+      ...files.map((file) => hash(`${file.path}\0${file.sourceHash}`)),
+      ...chunks.map((chunk) => hash(`${chunk.id}\0${chunk.contentHash}`)),
+    ]);
     const semanticSummary = input.semanticRetrieval?.summary;
 
     return RepositoryIndexManifestSchema.parse({
@@ -117,6 +121,7 @@ export class RepositoryIndexLifecycleService {
       freshness: {
         status: "fresh",
         contentSignature,
+        merkleRoot,
         stalePaths: [],
         checkedAt: generatedAt,
       },
@@ -298,4 +303,19 @@ function isExpiredEphemeralMemory(
 
 function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function merkleHash(leaves: readonly string[]): string {
+  if (leaves.length === 0) return hash("empty");
+  let level = [...leaves].sort();
+  while (level.length > 1) {
+    const next: string[] = [];
+    for (let index = 0; index < level.length; index += 2) {
+      const left = level[index]!;
+      const right = level[index + 1] ?? left;
+      next.push(hash(`${left}\0${right}`));
+    }
+    level = next;
+  }
+  return level[0]!;
 }

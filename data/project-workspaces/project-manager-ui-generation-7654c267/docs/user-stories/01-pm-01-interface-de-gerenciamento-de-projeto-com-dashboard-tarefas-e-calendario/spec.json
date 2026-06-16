@@ -1,0 +1,105 @@
+{
+  "id": "8f4b062f-5547-4435-b6c4-cde3424a36bb",
+  "userStoryId": "90cbb0ae-aa43-4699-a2f7-2b54e27340ef",
+  "version": 1,
+  "summary": "Interface React/TypeScript de gestão de projetos com navegação lateral e três telas: Home (dashboard), Tarefas e Calendário, responsiva e operacional.",
+  "technicalApproach": "Pattern: operational-dashboard. Implementar em React + TypeScript mantendo arquitetura existente (componentes funcionais, hooks, CSS Modules / design tokens locais). Shell com Router client-side (react-router) para navegação persistente sem reload; Sidebar com estado ativo por rota. Tela Home composta por cards de métricas, mini-gráfico (SVG/Canvas lightweight), e lista de marcos; Tarefas usando padrão form-crud-tool interno: formulário controlado (title, priority, assigneeId, dueDate) com validação acessível, listagem com filtros (diário/semana/mês), busca e estados visuais por tarefa; Calendário mensal com grid acessível, seleção de dia e painel lateral (slide-over) listando itens do dia. Estados cobertos: loading, empty, error, success, selected, disabled. Dados via adapters injetáveis (TaskApiAdapter) que implementam os contratos REST abaixo; use hooks de data (useTasks, useMetrics, useCalendar) com caching mínimo e revalidation. Responsividade: sidebar colapsável em < 768px; componentes reflow flex/stack; truncamento com ellipsis e aria-labels. Acessibilidade: foco visível, roles (navigation, grid, list), contraste WCAG AA, keyboard navigation para calendar cells. Seguir política de componentes existentes primeiro (local UI library), evitar bibliotecas novas além das já instaladas.",
+  "components": [
+    {
+      "name": "ProjectShell",
+      "type": "ui",
+      "description": "Shell da aplicação com Sidebar (Home, Tarefas, Calendário), TopBar, e outlet de rota; gerencia estado de collapsed sidebar e rota ativa.",
+      "dependencies": []
+    },
+    {
+      "name": "HomeDashboard",
+      "type": "ui",
+      "description": "Exibe cards de métricas (progresso, concluídas, atrasadas, produtividade semanal), mini-gráfico e lista de próximos marcos; trata loading/empty/error.",
+      "dependencies": [
+        "ProjectShell",
+        "MetricsService",
+        "TaskModel"
+      ]
+    },
+    {
+      "name": "TasksPage",
+      "type": "ui",
+      "description": "Form de criação/edição de tarefa (title, priority, assigneeId, dueDate), filtros (Daily/Weekly/Monthly), barra de busca, lista de tarefas com estados visuais e empty state.",
+      "dependencies": [
+        "ProjectShell",
+        "TaskApi",
+        "TaskModel",
+        "FormValidator"
+      ]
+    },
+    {
+      "name": "CalendarPage",
+      "type": "ui",
+      "description": "Visão mensal em grid; seleciona dia, renderiza eventos/tarefas por célula e abre painel lateral com itens do dia (slide-over).",
+      "dependencies": [
+        "ProjectShell",
+        "CalendarService",
+        "TaskModel"
+      ]
+    },
+    {
+      "name": "TaskApi",
+      "type": "api",
+      "description": "Adapter/Boundary que implementa chamadas REST para CRUD de tarefas e consultas por período; injetável via contexto ou service locator.",
+      "dependencies": []
+    },
+    {
+      "name": "MetricsService",
+      "type": "service",
+      "description": "Service que agrega métricas de tasks para o dashboard (cálculo local de produtividade semanal, tasks atrasadas), usando data models e TaskApi quando necessário.",
+      "dependencies": [
+        "TaskApi",
+        "TaskModel"
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "GET",
+      "path": "/projects/:projectId/tasks",
+      "description": "Listar tarefas com query params ?from=ISO&to=ISO&filter=daily|weekly|monthly&search=string"
+    },
+    {
+      "method": "POST",
+      "path": "/projects/:projectId/tasks",
+      "description": "Criar nova tarefa. Body: { title, priority, assigneeId, dueDate }"
+    },
+    {
+      "method": "PATCH",
+      "path": "/projects/:projectId/tasks/:taskId",
+      "description": "Atualizar campos da tarefa (status, title, dueDate, assigneeId, priority)"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/:projectId/metrics",
+      "description": "Retorna métricas para dashboard: { completedCount, overdueCount, weeklyProductivity: [{weekStart, value}], upcomingMilestones: [] }"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/:projectId/calendar",
+      "description": "Retorna eventos/tarefas por data no mês: query ?year=YYYY&month=MM -> { dates: { 'YYYY-MM-DD': [TaskSummary...] } }"
+    }
+  ],
+  "dataModels": [
+    "Task { id:string, title:string, priority:'low'|'medium'|'high', assigneeId:string|null, dueDate:ISO, status:'pending'|'in_progress'|'completed'|'overdue', projectId:string }",
+    "TaskSummary { id:string, title:string, date:ISO, status }",
+    "Metrics { completedCount:number, overdueCount:number, weeklyProductivity: { weekStart:ISO, value:number }[], upcomingMilestones: { id:string, title:string, date:ISO }[] }",
+    "CalendarResponse { dates: Record<string, TaskSummary[]> }"
+  ],
+  "acceptanceCriteria": [
+    "Navegação: clicar em Sidebar muda rota (react-router) sem reload; item ativo apresenta estilo distinto (aria-current) e shell persistente.",
+    "Home: renderiza cards com valores numéricos; ao carregar mostra skeleton (loading); se API metrics retornar vazio mostra empty state; mini-gráfico renderiza dados de weeklyProductivity; lista de marcos exibe até 5 itens com truncamento e link para tarefa.",
+    "Tarefas - criação: formulário valida campos (title obrigatório, dueDate válido); POST para /projects/:projectId/tasks é chamado ao submeter; após success lista atualiza por revalidation; em error mostra mensagem explicita.",
+    "Tarefas - listagem e filtros: GET /projects/:projectId/tasks com params from/to/filter é usado para popula lista; filtros Diário/Semanal/Mensal alternam query; busca aplica query search; empty state visível quando sem tarefas.",
+    "Tarefas - estados: cada item mostra status visual distinto (badge + color token), e ações de toggling de status disparam PATCH; tarefas atrasadas derivam de dueDate < hoje e status != completed.",
+    "Calendário: grid mensal mostra dias corretos; células com items exibem contador e lista resumida; selecionar dia abre painel lateral com itens daquele dia; calendário usa /projects/:projectId/calendar e trata loading/empty/error.",
+    "Visual/responsividade: em viewport <768px sidebar colapsa em icon-only; listas e calendário reflowam sem overflow de texto (truncar com ellipsis) e botões touch-target >=44px.",
+    "Acessibilidade: foco visível em elementos interativos, roles aplicados (navigation, list, grid), keyboard permite navegar cells do calendário e ativar seleção; contraste de texto mínimo AA."
+  ],
+  "generatedAt": "2026-05-27T06:06:21.078Z"
+}

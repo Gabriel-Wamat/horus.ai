@@ -1,0 +1,106 @@
+{
+  "id": "54817cc6-1d88-4d7c-bc03-cb0e42c5026b",
+  "userStoryId": "605e9e1c-9e58-4801-8999-f82bc99d75c2",
+  "version": 1,
+  "summary": "Triagem de incidentes com board/lista sincronizados, filtros compostos e painel lateral de detalhe para priorização NOC.",
+  "technicalApproach": "Pattern: operational-dashboard. Implementar em React + TypeScript mantendo arquitetura existente (componentes funcionais, hooks, CSS-in-JS or project token system). UI: topo com barra de filtros composta (severity, status, team, SLA range, full-text) que atualiza estado derivado central (URL-driven via query params). Área principal alterna entre Board (grid agrupado por severidade, cartões compactos) e Lista (table-like rows) reusando o mesmo data provider; seleção preservada ao alternar. DetailDrawer lateral controlado por selectedIncident com timeline (virtualized list), recommended actions, mitigation checklist e botão de atribuição com modal de confirmação para ações sensíveis. Data adapter: IncidentApiAdapter injetável implementando contratos REST (GET /incidents with filters, GET /incidents/:id, POST /incidents/:id/assign, POST /incidents/:id/actions). UI deve suportar loading/empty/error/success states, ser responsivo (desktop two-column, tablet single-column with drawer overlay, mobile full-screen drawer), e acessível (keyboard focus trap in drawer, ARIA roles, semantic lists, color contrast and text truncation with ellipsis). Use existing UI tokens/components first; expose adapters for backend boundary — não solicitar mocks em runtime.",
+  "components": [
+    {
+      "name": "IncidentsPage",
+      "type": "ui",
+      "description": "Container page: gerencia view mode (board/list), URL query state, composição de filtros e injeção do data provider; orquestra seleção e abertura do DetailDrawer.",
+      "dependencies": [
+        "IncidentListView",
+        "IncidentBoardView",
+        "FiltersBar",
+        "IncidentDetailDrawer",
+        "IncidentApiAdapter"
+      ]
+    },
+    {
+      "name": "FiltersBar",
+      "type": "ui",
+      "description": "Conjunto de controles: severity multi-select, status multi-select, team select, SLA slider/range, free-text search; produz state derivado e updates debounce; valida e sincroniza com query params.",
+      "dependencies": [
+        "IncidentsPage",
+        "utils/querySync"
+      ]
+    },
+    {
+      "name": "IncidentBoardView",
+      "type": "ui",
+      "description": "Visualização agrupada por severidade; renderiza colunas por severity bucket e cartões de incidente compactos com severidade, SLA restante, serviço, owner, status e último evento; suporta keyboard navigation e drag-preview (no persistência de drag unless future story).",
+      "dependencies": [
+        "IncidentCard",
+        "IncidentsPage"
+      ]
+    },
+    {
+      "name": "IncidentListView",
+      "type": "ui",
+      "description": "Lista condensada (virtualized) com linhas escaneáveis exibindo severity, SLA, service, owner, status, last event; permite seleção, ordenação e column resize where tokens allow.",
+      "dependencies": [
+        "IncidentsPage",
+        "IncidentRow"
+      ]
+    },
+    {
+      "name": "IncidentDetailDrawer",
+      "type": "ui",
+      "description": "Painel lateral com timeline (event feed), recommended actions, mitigation checklist (interactive, persisted via API), assign button (abre modal de confirmação); implementa focus trap, dismissible by ESC and backdrop click, responsive overlay behavior.",
+      "dependencies": [
+        "IncidentApiAdapter",
+        "ConfirmationModal",
+        "IncidentsPage"
+      ]
+    },
+    {
+      "name": "IncidentApiAdapter",
+      "type": "api",
+      "description": "Boundary adapter injetável que implementa contratos REST usados pelo frontend; encapsula fetch/http client do projeto e transforma respostas em models.",
+      "dependencies": [
+        "models/Incident"
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "GET",
+      "path": "/incidents",
+      "description": "Listagem paginada/filtrada de incidentes com query params: view=board|list, severity[], status[], team[], slaMin,slaMax, q(text), page, perPage, sort."
+    },
+    {
+      "method": "GET",
+      "path": "/incidents/:id",
+      "description": "Detalhe de incidente incluindo timeline (events[]), current owner, checklist items and recommended actions."
+    },
+    {
+      "method": "POST",
+      "path": "/incidents/:id/assign",
+      "description": "Atribui incidente a um usuário/time. Body: { assigneeId, note }. Retorna updated incident."
+    },
+    {
+      "method": "POST",
+      "path": "/incidents/:id/actions",
+      "description": "Executa ação recomendada ou atualiza checklist item. Body: { actionId, type, payload }. Retorna action result and updated checklist."
+    }
+  ],
+  "dataModels": [
+    "Incident { id:string, severity:'critical'|'major'|'minor'|'info', slaRemainingSeconds:number, service:{id,name}, owner:{id,name}, status:string, lastEvent:{ts,summary}, updatedAt:string }",
+    "IncidentListResponse { items: Incident[], total:number, page:number, perPage:number }",
+    "IncidentDetail { id:string, timeline: Event[], checklist: ChecklistItem[], recommendedActions: Action[] }",
+    "Event { id:string, ts:string, actor:string, message:string, type:string }",
+    "ChecklistItem { id:string, label:string, state:'open'|'in_progress'|'done', updatedBy?:string }"
+  ],
+  "acceptanceCriteria": [
+    "Modo alternável board/list: trocar view mantém mesmo conjunto de dados, filtros aplicados e incidente selecionado (verificável trocando view e confirmando selectedIncident id persistente).",
+    "Card/row content: cada incidente exibe severidade, SLA restante (hh:mm), serviço afetado, owner, status e último evento em uma linha/área escaneável sem overflow (texto truncado com ellipsis).",
+    "Seleção abre DetailDrawer lateral: ao clicar/select id, drawer abre com timeline, recommended actions, checklist interativo e botão de atribuição visível; drawer fechável por ESC e backdrop.",
+    "Filtros compõem estado derivado: aplicar combinação de severity/status/team/SLA/text atualiza listagem/board; se nenhum resultado, exibir estado vazio com CTA 'Clear filters'.",
+    "Ações sensíveis (assign, destructive) exigem confirmação clara (modal with title, description, Confirm/Cancel) e são visualmente secundárias ao CTA primário; ações primárias no drawer não conflitam visualmente.",
+    "Loading/Empty/Error: enquanto carrega mostrar skeletons; vazio exibe mensagem e CTA; falha de rede exibe erro persistente e botão retry.",
+    "Responsividade: desktop mostra board/list + drawer side-by-side where space allows; tablet/mobile drawer overlays full screen; todos os elementos acessíveis por teclado e leitores de tela.",
+    "State persistence: filtros e selection serializados em query params para recuperação via refresh/bookmark."
+  ],
+  "generatedAt": "2026-05-27T05:48:37.784Z"
+}

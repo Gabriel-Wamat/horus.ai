@@ -1,0 +1,58 @@
+[
+  {
+    "id": "bd8f49e4-aa8d-46de-848a-abb4b4bf3211",
+    "slug": "curator-quality-gate",
+    "displayName": "curator-quality-gate",
+    "description": "Use this skill when the Curator Agent must evaluate generated frontend HTML and QA test cases against a Horus.AI spec. Triggers include curator scoring, pass/fail validation, missing requirement analysis, frontend-vs-QA fault isolation, retry routing, and quality gate decisions.",
+    "scope": "system",
+    "sourceType": "filesystem_seed",
+    "sourcePath": "skills/agents/curator-quality-gate",
+    "status": "active",
+    "activeRevisionId": "f8bcefd4-ed54-4432-a10e-ccc66cdc3b97",
+    "createdBy": "filesystem_seed",
+    "createdAt": "2026-05-28T18:06:16.122Z",
+    "updatedAt": "2026-05-28T18:06:16.123Z"
+  },
+  {
+    "id": "a44a36bd-69ec-4aa8-83d4-47650cf8c621",
+    "slug": "front-design-frontend",
+    "displayName": "front-design-frontend",
+    "description": "Use this skill when the Front Agent must generate or revise frontend code from a Horus.AI spec using TypeScript/LangGraph workflow context. Triggers include project-aware React/Vite/TypeScript implementation, stack-aware frontend generation, UI quality, responsive layout, accessibility, and curator feedback targeting front fixes. Static HTML is allowed only for explicit artifact mode.",
+    "scope": "system",
+    "sourceType": "filesystem_seed",
+    "sourcePath": "skills/agents/front-design-frontend",
+    "status": "active",
+    "activeRevisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "createdBy": "filesystem_seed",
+    "createdAt": "2026-05-28T18:06:16.129Z",
+    "updatedAt": "2026-05-28T18:06:16.129Z"
+  },
+  {
+    "id": "7d8f43eb-cc86-44ca-817d-548022157d8c",
+    "slug": "qa-frontend-testing",
+    "displayName": "qa-frontend-testing",
+    "description": "Use this skill when the QA Agent must generate frontend validation cases for Horus.AI static UI artifacts. Triggers include QA test generation, acceptance criteria coverage, responsive checks, accessibility checks, interaction testing, curator feedback targeting QA fixes, and manual browser validation plans.",
+    "scope": "system",
+    "sourceType": "filesystem_seed",
+    "sourcePath": "skills/agents/qa-frontend-testing",
+    "status": "active",
+    "activeRevisionId": "906702df-97eb-41e9-bd0f-40aa2872f44b",
+    "createdBy": "filesystem_seed",
+    "createdAt": "2026-05-28T18:06:16.145Z",
+    "updatedAt": "2026-05-28T18:06:16.145Z"
+  },
+  {
+    "id": "909b7ed2-ed47-4a83-96f7-d01dcad80d1a",
+    "slug": "spec-frontend-sdd",
+    "displayName": "spec-frontend-sdd",
+    "description": "Use this skill when the Spec Agent must generate Horus.AI frontend-first SDD specs from user stories. Triggers include creating frontend implementation specs, planning robust UI architecture, preparing frontend code for future backend routes, defining typed UI/API contracts, preserving static artifact compatibility, and producing specs consumed by Front, QA, and Curator agents.",
+    "scope": "system",
+    "sourceType": "filesystem_seed",
+    "sourcePath": "skills/agents/spec-frontend-sdd",
+    "status": "active",
+    "activeRevisionId": "262dc45e-2665-4354-9aec-c3218c86c0bf",
+    "createdBy": "filesystem_seed",
+    "createdAt": "2026-05-28T18:06:16.153Z",
+    "updatedAt": "2026-05-28T18:06:16.153Z"
+  }
+]

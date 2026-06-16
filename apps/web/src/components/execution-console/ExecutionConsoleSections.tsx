@@ -171,6 +171,10 @@ export function ExecutionContextSection({
                   : "Nenhum arquivo selecionado."}
               </p>
               <span className="execution-console-trace">
+                tipos: {row.contextChannels.join(" · ") || "não informados"}
+              </span>
+              <span className="execution-console-trace">
+                retrieval: {retrievalStatusLabel(row.retrievalStatus)} ·{" "}
                 {row.channels.join(" · ") || "sem canais"} · {row.selectedBytes} bytes
                 {row.omittedFiles ? ` · ${row.omittedFiles} omitidos` : ""}
               </span>
@@ -189,6 +193,16 @@ export function ExecutionContextSection({
       </div>
     </section>
   );
+}
+
+function retrievalStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    matched: "match",
+    partial: "parcial",
+    no_match: "sem match",
+    blocked: "bloqueado",
+  };
+  return labels[status] ?? status;
 }
 
 export function ExecutionTerminalSection({

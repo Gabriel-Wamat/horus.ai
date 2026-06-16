@@ -3,6 +3,7 @@ import {
   AgentNameSchema,
   AgentProfileIdSchema,
 } from "./AgentToolProfile.js";
+import { CodeContextRetrievalStatusSchema } from "./CodeContext.js";
 
 export const AgentContextRetrievalChannelSchema = z.enum([
   "explicit_paths",
@@ -16,6 +17,20 @@ export const AgentContextRetrievalChannelSchema = z.enum([
   "budget_packer",
   "project_manifest",
   "terminal_output",
+]);
+
+export const AgentContextChannelSchema = z.enum([
+  "persistent_instructions",
+  "user_story_spec",
+  "repo_structure",
+  "ast_symbols",
+  "relevant_files",
+  "diff",
+  "terminal",
+  "runtime_errors",
+  "tests",
+  "history",
+  "decisions",
 ]);
 
 export const AgentContextSelectedFileSchema = z.object({
@@ -78,6 +93,8 @@ export const AgentContextReceiptSchema = z.object({
   selectionReasons: z.array(AgentContextSelectionReasonSchema).default([]),
   omittedFiles: z.array(AgentContextOmittedFileSchema).default([]),
   budget: AgentContextBudgetReceiptSchema,
+  contextChannels: z.array(AgentContextChannelSchema).default([]),
+  retrievalStatus: CodeContextRetrievalStatusSchema.default("partial"),
   retrievalChannels: z.array(AgentContextRetrievalChannelSchema).default([]),
   hashes: z.record(z.string(), z.string()).default({}),
   runtimeHints: z.array(AgentContextRuntimeHintReceiptSchema).default([]),
@@ -89,6 +106,7 @@ export const AgentContextReceiptSchema = z.object({
 export type AgentContextRetrievalChannel = z.infer<
   typeof AgentContextRetrievalChannelSchema
 >;
+export type AgentContextChannel = z.infer<typeof AgentContextChannelSchema>;
 export type AgentContextSelectedFile = z.infer<
   typeof AgentContextSelectedFileSchema
 >;

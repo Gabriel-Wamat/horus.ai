@@ -65,6 +65,7 @@ export const RepositoryIndexGraphSummarySchema = z.object({
 export const RepositoryIndexFreshnessSchema = z.object({
   status: RepositoryIndexInvalidationStatusSchema.default("fresh"),
   contentSignature: z.string().trim().min(1),
+  merkleRoot: z.string().trim().min(1).optional(),
   stalePaths: z.array(z.string().trim().min(1)).default([]),
   checkedAt: z.string().datetime(),
 });
