@@ -136,5 +136,8 @@ function handleCodingRouteError(err: unknown, res: Response): void {
     });
     return;
   }
-  res.status(500).json({ error: "Internal server error" });
+  res.status(500).json({
+    error: "Internal server error",
+    message: err instanceof Error ? err.message : String(err),
+  });
 }

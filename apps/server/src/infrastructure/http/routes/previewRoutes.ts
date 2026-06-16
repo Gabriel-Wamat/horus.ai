@@ -184,7 +184,10 @@ function handlePreviewRouteError(err: unknown, res: Response): void {
     res.status(400).json({ error: "Invalid frontend project root", message: err.message });
     return;
   }
-  res.status(500).json({ error: "Internal server error" });
+  res.status(500).json({
+    error: "Internal server error",
+    message: err instanceof Error ? err.message : String(err),
+  });
 }
 
 function writePreviewStreamError(

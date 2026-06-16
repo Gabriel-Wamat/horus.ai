@@ -106,5 +106,8 @@ function handleChatRouteError(err: unknown, res: Response): void {
     res.status(404).json({ error: "Chat session not found", message: err.message });
     return;
   }
-  res.status(500).json({ error: "Internal server error" });
+  res.status(500).json({
+    error: "Internal server error",
+    message: err instanceof Error ? err.message : String(err),
+  });
 }

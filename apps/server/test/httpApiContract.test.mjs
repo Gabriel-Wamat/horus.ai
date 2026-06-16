@@ -10,12 +10,17 @@ import {
   createApiNotFoundHandler,
   createApp,
 } from "../dist/infrastructure/http/server.js";
+import { createChatRouter } from "../dist/infrastructure/http/routes/chatRoutes.js";
+import { createCodingRouter } from "../dist/infrastructure/http/routes/codingRoutes.js";
+import { createExecutionTaskRouter } from "../dist/infrastructure/http/routes/executionTaskRoutes.js";
+import { createHorusChatRouter } from "../dist/infrastructure/http/routes/horusChatRoutes.js";
 import { createLlmSettingsRouter } from "../dist/infrastructure/http/routes/llmSettingsRoutes.js";
 import { createProjectConstructionRouter } from "../dist/infrastructure/http/routes/projectConstructionRoutes.js";
 import { createAgentRunFlowRouter } from "../dist/infrastructure/http/routes/agentRunFlowRoutes.js";
 import { createEventRouter } from "../dist/infrastructure/http/routes/eventRoutes.js";
 import { createPreviewRouter } from "../dist/infrastructure/http/routes/previewRoutes.js";
 import { createWorkflowRouter } from "../dist/infrastructure/http/routes/workflowRoutes.js";
+import { createWorkspaceRouter } from "../dist/infrastructure/http/routes/workspaceRoutes.js";
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
@@ -246,6 +251,149 @@ test("workflow routes preserve dependency failure details in JSON responses", as
         method: "GET",
         path: "/api/workflow/download/22222222-2222-4222-8222-222222222222",
         message: "workflow download dependency unavailable",
+      },
+    ];
+
+    for (const item of cases) {
+      const response = await fetch(`${baseUrl}${item.path}`, {
+        method: item.method,
+        ...(item.body
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(item.body),
+            }
+          : {}),
+      });
+      const body = await response.json();
+
+      assert.equal(response.status, 500, item.path);
+      assert.equal(hasJsonContentType(response), true, item.path);
+      assert.deepEqual(
+        body,
+        {
+          error: "Internal server error",
+          message: item.message,
+        },
+        item.path
+      );
+    }
+  } finally {
+    await close(server);
+  }
+});
+
+test("interactive route families preserve dependency failure details in JSON responses", async () => {
+  const app = express();
+  app.use(express.json());
+  app.use(
+    "/api/chat",
+    createChatRouter({
+      chatMemoryStore: {
+        async listSessions() {
+          throw new Error("chat memory unavailable");
+        },
+      },
+    })
+  );
+  app.use(
+    "/api/workspace",
+    createWorkspaceRouter({
+      workspaceStore: {
+        async listFolders() {
+          throw new Error("workspace store unavailable");
+        },
+      },
+    })
+  );
+  app.use(
+    "/api/coding",
+    createCodingRouter({
+      orchestrator: {
+        async getSnapshot() {
+          throw new Error("coding runtime unavailable");
+        },
+      },
+    })
+  );
+  app.use(
+    "/api/preview",
+    createPreviewRouter({
+      listProjectsUseCase: {
+        async execute() {
+          throw new Error("preview project registry unavailable");
+        },
+      },
+      createSessionUseCase: {},
+      startSessionUseCase: {},
+      stopSessionUseCase: {},
+      reloadSessionUseCase: {},
+      getSessionUseCase: {},
+      setDeviceUseCase: {},
+      listTimelineUseCase: {},
+      createInstructionDraftUseCase: {},
+      eventStream: {},
+    })
+  );
+  app.use(
+    "/api/horus",
+    createHorusChatRouter({
+      submitChatTurnUseCase: {
+        async execute() {
+          throw new Error("horus chat use case unavailable");
+        },
+      },
+    })
+  );
+  app.use(
+    "/api/project-files",
+    createExecutionTaskRouter({
+      projectConstruction: {
+        async getProjectWorkspace() {
+          throw new Error("execution task workspace unavailable");
+        },
+      },
+    })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const cases = [
+      {
+        method: "GET",
+        path: "/api/chat/sessions",
+        message: "chat memory unavailable",
+      },
+      {
+        method: "GET",
+        path: "/api/workspace/folders",
+        message: "workspace store unavailable",
+      },
+      {
+        method: "GET",
+        path: "/api/coding/tasks/11111111-1111-4111-8111-111111111111",
+        message: "coding runtime unavailable",
+      },
+      {
+        method: "GET",
+        path: "/api/preview/projects",
+        message: "preview project registry unavailable",
+      },
+      {
+        method: "POST",
+        path: "/api/horus/chat/turn",
+        body: {
+          chatSessionId: "11111111-1111-4111-8111-111111111111",
+          message: "corrija o preview",
+        },
+        message: "horus chat use case unavailable",
+      },
+      {
+        method: "GET",
+        path: "/api/project-files/projects/11111111-1111-4111-8111-111111111111/execution-tasks",
+        message: "execution task workspace unavailable",
       },
     ];
 
@@ -553,9 +701,12 @@ test("preview event stream emits structured failure when subscription dependency
 
 test("HTTP route handlers keep caught errors visible to route contracts", async () => {
   const violations = [];
+  const opaqueInternalErrorPattern =
+    /res\.status\(500\)\.json\(\{\s*error:\s*"Internal server error"\s*\}\)/;
   for (const file of httpRouteFiles) {
     const source = await readFile(join(repositoryRoot, file), "utf8");
     if (source.includes("catch {")) violations.push(file);
+    if (opaqueInternalErrorPattern.test(source)) violations.push(file);
   }
 
   assert.deepEqual(violations, []);
