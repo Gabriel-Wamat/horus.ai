@@ -213,6 +213,7 @@ export function ExecutionTerminalSection({
   commandCount,
   followedTasks,
   actionError,
+  runtimeError,
   selectedProjectId,
   killingTaskIds,
   retryingTaskIds,
@@ -225,6 +226,7 @@ export function ExecutionTerminalSection({
   readonly commandCount: number;
   readonly followedTasks: ReadonlyMap<string, FollowedTaskOutput>;
   readonly actionError: string | null;
+  readonly runtimeError: string | null;
   readonly selectedProjectId: string | null;
   readonly killingTaskIds: ReadonlySet<string>;
   readonly retryingTaskIds: ReadonlySet<string>;
@@ -242,6 +244,9 @@ export function ExecutionTerminalSection({
       <div className="execution-console-terminal">
         {actionError ? (
           <p className="execution-console-empty">{actionError}</p>
+        ) : null}
+        {runtimeError ? (
+          <p className="execution-console-empty">{runtimeError}</p>
         ) : null}
         {rows.length ? (
           rows.slice(0, 8).map((row) => {
@@ -327,7 +332,7 @@ export function ExecutionTerminalSection({
               </article>
             );
           })
-        ) : !actionError ? (
+        ) : !actionError && !runtimeError ? (
           <p className="execution-console-empty">Sem comando registrado.</p>
         ) : null}
       </div>

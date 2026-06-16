@@ -23,6 +23,16 @@ export interface FollowedTaskOutput {
   status: string;
 }
 
+export interface ExecutionTaskRowsState {
+  rows: TerminalRow[];
+  error: string | null;
+}
+
+export interface ExecutionTaskOutputsState {
+  outputs: Map<string, FollowedTaskOutput>;
+  error: string | null;
+}
+
 interface ExecutionTaskSnapshot {
   taskId: string;
   commandId: string;
@@ -43,17 +53,17 @@ interface ExecutionTaskSnapshot {
   policyReason?: string | null;
 }
 
-class ExecutionTaskEndpointUnavailableError extends Error {}
-
 export function useExecutionTaskRows(
   selectedProjectId: string | null,
   rows: readonly TerminalRow[]
-): TerminalRow[] {
+): ExecutionTaskRowsState {
   const [tasks, setTasks] = useState<ExecutionTaskSnapshot[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedProjectId) {
       setTasks([]);
+      setError(null);
       return;
     }
 
@@ -65,6 +75,7 @@ export function useExecutionTaskRows(
         const nextTasks = await fetchTaskList(selectedProjectId, controller.signal);
         if (controller.signal.aborted) return;
         setTasks(nextTasks);
+        setError(null);
         if (nextTasks.some((task) => isTaskActive(task.status))) {
           timer = window.setTimeout(poll, 1_200);
         } else {
@@ -72,12 +83,8 @@ export function useExecutionTaskRows(
         }
       } catch (err) {
         if (!controller.signal.aborted) {
-          if (err instanceof ExecutionTaskEndpointUnavailableError) {
-            setTasks((current) => (current.length === 0 ? current : []));
-          } else {
-            console.warn("execution_task_poll_failed", err);
-            timer = window.setTimeout(poll, 3_000);
-          }
+          setError(errorMessage(err, "Falha ao atualizar execution tasks."));
+          timer = window.setTimeout(poll, 3_000);
         }
       }
     };
@@ -90,16 +97,20 @@ export function useExecutionTaskRows(
     };
   }, [selectedProjectId]);
 
-  return mergeTaskRows(rows, tasks, selectedProjectId);
+  return {
+    rows: mergeTaskRows(rows, tasks, selectedProjectId),
+    error,
+  };
 }
 
 export function useExecutionTaskOutputs(
   selectedProjectId: string | null,
   rows: readonly TerminalRow[]
-): Map<string, FollowedTaskOutput> {
+): ExecutionTaskOutputsState {
   const [outputs, setOutputs] = useState<Map<string, FollowedTaskOutput>>(
     () => new Map()
   );
+  const [error, setError] = useState<string | null>(null);
   const taskRowsSignature = rows
     .map(
       (row) =>
@@ -110,12 +121,14 @@ export function useExecutionTaskOutputs(
   useEffect(() => {
     if (!selectedProjectId) {
       setOutputs((current) => (current.size === 0 ? current : new Map()));
+      setError(null);
       return;
     }
 
     const rowsWithTasks = uniqueTaskRows(rows).slice(0, 6);
     if (rowsWithTasks.length === 0) {
       setOutputs((current) => (current.size === 0 ? current : new Map()));
+      setError(null);
       return;
     }
 
@@ -179,12 +192,13 @@ export function useExecutionTaskOutputs(
           if (value.output.length > 0 || value.status) next.set(id, value);
         }
         setOutputs(next);
+        setError(null);
         if (entries.some(([, , active]) => active)) {
           timer = window.setTimeout(poll, 1_200);
         }
       } catch (err) {
         if (!controller.signal.aborted) {
-          console.warn("execution_task_output_poll_failed", err);
+          setError(errorMessage(err, "Falha ao ler output de execution task."));
           timer = window.setTimeout(poll, 2_000);
         }
       }
@@ -198,7 +212,7 @@ export function useExecutionTaskOutputs(
     };
   }, [taskRowsSignature, selectedProjectId]);
 
-  return outputs;
+  return { outputs, error };
 }
 
 function uniqueTaskRows(rows: readonly TerminalRow[]): TerminalRow[] {
@@ -253,9 +267,6 @@ async function fetchTaskList(
     `/api/projects/${encodeURIComponent(projectId)}/execution-tasks?limit=20`,
     { cache: "no-store", signal }
   );
-  if (response.status === 404) {
-    throw new ExecutionTaskEndpointUnavailableError("Execution task endpoint unavailable");
-  }
   await requireExecutionTaskOk(response, "Listar execution tasks");
   const body = (await response.json()) as { tasks?: ExecutionTaskSnapshot[] };
   return body.tasks ?? [];
@@ -333,4 +344,8 @@ export function executionTaskStatusLabel(status: string): string {
   if (status === "aborted") return "abortado";
   if (status === "rejected") return "rejeitado";
   return status;
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
 }
