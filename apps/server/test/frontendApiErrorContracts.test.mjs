@@ -165,6 +165,39 @@ test("Horus chat API validates response and stream contracts before exposing cha
   assert.match(source, /ChatMessagesResponseSchema/);
 });
 
+test("agent skills API validates catalog response contracts before exposing state", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/agentSkillsApi.ts"),
+    "utf8"
+  );
+
+  const forbiddenAgentSkillsCasts = [
+    "const body = (await response.json()) as { skills: AgentSkillSummary[] }",
+    "const body = (await response.json()) as { profiles: AgentProfile[] }",
+    "return response.json() as Promise<AgentSkillDetail>",
+    "return response.json() as Promise<ValidateAgentSkillResponse>",
+    "return response.json() as Promise<CreateAgentSkillResponse>",
+    "return response.json() as Promise<PublishAgentSkillResponse>",
+    "return response.json() as Promise<{ bindings: AgentSkillDetail[\"bindings\"] }>",
+    "return response.json() as Promise<{ skill: AgentSkillSummary }>",
+  ];
+
+  for (const fragment of forbiddenAgentSkillsCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /readAgentSkillsJson/);
+  assert.match(source, /AgentSkillSummarySchema/);
+  assert.match(source, /AgentSkillDetailSchema/);
+  assert.match(source, /AgentSkillValidationReportSchema/);
+  assert.match(source, /AgentProfileSchema/);
+  assert.match(source, /AgentSkillsListResponseSchema/);
+  assert.match(source, /ValidateAgentSkillResponseSchema/);
+  assert.match(source, /CreateAgentSkillResponseSchema/);
+  assert.match(source, /PublishAgentSkillResponseSchema/);
+  assert.match(source, /AgentSkillBindingsResponseSchema/);
+});
+
 test("workflow API validates workspace response contracts before exposing state", async () => {
   const source = await readFile(
     join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
