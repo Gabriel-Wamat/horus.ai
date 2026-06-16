@@ -21,12 +21,40 @@ export interface WorkspaceStoryArtifactsResponse {
   specsByStoryId: Record<string, Spec>;
 }
 
+export class WorkflowApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly details: unknown
+  ) {
+    super(message);
+    this.name = "WorkflowApiError";
+  }
+}
+
 async function requireOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;
 
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await res.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? res.statusText;
+    throw new WorkflowApiError(
+      `${action} falhou (${res.status}): ${detail}`,
+      res.status,
+      body
+    );
+  }
+
   const body = await res.text().catch(() => "");
   const detail = body.trim() || res.statusText || "sem detalhe retornado";
-  throw new Error(`${action} falhou (${res.status}): ${detail}`);
+  throw new WorkflowApiError(
+    `${action} falhou (${res.status}): ${detail}`,
+    res.status,
+    body
+  );
 }
 
 export interface StartWorkflowResponse {

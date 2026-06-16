@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FrontendProject } from "@u-build/shared";
-import { workflowApi } from "../../api/workflowApi.js";
+import { WorkflowApiError, workflowApi } from "../../api/workflowApi.js";
 import { findProjectWorkspaceFolder } from "./projectSelection.js";
 
 export interface ProjectChatScopeState {
@@ -54,9 +54,13 @@ export function useProjectChatScope({
       }
 
       for (const folderId of candidateIds) {
-        const artifacts = await workflowApi
-          .listWorkspaceStoryArtifacts(folderId)
-          .catch(() => null);
+        let artifacts;
+        try {
+          artifacts = await workflowApi.listWorkspaceStoryArtifacts(folderId);
+        } catch (err) {
+          if (err instanceof WorkflowApiError && err.status === 404) continue;
+          throw err;
+        }
         const firstStory = artifacts?.userStories[0];
         if (!firstStory) continue;
         return {

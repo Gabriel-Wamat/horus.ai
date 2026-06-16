@@ -79,6 +79,7 @@ export function usePreviewChatRuntime({
   const [isLoadingChatSession, setIsLoadingChatSession] = useState(false);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
   const chatMaxSequenceRef = useRef(0);
+  const chatSyncErrorRef = useRef<string | null>(null);
 
   const { chatWorkspaceFolderId, chatUserStoryId, isLoadingProjectChatScope } =
     useProjectChatScope({
@@ -194,6 +195,7 @@ export function usePreviewChatRuntime({
     chatAbortControllerRef.current?.abort();
     chatAbortControllerRef.current = null;
     chatMaxSequenceRef.current = 0;
+    chatSyncErrorRef.current = null;
 
     if (!chatWorkspaceFolderId || !chatUserStoryId) {
       return () => {
@@ -257,8 +259,17 @@ export function usePreviewChatRuntime({
       try {
         if (cancelled) return;
         await syncChatMessagesFromServer();
-      } catch {
-        // The preview remains usable even if one background sync is missed.
+        chatSyncErrorRef.current = null;
+      } catch (err) {
+        if (cancelled) return;
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Falha ao sincronizar mensagens do chat.";
+        if (chatSyncErrorRef.current !== message) {
+          chatSyncErrorRef.current = message;
+          onError(message);
+        }
       }
     };
 
@@ -272,7 +283,7 @@ export function usePreviewChatRuntime({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [chatSession, isSubmittingInstruction, syncChatMessagesFromServer]);
+  }, [chatSession, isSubmittingInstruction, onError, syncChatMessagesFromServer]);
 
   useEffect(() => {
     if (activeWorkflowThreadId) {
