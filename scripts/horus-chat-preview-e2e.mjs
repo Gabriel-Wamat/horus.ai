@@ -1,12 +1,5 @@
 import { randomUUID } from "node:crypto";
-
-const baseUrl = normalizeBaseUrl(
-  process.env.HORUS_E2E_BASE_URL ??
-    `http://${readEnv("HORUS_E2E_HOST", "127.0.0.1")}:${readEnv(
-      "HORUS_E2E_PORT",
-      "3001"
-    )}`
-);
+import { resolveHttpBaseUrl } from "./runtime-url-config.mjs";
 
 const required = {
   HORUS_E2E_CHAT_SESSION_ID: process.env.HORUS_E2E_CHAT_SESSION_ID,
@@ -25,6 +18,13 @@ if (missing.length > 0) {
   );
   process.exit(0);
 }
+
+const baseUrl = resolveHttpBaseUrl(process.env, {
+  label: "Horus chat preview E2E",
+  baseUrlEnv: "HORUS_E2E_BASE_URL",
+  hostEnv: ["HORUS_E2E_HOST", "HORUS_PUBLIC_HOST"],
+  portEnv: ["HORUS_E2E_PORT", "HORUS_API_PROXY_PORT", "PORT"],
+});
 
 const payload = {
   chatSessionId: required.HORUS_E2E_CHAT_SESSION_ID,
@@ -90,15 +90,6 @@ async function readCheckedJson(response, url) {
     fail(`Endpoint ${url} returned HTTP ${response.status}.`, json);
   }
   return json;
-}
-
-function normalizeBaseUrl(value) {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-}
-
-function readEnv(name, fallback) {
-  const value = process.env[name]?.trim();
-  return value && value.length > 0 ? value : fallback;
 }
 
 function fail(message, details) {

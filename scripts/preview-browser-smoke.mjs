@@ -1,22 +1,9 @@
 #!/usr/bin/env node
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { normalizeBaseUrl, resolveHttpBaseUrl } from "./runtime-url-config.mjs";
 
-const DEFAULT_BASE_URL = `http://${readEnv("HORUS_PREVIEW_SMOKE_HOST", "127.0.0.1")}:${readEnv("HORUS_PREVIEW_SMOKE_PORT", "5174")}`;
 const SCREENSHOT_TIMEOUT_MS = Number(process.env.HORUS_PREVIEW_SMOKE_TIMEOUT_MS ?? 45000);
-
-function inferApiBaseUrl(pageBaseUrl) {
-  const parsed = new URL(pageBaseUrl);
-  if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-    return `${parsed.protocol}//${parsed.hostname}:${readEnv("HORUS_PREVIEW_SMOKE_API_PORT", "3000")}`;
-  }
-  return pageBaseUrl;
-}
-
-function readEnv(name, fallback) {
-  const value = process.env[name]?.trim();
-  return value && value.length > 0 ? value : fallback;
-}
 
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -216,8 +203,15 @@ async function stopIfRunning(page) {
 }
 
 async function run() {
-  const baseUrl = process.env.HORUS_BASE_URL ?? DEFAULT_BASE_URL;
-  const apiBaseUrl = process.env.HORUS_API_BASE_URL ?? inferApiBaseUrl(baseUrl);
+  const baseUrl = resolveHttpBaseUrl(process.env, {
+    label: "Preview browser smoke",
+    baseUrlEnv: "HORUS_BASE_URL",
+    hostEnv: ["HORUS_PREVIEW_SMOKE_HOST", "HORUS_WEB_PREVIEW_PUBLIC_HOST", "HORUS_PUBLIC_HOST"],
+    portEnv: ["HORUS_PREVIEW_SMOKE_PORT", "HORUS_WEB_PREVIEW_PORT"],
+    defaultPort: "5174",
+  });
+  const apiBaseUrl =
+    process.env.HORUS_API_BASE_URL ? normalizeBaseUrl(process.env.HORUS_API_BASE_URL) : baseUrl;
   const artifactDir = makeArtifactDir();
   await mkdir(artifactDir, { recursive: true });
 

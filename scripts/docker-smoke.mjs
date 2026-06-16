@@ -1,9 +1,14 @@
 #!/usr/bin/env node
+import { resolveHttpBaseUrl } from "./runtime-url-config.mjs";
 
-const dockerHost = readEnv("HORUS_DOCKER_HOST", "127.0.0.1");
-const dockerPort = readEnv("HORUS_WEB_HOST_PORT", "8080");
 const baseUrl = new URL(
-  process.env.HORUS_DOCKER_BASE_URL ?? `http://${dockerHost}:${dockerPort}`
+  resolveHttpBaseUrl(process.env, {
+    label: "Docker smoke",
+    baseUrlEnv: "HORUS_DOCKER_BASE_URL",
+    hostEnv: ["HORUS_DOCKER_HOST", "HORUS_PUBLIC_HOST"],
+    portEnv: ["HORUS_WEB_HOST_PORT"],
+    defaultPort: "8080",
+  })
 );
 
 const checks = [
@@ -28,8 +33,3 @@ for (const check of checks) {
 }
 
 console.log(`Docker smoke passed for ${baseUrl}`);
-
-function readEnv(name, fallback) {
-  const value = process.env[name]?.trim();
-  return value && value.length > 0 ? value : fallback;
-}
