@@ -2,9 +2,15 @@ import { Router, type Request, type Response } from "express";
 import { HumanMessage } from "@langchain/core/messages";
 import { z, ZodError } from "zod";
 import {
+  LlmProvidersResponseSchema,
   LlmSettingsDraftSchema,
+  LlmSettingsNullableProfileResponseSchema,
+  LlmSettingsProfileResponseSchema,
   LlmSettingsReferenceSchema,
+  LlmSettingsResolveResponseSchema,
+  LlmSettingsTestResponseSchema,
   type LlmSettingsDraft,
+  type LlmSettingsTestResponse,
 } from "@u-build/shared";
 import type { LlmCredentialStore } from "../../llm/LlmCredentialStore.js";
 import {
@@ -30,13 +36,23 @@ export function createLlmSettingsRouter(deps: LlmSettingsRouteDeps): Router {
   const router = Router();
 
   router.get("/providers", (_req: Request, res: Response) => {
-    res.json({ providers: deps.credentials.listProviders() });
+    res.json(
+      parseLlmSettingsRouteResponse("GET /llm/providers", LlmProvidersResponseSchema, {
+        providers: deps.credentials.listProviders(),
+      })
+    );
   });
 
   router.get("/settings", async (_req: Request, res: Response) => {
     try {
       const profile = await deps.credentials.getDefaultProfile();
-      res.json({ profile });
+      res.json(
+        parseLlmSettingsRouteResponse(
+          "GET /llm/settings",
+          LlmSettingsNullableProfileResponseSchema,
+          { profile }
+        )
+      );
     } catch (err) {
       handleLlmSettingsError(res, err);
     }
@@ -59,7 +75,13 @@ export function createLlmSettingsRouter(deps: LlmSettingsRouteDeps): Router {
           : {}),
         ...(draft.validatedAt ? { validatedAt: draft.validatedAt } : {}),
       });
-      res.status(200).json({ profile });
+      res.status(200).json(
+        parseLlmSettingsRouteResponse(
+          "PUT /llm/settings",
+          LlmSettingsProfileResponseSchema,
+          { profile }
+        )
+      );
     } catch (err) {
       handleLlmSettingsError(res, err);
     }
@@ -69,7 +91,13 @@ export function createLlmSettingsRouter(deps: LlmSettingsRouteDeps): Router {
     try {
       const draft = LlmSettingsDraftSchema.parse(req.body);
       const result = await testDraftSettings(draft);
-      res.json(result);
+      res.json(
+        parseLlmSettingsRouteResponse(
+          "POST /llm/settings/test",
+          LlmSettingsTestResponseSchema,
+          result
+        )
+      );
     } catch (err) {
       handleLlmSettingsError(res, err);
     }
@@ -88,12 +116,18 @@ export function createLlmSettingsRouter(deps: LlmSettingsRouteDeps): Router {
     try {
       const reference = LlmSettingsReferenceSchema.parse(req.body);
       const settings = await deps.resolver.resolveReference(reference);
-      res.json({
-        resolved: Boolean(settings),
-        provider: settings?.provider,
-        model: settings?.model,
-        baseUrl: settings?.baseUrl,
-      });
+      res.json(
+        parseLlmSettingsRouteResponse(
+          "POST /llm/settings/resolve",
+          LlmSettingsResolveResponseSchema,
+          {
+            resolved: Boolean(settings),
+            provider: settings?.provider,
+            model: settings?.model,
+            baseUrl: settings?.baseUrl,
+          }
+        )
+      );
     } catch (err) {
       handleLlmSettingsError(res, err);
     }
@@ -104,7 +138,7 @@ export function createLlmSettingsRouter(deps: LlmSettingsRouteDeps): Router {
 
 async function testDraftSettings(
   draft: LlmSettingsDraft
-): Promise<{ ok: boolean; message: string; testedAt: string }> {
+): Promise<LlmSettingsTestResponse> {
   if (!draft.apiKey) {
     return {
       ok: false,
@@ -145,6 +179,29 @@ async function testDraftSettings(
   }
 }
 
+interface LlmSettingsRouteContract<T> {
+  parse(input: unknown): T;
+}
+
+class LlmSettingsRouteResponseContractError extends Error {
+  constructor(route: string, cause: unknown) {
+    super(`LLM settings route response contract violated at ${route}`, { cause });
+    this.name = "LlmSettingsRouteResponseContractError";
+  }
+}
+
+function parseLlmSettingsRouteResponse<T>(
+  route: string,
+  contract: LlmSettingsRouteContract<T>,
+  payload: unknown
+): T {
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new LlmSettingsRouteResponseContractError(route, err);
+  }
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeout: NodeJS.Timeout | undefined;
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
@@ -161,6 +218,10 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 }
 
 function handleLlmSettingsError(res: Response, err: unknown): void {
+  if (err instanceof LlmSettingsRouteResponseContractError) {
+    res.status(500).json({ error: "Internal server error", message: err.message });
+    return;
+  }
   if (err instanceof ZodError) {
     res.status(400).json({ error: "Validation failed", issues: err.issues });
     return;
