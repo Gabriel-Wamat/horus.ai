@@ -1,7 +1,7 @@
-import { z } from "zod";
 import {
-  ChatMessageSchema,
-  ChatSessionSchema,
+  ChatMessagesResponseSchema,
+  ChatSessionResponseSchema,
+  ChatSessionsResponseSchema,
   HorusChatStreamEventSchema,
   HorusChatTurnResponseSchema,
   type ChatMessage,
@@ -24,18 +24,6 @@ export class HorusChatApiError extends Error {
     this.name = "HorusChatApiError";
   }
 }
-
-const ChatSessionsResponseSchema = z.object({
-  sessions: z.array(ChatSessionSchema),
-});
-
-const ChatSessionResponseSchema = z.object({
-  session: ChatSessionSchema,
-});
-
-const ChatMessagesResponseSchema = z.object({
-  messages: z.array(ChatMessageSchema),
-});
 
 async function requireOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;

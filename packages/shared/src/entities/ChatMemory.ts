@@ -100,6 +100,26 @@ export const ChatAgentContextBundleSchema = z.object({
   previousAgentResults: z.array(AgentResultSchema),
 });
 
+export const ChatSessionsResponseSchema = z.object({
+  sessions: z.array(ChatSessionSchema),
+});
+
+export const ChatSessionResponseSchema = z.object({
+  session: ChatSessionSchema,
+});
+
+export const ChatMessagesResponseSchema = z.object({
+  messages: z.array(ChatMessageSchema),
+});
+
+export const ChatMessageResponseSchema = z.object({
+  message: ChatMessageSchema,
+});
+
+export const ChatContextResponseSchema = z.object({
+  context: ChatAgentContextBundleSchema,
+});
+
 export type ChatRole = z.infer<typeof ChatRoleSchema>;
 export type ChatMessageEventType = z.infer<typeof ChatMessageEventTypeSchema>;
 export type ChatMessageVisibility = z.infer<typeof ChatMessageVisibilitySchema>;
@@ -118,3 +138,8 @@ export type AppendChatMessageInput = z.input<
 export type ChatAgentContextBundle = z.infer<
   typeof ChatAgentContextBundleSchema
 >;
+export type ChatSessionsResponse = z.infer<typeof ChatSessionsResponseSchema>;
+export type ChatSessionResponse = z.infer<typeof ChatSessionResponseSchema>;
+export type ChatMessagesResponse = z.infer<typeof ChatMessagesResponseSchema>;
+export type ChatMessageResponse = z.infer<typeof ChatMessageResponseSchema>;
+export type ChatContextResponse = z.infer<typeof ChatContextResponseSchema>;
