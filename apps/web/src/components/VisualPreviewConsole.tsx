@@ -122,7 +122,15 @@ export function VisualPreviewConsole({
               setTimeline((current) => mergeEvents(current, events));
             }
           })
-          .catch(() => undefined);
+          .catch((err) => {
+            if (!cancelled) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "Falha ao carregar timeline do preview."
+              );
+            }
+          });
       }
     }
 
@@ -193,7 +201,13 @@ export function VisualPreviewConsole({
     void previewApi
       .getSession(session.id)
       .then(setSession)
-      .catch(() => undefined);
+      .catch((err) => {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Falha ao atualizar sessão de preview."
+        );
+      });
   }, [latestEvent, session?.id]);
 
   const appendEvent = useCallback((event: PreviewEvent): void => {
