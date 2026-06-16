@@ -29,15 +29,7 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
       const result = await deps.startUseCase.execute(req.body);
       res.status(202).json(result);
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      if (err instanceof WorkspaceFolderNotFoundError) {
-        res.status(404).json({ error: "Workspace folder not found", message: err.message });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkflowRouteError(err, res);
     }
   });
 
@@ -46,18 +38,7 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
       await deps.resumeUseCase.execute(req.body);
       res.status(204).send();
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      if (err instanceof WorkflowResumeUnavailableError) {
-        res.status(409).json({
-          error: "Workflow checkpoint unavailable",
-          message: err.message,
-        });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkflowRouteError(err, res);
     }
   });
 
@@ -67,18 +48,7 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
       await deps.retryDecisionUseCase.execute(req.body);
       res.status(204).send();
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      if (err instanceof WorkflowResumeUnavailableError) {
-        res.status(409).json({
-          error: "Workflow checkpoint unavailable",
-          message: err.message,
-        });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkflowRouteError(err, res);
     }
   });
 
@@ -93,11 +63,7 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
       }
       res.json(state);
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkflowRouteError(err, res);
     }
   });
 
@@ -126,15 +92,35 @@ export function createWorkflowRouter(deps: WorkflowRouteDeps): Router {
 
       await archive.finalize();
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Internal server error" });
-      }
+      handleWorkflowRouteError(err, res);
     }
   });
 
   return router;
+}
+
+function handleWorkflowRouteError(err: unknown, res: Response): void {
+  if (res.headersSent) {
+    res.destroy(err instanceof Error ? err : undefined);
+    return;
+  }
+  if (err instanceof ZodError) {
+    res.status(400).json({ error: "Validation failed", issues: err.issues });
+    return;
+  }
+  if (err instanceof WorkspaceFolderNotFoundError) {
+    res.status(404).json({ error: "Workspace folder not found", message: err.message });
+    return;
+  }
+  if (err instanceof WorkflowResumeUnavailableError) {
+    res.status(409).json({
+      error: "Workflow checkpoint unavailable",
+      message: err.message,
+    });
+    return;
+  }
+  res.status(500).json({
+    error: "Internal server error",
+    message: err instanceof Error ? err.message : String(err),
+  });
 }

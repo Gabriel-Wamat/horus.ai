@@ -15,6 +15,7 @@ import { createProjectConstructionRouter } from "../dist/infrastructure/http/rou
 import { createAgentRunFlowRouter } from "../dist/infrastructure/http/routes/agentRunFlowRoutes.js";
 import { createEventRouter } from "../dist/infrastructure/http/routes/eventRoutes.js";
 import { createPreviewRouter } from "../dist/infrastructure/http/routes/previewRoutes.js";
+import { createWorkflowRouter } from "../dist/infrastructure/http/routes/workflowRoutes.js";
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
@@ -175,6 +176,102 @@ test("project construction routes return JSON when repository dependency fails",
       error: "Internal server error",
       message: "workspace repository unavailable",
     });
+  } finally {
+    await close(server);
+  }
+});
+
+test("workflow routes preserve dependency failure details in JSON responses", async () => {
+  const app = express();
+  app.use(express.json());
+  app.use(
+    "/api/workflow",
+    createWorkflowRouter({
+      startUseCase: {
+        async execute() {
+          throw new Error("workflow start dependency unavailable");
+        },
+      },
+      resumeUseCase: {
+        async execute() {
+          throw new Error("workflow resume dependency unavailable");
+        },
+      },
+      retryDecisionUseCase: {
+        async execute() {
+          throw new Error("workflow retry dependency unavailable");
+        },
+      },
+      statusUseCase: {
+        async execute(input) {
+          if (input.threadId === "11111111-1111-4111-8111-111111111111") {
+            throw new Error("workflow status dependency unavailable");
+          }
+          throw new Error("workflow download dependency unavailable");
+        },
+      },
+    })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const cases = [
+      {
+        method: "POST",
+        path: "/api/workflow/start",
+        body: {},
+        message: "workflow start dependency unavailable",
+      },
+      {
+        method: "POST",
+        path: "/api/workflow/resume",
+        body: {},
+        message: "workflow resume dependency unavailable",
+      },
+      {
+        method: "POST",
+        path: "/api/workflow/retry-decision",
+        body: {},
+        message: "workflow retry dependency unavailable",
+      },
+      {
+        method: "GET",
+        path: "/api/workflow/status/11111111-1111-4111-8111-111111111111",
+        message: "workflow status dependency unavailable",
+      },
+      {
+        method: "GET",
+        path: "/api/workflow/download/22222222-2222-4222-8222-222222222222",
+        message: "workflow download dependency unavailable",
+      },
+    ];
+
+    for (const item of cases) {
+      const response = await fetch(`${baseUrl}${item.path}`, {
+        method: item.method,
+        ...(item.body
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(item.body),
+            }
+          : {}),
+      });
+      const body = await response.json();
+
+      assert.equal(response.status, 500, item.path);
+      assert.equal(hasJsonContentType(response), true, item.path);
+      assert.deepEqual(
+        body,
+        {
+          error: "Internal server error",
+          message: item.message,
+        },
+        item.path
+      );
+    }
   } finally {
     await close(server);
   }
