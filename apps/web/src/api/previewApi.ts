@@ -1,21 +1,118 @@
-import type {
-  CreatePreviewSessionInput,
-  CreateVisualInstructionDraftInput,
-  FrontendProject,
-  PreviewDeviceName,
-  PreviewEvent,
-  PreviewSession,
-  VisualInstructionDraft,
+import { z } from "zod";
+import {
+  FrontendProjectSchema,
+  PreviewEventSchema,
+  PreviewSessionSchema,
+  VisualInstructionDraftSchema,
+  type CreatePreviewSessionInput,
+  type CreateVisualInstructionDraftInput,
+  type FrontendProject,
+  type PreviewDeviceName,
+  type PreviewEvent,
+  type PreviewSession,
+  type VisualInstructionDraft,
 } from "@u-build/shared";
 
 const BASE = "/api/preview";
 
+export class PreviewApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly details: unknown
+  ) {
+    super(message);
+    this.name = "PreviewApiError";
+  }
+}
+
+const PreviewProjectsResponseSchema = z.object({
+  projects: z.array(FrontendProjectSchema),
+});
+
+const PreviewActionResponseSchema = z.object({
+  session: PreviewSessionSchema,
+  event: PreviewEventSchema,
+});
+
+const PreviewSessionResponseSchema = z.object({
+  session: PreviewSessionSchema,
+});
+
+const PreviewTimelineResponseSchema = z.object({
+  events: z.array(PreviewEventSchema),
+});
+
+const VisualInstructionDraftResponseSchema = z.object({
+  draft: VisualInstructionDraftSchema,
+  event: PreviewEventSchema,
+});
+
 async function requireOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;
 
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await res.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? res.statusText;
+    throw new PreviewApiError(
+      `${action} falhou (${res.status}): ${detail}`,
+      res.status,
+      body
+    );
+  }
+
   const body = await res.text().catch(() => "");
   const detail = body.trim() || res.statusText || "sem detalhe retornado";
-  throw new Error(`${action} falhou (${res.status}): ${detail}`);
+  throw new PreviewApiError(
+    `${action} falhou (${res.status}): ${detail}`,
+    res.status,
+    body
+  );
+}
+
+interface PreviewApiContract<T> {
+  parse(input: unknown): T;
+}
+
+async function readPreviewJson<T>(
+  res: Response,
+  action: string,
+  contract: PreviewApiContract<T>
+): Promise<T> {
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new PreviewApiError(
+      `${action} falhou: contrato inválido da API, esperado application/json e recebido ${
+        contentType || "content-type ausente"
+      }.`,
+      res.status,
+      null
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await res.json();
+  } catch (err) {
+    throw new PreviewApiError(
+      `${action} falhou: JSON inválido retornado pela API (${errorMessage(err)}).`,
+      res.status,
+      null
+    );
+  }
+
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new PreviewApiError(
+      `${action} falhou: payload fora do contrato esperado (${errorMessage(err)}).`,
+      res.status,
+      payload
+    );
+  }
 }
 
 export interface PreviewActionResponse {
@@ -39,7 +136,11 @@ export const previewApi = {
       cache: "no-store",
     });
     await requireOk(res, "Listar projetos de preview");
-    const body = (await res.json()) as { projects: FrontendProject[] };
+    const body = await readPreviewJson(
+      res,
+      "Listar projetos de preview",
+      PreviewProjectsResponseSchema
+    );
     return body.projects;
   },
 
@@ -52,32 +153,36 @@ export const previewApi = {
       body: JSON.stringify(input),
     });
     await requireOk(res, "Criar sessão de preview");
-    return res.json() as Promise<PreviewActionResponse>;
+    return readPreviewJson(res, "Criar sessão de preview", PreviewActionResponseSchema);
   },
 
   getSession: async (sessionId: string): Promise<PreviewSession> => {
     const res = await fetch(`${BASE}/sessions/${sessionId}`, { cache: "no-store" });
     await requireOk(res, "Consultar sessão de preview");
-    const body = (await res.json()) as { session: PreviewSession };
+    const body = await readPreviewJson(
+      res,
+      "Consultar sessão de preview",
+      PreviewSessionResponseSchema
+    );
     return body.session;
   },
 
   startSession: async (sessionId: string): Promise<PreviewActionResponse> => {
     const res = await fetch(`${BASE}/sessions/${sessionId}/start`, { method: "POST" });
     await requireOk(res, "Iniciar preview");
-    return res.json() as Promise<PreviewActionResponse>;
+    return readPreviewJson(res, "Iniciar preview", PreviewActionResponseSchema);
   },
 
   stopSession: async (sessionId: string): Promise<PreviewActionResponse> => {
     const res = await fetch(`${BASE}/sessions/${sessionId}/stop`, { method: "POST" });
     await requireOk(res, "Parar preview");
-    return res.json() as Promise<PreviewActionResponse>;
+    return readPreviewJson(res, "Parar preview", PreviewActionResponseSchema);
   },
 
   reloadSession: async (sessionId: string): Promise<PreviewActionResponse> => {
     const res = await fetch(`${BASE}/sessions/${sessionId}/reload`, { method: "POST" });
     await requireOk(res, "Recarregar preview");
-    return res.json() as Promise<PreviewActionResponse>;
+    return readPreviewJson(res, "Recarregar preview", PreviewActionResponseSchema);
   },
 
   setDevice: async (
@@ -90,7 +195,11 @@ export const previewApi = {
       body: JSON.stringify({ device }),
     });
     await requireOk(res, "Alterar dispositivo do preview");
-    return res.json() as Promise<PreviewActionResponse>;
+    return readPreviewJson(
+      res,
+      "Alterar dispositivo do preview",
+      PreviewActionResponseSchema
+    );
   },
 
   listTimeline: async (sessionId: string): Promise<PreviewEvent[]> => {
@@ -98,7 +207,11 @@ export const previewApi = {
       cache: "no-store",
     });
     await requireOk(res, "Listar timeline do preview");
-    const body = (await res.json()) as { events: PreviewEvent[] };
+    const body = await readPreviewJson(
+      res,
+      "Listar timeline do preview",
+      PreviewTimelineResponseSchema
+    );
     return body.events;
   },
 
@@ -111,6 +224,14 @@ export const previewApi = {
       body: JSON.stringify(input),
     });
     await requireOk(res, "Criar draft visual");
-    return res.json() as Promise<VisualInstructionDraftResponse>;
+    return readPreviewJson(
+      res,
+      "Criar draft visual",
+      VisualInstructionDraftResponseSchema
+    );
   },
 } as const;
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
