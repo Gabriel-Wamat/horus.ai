@@ -46,6 +46,7 @@ export * from "./entities/ShellCommand.js";
 export type { IAgentProvider, AgentRunContext } from "./ports/IAgentProvider.js";
 export type { IStorageProvider } from "./ports/IStorageProvider.js";
 export {
+  parseWorkflowEvent,
   WorkflowEventSchema,
   type IEventStream,
   type WorkflowEvent,

@@ -11,11 +11,13 @@ export function useSseStream<TEvent>({
   url,
   errorMessage,
   logPrefix,
+  parseEvent,
   eventTypes,
 }: {
   url: string | null;
   errorMessage: string;
   logPrefix: string;
+  parseEvent: (payload: unknown) => TEvent;
   eventTypes?: readonly string[];
 }): UseSseStreamResult<TEvent> {
   const [latestEvent, setLatestEvent] = useState<TEvent | null>(null);
@@ -45,7 +47,7 @@ export function useSseStream<TEvent>({
 
     const parse = (event: MessageEvent<string>): void => {
       try {
-        const parsed = JSON.parse(event.data) as TEvent;
+        const parsed = parseEvent(JSON.parse(event.data));
         setError(null);
         setLatestEvent(parsed);
         setEvents((current) => [...current, parsed]);
@@ -80,7 +82,7 @@ export function useSseStream<TEvent>({
       source.close();
       setIsConnected(false);
     };
-  }, [errorMessage, eventTypes, logPrefix, url]);
+  }, [errorMessage, eventTypes, logPrefix, parseEvent, url]);
 
   return { latestEvent, events, isConnected, error };
 }
