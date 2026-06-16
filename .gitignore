@@ -20,11 +20,21 @@ data/**/.git.local/
 data/**/node_modules/
 data/**/dist/
 data/**/*.tsbuildinfo
+!data/**/*.md
+!data/**/.horus/
+!data/**/.horus/**
+!data/**/.horus/**/*.log
 
 .horus/
 !.horus/
 !.horus/artifacts/
 !.horus/artifacts/**
+apps/server/.horus/
+!apps/server/.horus/
+!apps/server/.horus/data/
+!apps/server/.horus/data/**
+apps/server/.horus/data/llm/
+apps/server/.horus/data/llm/**
 
 spec/
 !spec/
@@ -47,6 +57,8 @@ apps/server/test/*
 !apps/server/test/projectConstructionPreviewSession.test.mjs
 !apps/server/test/surfacePatternLibrary.test.mjs
 !apps/server/test/visualDesignGateProfessional.test.mjs
+!apps/server/test/horusChatResponseStyle.test.mjs
+!apps/server/test/horusRunFlowSnapshotBuilder.test.mjs
 packages/**/test/
 packages/**/tests/
 scripts/*.test.mjs
@@ -56,8 +68,10 @@ scripts/worktree-spec-audit.mjs
 /tools/
 apps/web/src/features/design-studio/
 *.log
+!data/**/.horus/**/*.log
 *.md
 !README.md
+!data/**/*.md
 !/skills/
 !/skills/agents/
 !/skills/agents/**
@@ -92,3 +106,8 @@ Thumbs.db
 !spec/**
 apps/**/.horus/
 apps/**/.horus/**
+!apps/server/.horus/
+!apps/server/.horus/data/
+!apps/server/.horus/data/**
+apps/server/.horus/data/llm/
+apps/server/.horus/data/llm/**
