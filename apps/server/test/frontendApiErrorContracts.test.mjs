@@ -158,3 +158,28 @@ test("workflow API validates execution response contracts before exposing state"
   assert.match(source, /FrontendProjectSchema/);
   assert.match(source, /PreviewSessionSchema/);
 });
+
+test("workflow API validates LLM settings response contracts before exposing state", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
+    "utf8"
+  );
+
+  const forbiddenLlmSettingsCasts = [
+    "return res.json() as Promise<{ providers: LlmProviderCapability[] }>",
+    "const body = (await res.json()) as { profile: LlmSettingsProfile | null }",
+    "const body = (await res.json()) as { profile: LlmSettingsProfile }",
+    "return res.json() as Promise<{ ok: boolean; message: string; testedAt: string }>",
+  ];
+
+  for (const fragment of forbiddenLlmSettingsCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /LlmProviderCapabilitySchema/);
+  assert.match(source, /LlmSettingsProfileSchema/);
+  assert.match(source, /LlmProvidersResponseSchema/);
+  assert.match(source, /LlmSettingsNullableProfileResponseSchema/);
+  assert.match(source, /LlmSettingsProfileResponseSchema/);
+  assert.match(source, /LlmSettingsTestResponseSchema/);
+});
