@@ -384,6 +384,9 @@ export class SubmitHorusChatTurnUseCase {
           context,
           intentKind: intent.kind,
           ...(project ? { project } : {}),
+          ...(parsed.previewSessionId
+            ? { previewSessionId: parsed.previewSessionId }
+            : {}),
           ...(codeContext ? { codeContext } : {}),
           ...(llmSettings ? { llmSettings } : {}),
           ...(options.signal ? { signal: options.signal } : {}),
@@ -498,6 +501,23 @@ export class SubmitHorusChatTurnUseCase {
           ...(toolSteps.length ? { toolSteps } : {}),
           summary: summary.trim() || buildResponderFailureFallback(),
         };
+        const previewReload = await reloadPreviewAfterAppliedCodeChange({
+          intent,
+          input: parsed,
+          outcome,
+          toolSteps,
+          previewRuntime: this.previewRuntime,
+        });
+        outcome = previewReload.outcome;
+        if (previewReload.reloaded) {
+          yield emit({
+            type: "action_updated",
+            action: "project_execution_reloaded",
+            status: "completed",
+            summary: "Preview recarregado automaticamente após aplicar a alteração.",
+            previewSessionId: previewReload.previewSessionId,
+          });
+        }
       } else {
         const action = actionForIntent(intent);
         yield emit({
@@ -676,6 +696,63 @@ export class SubmitHorusChatTurnUseCase {
 
     return project;
   }
+}
+
+async function reloadPreviewAfterAppliedCodeChange(input: {
+  readonly intent: HorusChatIntent;
+  readonly input: HorusChatTurnInput;
+  readonly outcome: HorusChatOutcome;
+  readonly toolSteps: readonly HorusChatToolStep[];
+  readonly previewRuntime: PreviewRuntimeReader;
+}): Promise<{
+  readonly outcome: HorusChatOutcome;
+  readonly reloaded: boolean;
+  readonly previewSessionId?: string;
+}> {
+  if (input.intent.kind !== "code_change") {
+    return { outcome: input.outcome, reloaded: false };
+  }
+  if (!input.input.previewSessionId) {
+    return { outcome: input.outcome, reloaded: false };
+  }
+  if (!hasAppliedCodeChange(input.toolSteps)) {
+    return { outcome: input.outcome, reloaded: false };
+  }
+
+  try {
+    const result = await input.previewRuntime.reloadSession(input.input.previewSessionId);
+    return {
+      outcome: {
+        ...input.outcome,
+        previewSessionId: result.session.id,
+      },
+      reloaded: true,
+      previewSessionId: result.session.id,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      outcome: {
+        ...input.outcome,
+        previewSessionId: input.input.previewSessionId,
+        summary: `${input.outcome.summary}\n\nPreview: alteração aplicada, mas o recarregamento automático falhou (${message}).`,
+      },
+      reloaded: false,
+      previewSessionId: input.input.previewSessionId,
+    };
+  }
+}
+
+function hasAppliedCodeChange(toolSteps: readonly HorusChatToolStep[]): boolean {
+  return toolSteps.some((step) => {
+    if (step.tool !== "apply_code_change_set" || step.phase !== "succeeded") {
+      return false;
+    }
+    if (step.fileOperations.some((operation) => operation.status === "applied")) {
+      return true;
+    }
+    return step.filePaths.length > 0;
+  });
 }
 
 async function* streamAnswerText(

@@ -1,0 +1,63 @@
+[
+  {
+    "id": "ed286a20-175a-4597-ae6c-f52139f4e796",
+    "type": "preview_created",
+    "sessionId": "902d4299-fbf1-4545-9370-77d0305ad38c",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:46:57.622Z",
+    "status": "waiting",
+    "message": "Preview session created",
+    "data": {
+      "route": "/",
+      "device": "pc"
+    }
+  },
+  {
+    "id": "05283e5f-6c15-4ebf-b0a7-97c0a20f4fed",
+    "type": "preview_started",
+    "sessionId": "902d4299-fbf1-4545-9370-77d0305ad38c",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:46:57.631Z",
+    "status": "running",
+    "message": "Preview session started",
+    "data": {
+      "previewUrl": "http://localhost:5174"
+    }
+  },
+  {
+    "id": "49135132-f4d3-41ff-b10e-512b854c1a8a",
+    "type": "device_changed",
+    "sessionId": "902d4299-fbf1-4545-9370-77d0305ad38c",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:47:01.303Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "phone"
+    }
+  },
+  {
+    "id": "a7585a86-164c-4879-9d02-d79ad81c14f0",
+    "type": "device_changed",
+    "sessionId": "902d4299-fbf1-4545-9370-77d0305ad38c",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:47:02.954Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "tablet"
+    }
+  },
+  {
+    "id": "131c904e-5cd7-467d-a525-ace6d17617ad",
+    "type": "device_changed",
+    "sessionId": "902d4299-fbf1-4545-9370-77d0305ad38c",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:47:09.183Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "pc"
+    }
+  }
+]

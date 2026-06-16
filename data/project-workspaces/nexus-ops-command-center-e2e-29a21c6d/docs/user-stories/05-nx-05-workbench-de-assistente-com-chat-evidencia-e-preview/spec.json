@@ -1,0 +1,99 @@
+{
+  "id": "20693521-8f07-45cb-bee1-3fe9787329f1",
+  "userStoryId": "dd7d44ed-7578-4c85-89ec-1e078243bb63",
+  "version": 1,
+  "summary": "Workbench de assistente com chat, painel de evidências e preview integrado, mantendo input fixo e indicativo compacto de progresso.",
+  "technicalApproach": "Pattern: chat-preview-workbench. Implementação React + TypeScript preservando arquitetura frontend existente (components/, hooks/, services/). Layout: 3 áreas responsivas em grid CSS: 1) Chat column (histórico + composer) 2) Evidence panel (colapsável à direita) 3) Preview/Result area (bottom-right ou modal dependendo de breakpoint). Componentização clara com apresentação/control separation: dumb UI components (MessageBubble, Composer, EvidenceItem, PreviewCanvas) e smart containers (AssistantWorkbenchContainer) que injetam adapters para API/Service. Estados: default, loading(action-in-progress), progress(event stream), error, empty. Interações: composer envia via AssistantService.postMessage(adapter), service expõe SSE/WebSocket/long-poll adapter para eventos de progresso; progressos renderizam como single compact animated ActivityBar em área do chat (não criar múltiplas mensagens). Evidence revelável por mensagem via toggle que consulta EvidenceAPI adapter (paginação opcional). Input permanece fixed/pinned; disabled only while action locks concurrency. Accessibility: ARIA landmarks, role=log para histórico, focus trap composer, keyboard shortcuts (Enter / Shift+Enter), live region for progress updates. Responsividade: column stack under 900px (preview collapses to modal). Use boundary adapters in services (injetáveis) — não embedar mocks.",
+  "components": [
+    {
+      "name": "AssistantWorkbenchContainer",
+      "type": "service",
+      "description": "Container orchestration: coordena chat, evidence, preview, injecta adapters (AssistantAPIAdapter, EvidenceAPIAdapter, ProgressStreamAdapter), gerencia concurrency lock e UI state machine.",
+      "dependencies": [
+        "AssistantMessageList",
+        "Composer",
+        "EvidencePanel",
+        "PreviewPane",
+        "ProgressActivityBar",
+        "assistantApi"
+      ]
+    },
+    {
+      "name": "AssistantMessageList",
+      "type": "ui",
+      "description": "Renderiza histórico com MessageBubble (user/assistant/event/failure). Expõe callbacks para expandir evidências; role=log, virtualized list for large history.",
+      "dependencies": [
+        "MessageBubble",
+        "ProgressActivityBar"
+      ]
+    },
+    {
+      "name": "Composer",
+      "type": "ui",
+      "description": "Input fixo/pinned com text area, send button, state (idle, disabled, sending). Handles keyboard shortcuts, validation, and emits send events to container.",
+      "dependencies": [
+        "AssistantWorkbenchContainer",
+        "assistantService"
+      ]
+    },
+    {
+      "name": "EvidencePanel",
+      "type": "ui",
+      "description": "Painel colapsável que lista EvidenceItem; cada item mostra origem, file link, excerpt and relevance score; supports expand/collapse and fetch-on-demand via adapter.",
+      "dependencies": [
+        "evidenceApi"
+      ]
+    },
+    {
+      "name": "PreviewPane",
+      "type": "ui",
+      "description": "Mostra resultado/preview de ações (textual, difs, file render). Supports modal fallback on small screens; can pin/unpin. Shows source toggles to reveal evidence per response.",
+      "dependencies": []
+    },
+    {
+      "name": "assistantApi",
+      "type": "api",
+      "description": "Boundary adapter module that implements backend contracts for messages, evidence fetch and progress streaming; injected into services for testability.",
+      "dependencies": []
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "POST",
+      "path": "/assistant/messages",
+      "description": "Envia mensagem do usuário e inicia processamento; retorna message id e optionally initial assistant chunk."
+    },
+    {
+      "method": "GET",
+      "path": "/assistant/messages/{messageId}",
+      "description": "Recupera estado atualizado de uma mensagem (finalizada, error, evidence pointers)."
+    },
+    {
+      "method": "GET",
+      "path": "/assistant/progress/subscribe",
+      "description": "Endpoint SSE/WebSocket para enviar eventos de progresso/phase updates e stream partial outputs."
+    },
+    {
+      "method": "GET",
+      "path": "/evidence/search",
+      "description": "Busca evidências relacionadas a uma resposta ou query; suporta pagination & filters."
+    }
+  ],
+  "dataModels": [
+    "Message { id:string, role:'user'|'assistant'|'system'|'event'|'error', content: string, timestamp: ISO, evidenceRefs?: string[], status:'pending'|'in_progress'|'done'|'failed' }",
+    "ProgressEvent { messageId:string, phase:string, phaseIndex:number, percent?:number, detail?:string, timestamp:ISO }",
+    "EvidenceItem { id:string, type:'file'|'command'|'signal'|'url', title:string, excerpt?:string, source:string, link?:string, relevance:number }",
+    "PreviewPayload { messageId:string, kind:'text'|'diff'|'file-preview', payload: any }"
+  ],
+  "acceptanceCriteria": [
+    "Composition: na viewport >=900px as 3 áreas (chat, evidence, preview) renderizadas; em <900px evidence colapsável e preview abre em modal — verificável por snapshot/responsive test.",
+    "Visual distinction: MessageBubble apresenta classes distintas para user/assistant/event/error; eventos de progresso e falhas têm estilo exclusivo sem sobrepor mensagens (inspect DOM classes).",
+    "Compact progress: durante ação ativa há no máximo 1 ProgressActivityBar visível por messageId, animada e indicando phase; não criar múltiplas mensagens de progresso no histórico.",
+    "Evidence reveal: cada resposta assinala control para revelar evidências; ao abrir, EvidencePanel/flyout consulta /evidence/search e mostra EvidenceItem list contendo source/link (verificável por network call).",
+    "Input pin: Composer permanece visível e focável; somente disabled quando assistant lock=true (concurrency) e re-enable após message status 'done' ou 'failed'.",
+    "Error handling: falhas na submissão mostram Message with status 'failed' com action retry; progress stream errors renderizam toast+error event bubble.",
+    "Accessibility: history uses role=log and aria-live for assistant updates; composer keyboard send funciona; focus not lost when preview/evidence toggled.",
+    "Responsiveness & overflow: mensagens longas truncam visually with expandable detail; no overflow outside containers at common breakpoints."
+  ],
+  "generatedAt": "2026-05-27T05:52:54.258Z"
+}

@@ -347,19 +347,17 @@ export class AgentToolLoop {
                 });
                 continue;
               }
-              const replaceInput: Record<string, unknown> = {
+              const rewriteInput: Record<string, unknown> = {
                 path: operation.targetPath,
-                startLine: lineRangeEdit.startLine,
-                endLine: lineRangeEdit.endLine,
-                replacement: lineRangeEdit.replacement,
+                content: operation.afterContent,
                 reason: operation.diff,
               };
-              if (read.versionHash) replaceInput["expectedContentHash"] = read.versionHash;
-              if (read.version) replaceInput["baseVersion"] = read.version;
+              if (read.versionHash) rewriteInput["expectedContentHash"] = read.versionHash;
+              if (read.version) rewriteInput["baseVersion"] = read.version;
               await runTool(
-                "replace_file_range",
-                replaceInput,
-                `Editar faixa ${operation.targetPath}:${lineRangeEdit.startLine}-${lineRangeEdit.endLine}.`,
+                "rewrite_file",
+                rewriteInput,
+                `Reescrever ${operation.targetPath} com diff mínimo.`,
                 {
                   metadata: {
                     codeChangeOperation: codeChangeOperationTelemetry(operation),
@@ -370,16 +368,15 @@ export class AgentToolLoop {
             }
             const editInput: Record<string, unknown> = {
               path: operation.targetPath,
-              oldString: operation.beforeContent,
-              newString: operation.afterContent,
+              content: operation.afterContent,
               reason: operation.diff,
             };
             if (read.versionHash) editInput["expectedContentHash"] = read.versionHash;
             if (read.version) editInput["baseVersion"] = read.version;
             await runTool(
-              "edit_file",
+              "rewrite_file",
               editInput,
-              `Editar ${operation.targetPath}.`,
+              `Reescrever ${operation.targetPath} com base na versão atual.`,
               {
                 metadata: {
                   codeChangeOperation: codeChangeOperationTelemetry(operation),

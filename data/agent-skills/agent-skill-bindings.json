@@ -1,0 +1,42 @@
+[
+  {
+    "id": "8ce57665-db5b-44d4-87f5-808c8e960d81",
+    "skillId": "bd8f49e4-aa8d-46de-848a-abb4b4bf3211",
+    "agentProfileId": "curator_agent",
+    "triggerMode": "automatic",
+    "priority": 10,
+    "enabled": true,
+    "createdAt": "2026-05-28T18:06:16.127Z",
+    "updatedAt": "2026-05-28T18:06:16.127Z"
+  },
+  {
+    "id": "a0546eb5-b1ae-4384-8e5f-d493b97522d3",
+    "skillId": "a44a36bd-69ec-4aa8-83d4-47650cf8c621",
+    "agentProfileId": "front_agent",
+    "triggerMode": "automatic",
+    "priority": 10,
+    "enabled": true,
+    "createdAt": "2026-05-28T18:06:16.139Z",
+    "updatedAt": "2026-05-28T18:06:16.139Z"
+  },
+  {
+    "id": "c024a0ac-56f1-4554-acc5-77acbfb3687f",
+    "skillId": "7d8f43eb-cc86-44ca-817d-548022157d8c",
+    "agentProfileId": "qa_agent",
+    "triggerMode": "automatic",
+    "priority": 10,
+    "enabled": true,
+    "createdAt": "2026-05-28T18:06:16.150Z",
+    "updatedAt": "2026-05-28T18:06:16.150Z"
+  },
+  {
+    "id": "1ba24852-abe1-4738-bf7c-48755f607365",
+    "skillId": "909b7ed2-ed47-4a83-96f7-d01dcad80d1a",
+    "agentProfileId": "spec_agent",
+    "triggerMode": "automatic",
+    "priority": 10,
+    "enabled": true,
+    "createdAt": "2026-05-28T18:06:16.157Z",
+    "updatedAt": "2026-05-28T18:06:16.157Z"
+  }
+]

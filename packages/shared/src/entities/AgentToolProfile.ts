@@ -24,6 +24,7 @@ export const AgentToolNameSchema = z.enum([
   "search_code",
   "list_files",
   "edit_file",
+  "rewrite_file",
   "replace_file_range",
   "save_file",
   "apply_code_change_set",

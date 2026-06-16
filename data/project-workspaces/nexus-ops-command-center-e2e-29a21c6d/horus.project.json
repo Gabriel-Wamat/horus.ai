@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "projectId": "1b6105ab-c505-486a-acc1-532069e7f184",
+  "projectName": "nexus-ops-command-center-e2e",
+  "rootPathPolicy": {
+    "writeRoots": [
+      ".",
+      "src"
+    ],
+    "deniedPaths": [
+      ".env",
+      ".git",
+      "node_modules",
+      "dist",
+      "build",
+      ".turbo",
+      "coverage"
+    ],
+    "generatedPaths": [
+      "dist",
+      "build",
+      ".turbo",
+      "coverage"
+    ]
+  },
+  "stack": {
+    "frontend": "react",
+    "language": "typescript",
+    "packageManager": "unknown"
+  },
+  "entrypoints": [
+    "index.html",
+    "src/main.tsx",
+    "src/App.tsx"
+  ],
+  "commandCatalog": [
+    {
+      "id": "inspect-repo-tree",
+      "label": "Inspect repository tree",
+      "executable": "/Users/wamat/.asdf/installs/nodejs/25.2.1/bin/node",
+      "args": [
+        "-e",
+        "const fs=require('node:fs');const path=require('node:path');const ignored=new Set([\".git\",\".hg\",\".svn\",\".idea\",\".vscode\",\"__pycache__\",\".mypy_cache\",\".pytest_cache\",\".ruff_cache\",\".venv\",\"venv\",\"node_modules\",\"dist\",\"build\",\".next\",\".turbo\",\".cache\",\"coverage\"]);let count=0;function walk(dir,depth){if(depth>3||count>=300)return;for(const name of fs.readdirSync(dir).sort()){if(ignored.has(name)||name.startsWith('.'))continue;const abs=path.join(dir,name);const rel=path.relative(process.cwd(),abs).split(path.sep).join('/');const stat=fs.statSync(abs);if(stat.isDirectory())walk(abs,depth+1);else{console.log(rel);count++;if(count>=300)return;}}}walk(process.cwd(),0);"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 30000
+    },
+    {
+      "id": "inspect-project-manifests",
+      "label": "Inspect project manifests",
+      "executable": "/Users/wamat/.asdf/installs/nodejs/25.2.1/bin/node",
+      "args": [
+        "-e",
+        "const fs=require('node:fs');const path=require('node:path');const ignored=new Set([\".git\",\".hg\",\".svn\",\".idea\",\".vscode\",\"__pycache__\",\".mypy_cache\",\".pytest_cache\",\".ruff_cache\",\".venv\",\"venv\",\"node_modules\",\"dist\",\"build\",\".next\",\".turbo\",\".cache\",\"coverage\"]);const manifests=new Set([\"package.json\",\"pyproject.toml\",\"requirements.txt\",\"Cargo.toml\",\"go.mod\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"Makefile\",\"makefile\"]);const found=[];function walk(dir){for(const name of fs.readdirSync(dir).sort()){if(ignored.has(name)||name.startsWith('.'))continue;const abs=path.join(dir,name);const stat=fs.statSync(abs);if(stat.isDirectory())walk(abs);else if(manifests.has(name))found.push(path.relative(process.cwd(),abs).split(path.sep).join('/'));}}walk(process.cwd());console.log(found.length?found.join('\\n'):'NO_MANIFESTS_FOUND');"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 30000
+    },
+    {
+      "id": "install-root-dependencies",
+      "label": "Install dependencies (.)",
+      "executable": "npm",
+      "args": [
+        "install"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 120000
+    },
+    {
+      "id": "test-root-test",
+      "label": "test (.)",
+      "executable": "npm",
+      "args": [
+        "test"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "build-root-build",
+      "label": "build (.)",
+      "executable": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "type-check-root-type-check",
+      "label": "type-check (.)",
+      "executable": "npm",
+      "args": [
+        "run",
+        "type-check"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 60000
+    },
+    {
+      "id": "run-root-dev",
+      "label": "dev (.)",
+      "executable": "npm",
+      "args": [
+        "run",
+        "dev"
+      ],
+      "cwd": ".",
+      "env": {},
+      "timeoutMs": 120000
+    }
+  ],
+  "architecture": {
+    "summary": "Horus generated project. Agents must use this manifest as orientation and then inspect real source files before making code claims or changes.",
+    "sourceRoots": [
+      "src"
+    ],
+    "routeFiles": [
+      "src/main.tsx",
+      "src/App.tsx",
+      "index.html"
+    ],
+    "componentRoots": [
+      "src/components",
+      "src/features"
+    ]
+  },
+  "designSystem": {
+    "referenceFiles": [
+      "ID_VISUAL.md",
+      "src/styles/tokens.css",
+      "src/index.css"
+    ],
+    "notes": [
+      "Follow the Horus visual identity when a local design reference exists.",
+      "Keep operational interfaces dense, calm and predictable."
+    ]
+  },
+  "agentRules": {
+    "codingStyle": [
+      "Prefer existing project patterns over new abstractions.",
+      "Read the affected source files before proposing changes."
+    ],
+    "uiStyle": [
+      "Use project typography, spacing and colors consistently.",
+      "Avoid decorative UI that does not support the workflow."
+    ],
+    "forbiddenPatterns": [
+      "Do not hardcode fake runtime behavior.",
+      "Do not bypass write-root, command or tool policies.",
+      "Do not claim code evidence without reading source files."
+    ],
+    "testingExpectations": [
+      "Run validation command ids: test-root-test"
+    ]
+  },
+  "security": {
+    "denyPaths": [
+      ".env",
+      ".git",
+      "node_modules",
+      "dist",
+      "build",
+      ".turbo",
+      "coverage"
+    ],
+    "secretPatterns": [
+      "api[_-]?key",
+      "secret",
+      "token",
+      "password",
+      "private[_-]?key"
+    ],
+    "rulesCannotGrantPermissions": true
+  },
+  "lastValidatedAt": null,
+  "updatedAt": "2026-05-29T20:57:42.387Z"
+}

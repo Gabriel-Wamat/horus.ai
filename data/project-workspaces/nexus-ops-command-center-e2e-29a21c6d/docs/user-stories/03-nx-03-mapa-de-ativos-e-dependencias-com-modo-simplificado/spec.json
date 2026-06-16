@@ -1,0 +1,94 @@
+{
+  "id": "9886439e-a150-40d3-8785-dcb97a7bcd43",
+  "userStoryId": "da1a97dd-7cda-4702-98fc-71f8e218156b",
+  "version": 1,
+  "summary": "Mapa topológico simplificado/expandido de ativos e dependências para investigação de incidentes.",
+  "technicalApproach": "Pattern: workflow-map. Implementação React + TypeScript (preservar arquitetura frontend existente). Canvas principal renderiza grafo top-to-bottom ou por lanes usando SVG dentro de componente React controlado (no direct DOM mutations). Organizar em: Toolbar (modo de arestas, filtro de tipos), GraphRenderer (SVG groups por lane, nodes e edges), SidePanel (detalhes do nó), DataAdapter (injetável) e StateStore (React Context + reducer). Nodes: componentes UI que expõem texto, forma e ícone; estado visual não depende só de cor (shape, badge text). Edge modes: full (curvas + labels) e simplified (straight minimal connectors) mantendo todos os nós renderizados; algoritmo de roteamento aplica bundling e collision-avoidance para evitar excesso de arestas e labels ilegíveis. Data: consumido via adapters injetáveis que implementam contratos HTTP (ou GraphQL) fornecidos pelo backend; não use mocks embutidos em runtime. Responsividade: breakpoint para collapsible lanes e zoom/pan com limites; acessibilidade: roles SVG+aria-labels, keyboard focus navegável por tab/arrow, contrastes e text alternatives. Estados cobertos: loading, empty, error, success, selected, focus, disabled. Testabilidade: comportamentos observáveis e hooks para testes E2E.",
+  "components": [
+    {
+      "name": "TopologyToolbar",
+      "type": "ui",
+      "description": "Controles globais: selector de layout (top-to-bottom / lanes), toggle de arestas (complete/simplified), filtros por tipo de ativo, search rápido e zoom controls.",
+      "dependencies": []
+    },
+    {
+      "name": "GraphRenderer",
+      "type": "ui",
+      "description": "Canvas SVG responsável por layout e renderização de lanes, nós (service, db, queue, job, external) e arestas; implementa bundling, route-simplify, zoom, pan e collision-avoidance.",
+      "dependencies": [
+        "TopologyToolbar",
+        "NodeDetailPanel",
+        "TopologyModel",
+        "RoutingService"
+      ]
+    },
+    {
+      "name": "NodeDetailPanel",
+      "type": "ui",
+      "description": "Painel lateral com dependências do nó selecionado, incidentes relacionados, última checagem e ações de investigação (links/commands).",
+      "dependencies": [
+        "TopologyModel",
+        "ApiService"
+      ]
+    },
+    {
+      "name": "ApiService",
+      "type": "service",
+      "description": "Adapter injetável que implementa contratos HTTP definidos (GET /topology etc.), lida com caching, reconciliação incremental e erros; expõe métodos usados pelo StateStore.",
+      "dependencies": [
+        "TopologyModel"
+      ]
+    },
+    {
+      "name": "TopologyModel",
+      "type": "model",
+      "description": "Estrutura de dados em memória com nós, arestas, estados e timestamps; fornece selectors e normalização para GraphRenderer e NodeDetailPanel.",
+      "dependencies": [
+        "ApiService"
+      ]
+    },
+    {
+      "name": "RoutingService",
+      "type": "utility",
+      "description": "Algoritmos de roteamento de arestas e simplificação (full vs simplified), packing e label placement para evitar overlaps; puros e testáveis.",
+      "dependencies": [
+        "TopologyModel"
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "GET",
+      "path": "/topology",
+      "description": "Retorna grafo completo de nós e arestas com status, últimas checagens e metadados (paginação opcional)."
+    },
+    {
+      "method": "GET",
+      "path": "/topology/{nodeId}/incidents",
+      "description": "Lista de incidentes relacionados a um nó específico com estado e timestamps."
+    },
+    {
+      "method": "GET",
+      "path": "/topology/{nodeId}/dependencies",
+      "description": "Dependências diretas (in/out) de um nó, com tipo e severidade."
+    }
+  ],
+  "dataModels": [
+    "TopologyResponse: { nodes: Node[], edges: Edge[] }",
+    "Node: { id: string, type: 'service'|'db'|'queue'|'job'|'external', name: string, status: 'healthy'|'degraded'|'critical'|'pending'|'unknown', lastCheck: ISO8601, meta: Record<string,any> }",
+    "Edge: { id: string, source: string, target: string, label?: string, type?: string }",
+    "IncidentsResponse: { incidents: Incident[] }",
+    "Incident: { id: string, nodeId: string, severity: string, summary: string, createdAt: ISO8601 }"
+  ],
+  "acceptanceCriteria": [
+    "Renderiza mapa top-to-bottom ou por lanes conforme opção selecionada; QA valida a orientação visual e presença de todos os nós retornados pela API /topology.",
+    "Existe botão/ícone na Toolbar que alterna arestas entre modos complete e simplified; ao alternar todos os nós permanecem visíveis (contagem de nós inalterada).",
+    "Cada nó exibe status por texto legível e forma/badge além de cor; estados suportados: healthy, degraded, critical, pending, unknown; verificação por labels e atributo data-status em DOM.",
+    "Ao selecionar um nó (click ou keyboard Enter) SidePanel abre exibindo: lista de dependencies (GET /topology/{nodeId}/dependencies), incidents (GET /topology/{nodeId}/incidents), lastCheck timestamp e ações clicáveis; QA valida requests e renderização.",
+    "Mapa evita excesso de arestas e labels ilegíveis via bundling/simplify e label-placement; teste observa ausência de overlapping de labels em viewport padrão e mantém legibilidade em zoom 100%.",
+    "Cobertura de estados: loading (skeleton canvas), empty (mensagem acionável), error (banner e retry), success (grafo interativo), selected (node highlight), focus (keyboard outline), disabled (controls desabilitados).",
+    "Acessibilidade: nodes e controls possuem aria-labels, roles, e permitem navegação por teclado; contraste mínimo WCAG AA para elementos textuais críticos; tester valida com keyboard-only e screen reader.",
+    "Responsividade: em width < 800px lanes colapsam e o mapa permite scroll/zoom; QA verifica leitura e seleção de nós em mobile em portrait."
+  ],
+  "generatedAt": "2026-05-27T05:48:56.079Z"
+}

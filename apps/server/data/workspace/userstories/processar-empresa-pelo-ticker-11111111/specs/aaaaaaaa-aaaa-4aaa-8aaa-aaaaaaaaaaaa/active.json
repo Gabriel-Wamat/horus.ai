@@ -1,0 +1,31 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "storyId": "11111111-1111-4111-8111-111111111111",
+  "specId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "activeRevision": 1,
+  "updatedAt": "2026-05-26T12:24:49.188Z",
+  "spec": {
+    "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "version": 1,
+    "summary": "Criar processamento por ticker com validação clara",
+    "technicalApproach": "Implementar fluxo de captura, validação de ticker e indexação de documentos.",
+    "components": [
+      {
+        "name": "TickerForm",
+        "type": "ui",
+        "description": "Formulário para informar ticker e iniciar processamento.",
+        "dependencies": []
+      }
+    ],
+    "apiEndpoints": [],
+    "dataModels": [
+      "CompanyTicker"
+    ],
+    "acceptanceCriteria": [
+      "Valida ticker vazio antes de iniciar",
+      "Exibe erro claro para ticker inválido"
+    ],
+    "generatedAt": "2026-05-26T10:01:00.000Z"
+  }
+}

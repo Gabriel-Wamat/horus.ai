@@ -1,0 +1,17 @@
+{
+  "id": "8f06a9eb-0c2d-462a-8f13-02f2e6dccd27",
+  "projectId": "11111111-1111-4111-8111-111111111116",
+  "status": "running",
+  "route": "/",
+  "device": {
+    "name": "pc",
+    "width": 1440,
+    "height": 900
+  },
+  "previewUrl": "http://localhost:5174",
+  "processId": null,
+  "startedAt": "2026-05-26T14:56:03.344Z",
+  "stoppedAt": null,
+  "updatedAt": "2026-05-26T14:56:03.344Z",
+  "errorMessage": null
+}

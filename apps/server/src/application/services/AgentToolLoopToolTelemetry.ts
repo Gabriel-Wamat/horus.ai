@@ -14,6 +14,7 @@ export function extractFilePaths(toolName: AgentToolName, output: unknown): stri
   }
   if (
     (toolName === "edit_file" ||
+      toolName === "rewrite_file" ||
       toolName === "replace_file_range" ||
       toolName === "save_file" ||
       toolName === "write_file") &&
@@ -41,6 +42,7 @@ export function extractFilePaths(toolName: AgentToolName, output: unknown): stri
 export function isMutatingFileTool(toolName: AgentToolName): boolean {
   return (
     toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
     toolName === "replace_file_range" ||
     toolName === "save_file" ||
     toolName === "write_file" ||
@@ -142,7 +144,12 @@ export function inferChangeType(
 ): "create" | "update" | "delete" | "unknown" {
   if (toolName === "write_file") return "create";
   if (toolName === "delete_file") return "delete";
-  if (toolName === "edit_file" || toolName === "replace_file_range" || toolName === "save_file") {
+  if (
+    toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
+    toolName === "replace_file_range" ||
+    toolName === "save_file"
+  ) {
     return "update";
   }
   return "unknown";

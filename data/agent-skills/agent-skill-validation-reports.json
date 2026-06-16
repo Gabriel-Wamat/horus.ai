@@ -1,0 +1,118 @@
+[
+  {
+    "id": "ae79d6de-b641-4894-bc3e-3a1433d97ad8",
+    "revisionId": "f8bcefd4-ed54-4432-a10e-ccc66cdc3b97",
+    "status": "passed",
+    "checks": [
+      {
+        "code": "skill_md_size",
+        "status": "passed",
+        "message": "SKILL.md is within the supported size limit."
+      },
+      {
+        "code": "frontmatter",
+        "status": "passed",
+        "message": "Skill frontmatter includes catalog metadata."
+      },
+      {
+        "code": "support_files",
+        "status": "passed",
+        "message": "Support files are safe to store."
+      },
+      {
+        "code": "agent_bindings",
+        "status": "passed",
+        "message": "Agent bindings target known profiles."
+      }
+    ],
+    "issues": [],
+    "createdAt": "2026-05-28T18:06:16.123Z"
+  },
+  {
+    "id": "d5f616e6-1b70-4983-9256-5e71680a1928",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "status": "passed",
+    "checks": [
+      {
+        "code": "skill_md_size",
+        "status": "passed",
+        "message": "SKILL.md is within the supported size limit."
+      },
+      {
+        "code": "frontmatter",
+        "status": "passed",
+        "message": "Skill frontmatter includes catalog metadata."
+      },
+      {
+        "code": "support_files",
+        "status": "passed",
+        "message": "Support files are safe to store."
+      },
+      {
+        "code": "agent_bindings",
+        "status": "passed",
+        "message": "Agent bindings target known profiles."
+      }
+    ],
+    "issues": [],
+    "createdAt": "2026-05-28T18:06:16.129Z"
+  },
+  {
+    "id": "229368a9-d4f8-403e-ad2a-046cb9560290",
+    "revisionId": "906702df-97eb-41e9-bd0f-40aa2872f44b",
+    "status": "passed",
+    "checks": [
+      {
+        "code": "skill_md_size",
+        "status": "passed",
+        "message": "SKILL.md is within the supported size limit."
+      },
+      {
+        "code": "frontmatter",
+        "status": "passed",
+        "message": "Skill frontmatter includes catalog metadata."
+      },
+      {
+        "code": "support_files",
+        "status": "passed",
+        "message": "Support files are safe to store."
+      },
+      {
+        "code": "agent_bindings",
+        "status": "passed",
+        "message": "Agent bindings target known profiles."
+      }
+    ],
+    "issues": [],
+    "createdAt": "2026-05-28T18:06:16.145Z"
+  },
+  {
+    "id": "8ca1594e-1da8-4290-aed3-2992adf90609",
+    "revisionId": "262dc45e-2665-4354-9aec-c3218c86c0bf",
+    "status": "passed",
+    "checks": [
+      {
+        "code": "skill_md_size",
+        "status": "passed",
+        "message": "SKILL.md is within the supported size limit."
+      },
+      {
+        "code": "frontmatter",
+        "status": "passed",
+        "message": "Skill frontmatter includes catalog metadata."
+      },
+      {
+        "code": "support_files",
+        "status": "passed",
+        "message": "Support files are safe to store."
+      },
+      {
+        "code": "agent_bindings",
+        "status": "passed",
+        "message": "Agent bindings target known profiles."
+      }
+    ],
+    "issues": [],
+    "createdAt": "2026-05-28T18:06:16.153Z"
+  }
+]

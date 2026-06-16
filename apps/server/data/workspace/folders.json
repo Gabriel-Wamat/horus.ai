@@ -1,0 +1,16 @@
+[
+  {
+    "id": "a29f2670-01ce-41e9-91ef-8afdba73feec",
+    "name": "Sistema Teste",
+    "slug": "sistema-teste",
+    "createdAt": "2026-05-26T11:27:07.654Z",
+    "storyCount": 1
+  },
+  {
+    "id": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "name": "userstories",
+    "slug": "userstories",
+    "createdAt": "2026-05-26T11:30:21.721Z",
+    "storyCount": 3
+  }
+]

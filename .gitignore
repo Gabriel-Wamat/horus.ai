@@ -8,12 +8,28 @@ build/
 .env
 .env.local
 .env.*.local
+apps/**/.horus/
 
 *.tsbuildinfo
 
 data/
+!data/
+!data/**
+data/**/.git/
+data/**/.git.local/
+data/**/node_modules/
+data/**/dist/
+data/**/*.tsbuildinfo
+
 .horus/
+!.horus/
+!.horus/artifacts/
+!.horus/artifacts/**
+
 spec/
+!spec/
+!spec/**
+
 /docs/
 /apps/docs/
 apps/**/test/
@@ -22,7 +38,11 @@ apps/**/__tests__/
 !apps/server/test/
 apps/server/test/*
 !apps/server/test/curatorRetryLimit.test.mjs
+!apps/server/test/contextRetrievalEvaluation.test.mjs
+!apps/server/test/agentRewriteFileProfile.test.mjs
 !apps/server/test/frontAgentDesignIntelligence.test.mjs
+!apps/server/test/horusChatPreviewReload.test.mjs
+!apps/server/test/horusOdinIntentRouter.test.mjs
 !apps/server/test/opsControlPlane.test.mjs
 !apps/server/test/projectConstructionPreviewSession.test.mjs
 !apps/server/test/surfacePatternLibrary.test.mjs
@@ -44,18 +64,8 @@ apps/web/src/features/design-studio/
 /skills/*.md
 /skills/scripts/
 !/docs/
-!/docs/RELEASE_CHECKLIST.md
-!/docs/spec/
-docs/spec/**
-!/docs/spec/README.md
-!/docs/spec/CHANGELOG.md
-!/docs/spec/features/
-!/docs/spec/features/109-professionalization-master-plan.md
-!/docs/spec/features/110-live-preview-file-tree-execution-spine.md
-!/docs/spec/features/111-runtime-visual-curator-design-evaluator.md
-!/docs/spec/features/112-surface-pattern-library-design-intelligence.md
-!/docs/spec/features/113-docker-ci-release-hardening.md
-!/docs/spec/features/114-ops-recovery-observability-control-plane.md
+!/docs/**
+docs/spec/features/*.swp
 
 .vite/
 .next/
@@ -67,8 +77,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
-/AGENTS.md
-/ID_VISUAL.md
 /UNPROTECT.md
 /*.png
 /*.jpg
@@ -76,3 +84,11 @@ Thumbs.db
 /*.gif
 /*.webp
 /*.svg
+!/AGENTS.md
+!/CLAUDE.md
+!/ID_VISUAL.md
+!/arquitetura.png
+!/horus-ai.png
+!spec/**
+apps/**/.horus/
+apps/**/.horus/**

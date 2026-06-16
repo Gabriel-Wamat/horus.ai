@@ -1,0 +1,55 @@
+[
+  {
+    "id": "c77cda64-b924-4b4e-a23a-da32bf49e15e",
+    "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "activeUserStoryRevisionId": "user-story:1",
+    "createdAt": "2026-05-26T12:19:17.620Z",
+    "updatedAt": "2026-05-26T12:19:30.409Z"
+  },
+  {
+    "id": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+    "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "activeUserStoryRevisionId": "user-story:1",
+    "activeSpecRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+    "workflowThreadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7",
+    "createdAt": "2026-05-26T14:08:14.113Z",
+    "updatedAt": "2026-05-26T14:56:03.403Z"
+  },
+  {
+    "id": "888c5969-8d0f-4da2-b4b0-75f73cedeef4",
+    "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "userStoryId": "22222222-2222-4222-8222-222222222222",
+    "activeUserStoryRevisionId": "user-story:1",
+    "createdAt": "2026-05-26T14:32:36.768Z",
+    "updatedAt": "2026-05-26T14:32:36.768Z"
+  },
+  {
+    "id": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "activeUserStoryRevisionId": "user-story:1",
+    "activeSpecRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+    "createdAt": "2026-05-26T14:55:57.041Z",
+    "updatedAt": "2026-05-26T15:03:00.129Z"
+  },
+  {
+    "id": "40fcaf9d-b480-4386-a3c0-24c995200b4b",
+    "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "activeUserStoryRevisionId": "user-story:1",
+    "activeSpecRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+    "createdAt": "2026-05-26T15:11:16.174Z",
+    "updatedAt": "2026-05-26T15:11:24.591Z"
+  },
+  {
+    "id": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+    "userStoryId": "11111111-1111-4111-8111-111111111111",
+    "activeUserStoryRevisionId": "user-story:1",
+    "activeSpecRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+    "createdAt": "2026-05-26T15:12:41.357Z",
+    "updatedAt": "2026-05-26T15:29:15.029Z"
+  }
+]

@@ -121,6 +121,7 @@ export function describeToolCall(
     get_git_diff: "Lendo diff do git",
     write_file: "Criando/gravando arquivo",
     edit_file: "Editando arquivo",
+    rewrite_file: "Reescrevendo arquivo",
     replace_file_range: "Editando faixa",
     delete_file: "Removendo arquivo",
     run_validation_command: "Rodando validação",
@@ -190,7 +191,13 @@ function operationTypeForTool(
   if (toolName === "run_validation_command" || toolName === "run_command") {
     return "validate";
   }
-  if (toolName === "edit_file" || toolName === "replace_file_range") return "update";
+  if (
+    toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
+    toolName === "replace_file_range"
+  ) {
+    return "update";
+  }
   return "unknown";
 }
 

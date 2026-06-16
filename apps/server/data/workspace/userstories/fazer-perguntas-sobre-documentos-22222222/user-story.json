@@ -1,0 +1,17 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "savedAt": "2026-05-26T14:32:23.114Z",
+  "story": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "title": "Fazer perguntas sobre documentos",
+    "description": "Como analista, quero perguntar sobre documentos baixados para receber respostas baseadas no conteúdo indexado.",
+    "acceptanceCriteria": [
+      "A pergunta usa apenas documentos indexados",
+      "A resposta cita o documento de origem",
+      "Quando não houver evidência, o sistema informa que não encontrou base suficiente"
+    ],
+    "priority": "medium",
+    "labels": [],
+    "createdAt": "2026-05-26T10:05:00.000Z"
+  }
+}

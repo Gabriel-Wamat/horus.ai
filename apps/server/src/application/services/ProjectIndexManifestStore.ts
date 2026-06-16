@@ -72,6 +72,7 @@ export interface ProjectIndexSnapshotSummary {
   readonly freshness: {
     readonly status: "fresh" | "stale" | "rebuild_required";
     readonly contentSignature: string;
+    readonly merkleRoot?: string | undefined;
     readonly checkedAt: string;
   };
   readonly retrievalFusion: readonly string[];

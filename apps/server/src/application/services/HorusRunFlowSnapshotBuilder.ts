@@ -611,6 +611,7 @@ function operationTypeFromRunEvent(
   if (toolName === "write_file") return "create";
   if (
     toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
     toolName === "replace_file_range" ||
     toolName === "save_file"
   ) {
@@ -654,6 +655,7 @@ function changeTypeFromToolName(
   if (toolName === "write_file") return "create";
   if (
     toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
     toolName === "replace_file_range" ||
     toolName === "save_file"
   ) {

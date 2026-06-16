@@ -1,0 +1,137 @@
+[
+  {
+    "id": "d35982ac-f5c9-4389-b84f-77ddd99dec5d",
+    "revisionId": "f8bcefd4-ed54-4432-a10e-ccc66cdc3b97",
+    "relativePath": "references/architecture.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 808,
+    "contentText": "# Curator Skill Architecture Notes\n\n- The Curator Agent is the quality gate for generated artifacts.\n- It must evaluate both frontend implementation and QA coverage.\n- It returns a structured verdict used by the LangGraph self-correction loop.\n- `fixTarget` drives Horus/Odin routing, so it must identify the failing responsibility.\n- The Curator must not create new product scope or rewrite the spec.\n- The full spec is in scope: summary, technical approach, components, data models, future API/route contracts, and acceptance criteria.\n- Future API/route contracts are route-readiness checks for the frontend, not evidence that a backend exists.\n- Data-model gaps should be routed to `front` when HTML/mock data is wrong, to `qa` when tests miss the model behavior, and to `both` when both are incomplete.\n",
+    "contentSha256": "00f04f809be09679c0bd5023565aa7ef0f6eee13983565c33bdfb34b88f52cd4"
+  },
+  {
+    "id": "21ec9f13-9d2d-43d9-835f-642c75fce191",
+    "revisionId": "f8bcefd4-ed54-4432-a10e-ccc66cdc3b97",
+    "relativePath": "references/examples.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 1098,
+    "contentText": "# Curator Skill Examples\n\nGood verdict:\n\n- Gives a score consistent with severity.\n- Explains missing frontend or QA evidence.\n- Uses `fixTarget: \"front\"` for implementation-only defects.\n- Uses `fixTarget: \"qa\"` for test coverage-only defects.\n- Uses `fixTarget: \"both\"` when implementation and QA are both deficient.\n- Uses `[data]` or `[route]` prefixes when missing items involve data models or future route contracts.\n\nBad verdict:\n\n- Passes output with missing acceptance criteria.\n- Fails output for subjective taste unrelated to the spec.\n- Provides vague feedback like \"improve quality\".\n- Routes to both agents when only one needs repair.\n- Claims live browser execution without evidence.\n- Requires a live backend for an `apiEndpoints` contract that is only future route-readiness.\n\nGood missing items:\n\n- `[front:data] ProductCard does not render the preco field defined in ProdutoModel.`\n- `[qa:route] No QA case covers the adapter error state for GET /api/produtos.`\n- `[both:accessibility] The icon-only filter control lacks an accessible label and QA does not test keyboard focus.`\n",
+    "contentSha256": "28b81472c33a586fe2e2753f9bb15834e59fd5e19268651adfae353b42b636ef"
+  },
+  {
+    "id": "39f3f6ac-9943-4541-8335-65ed4fae83ba",
+    "revisionId": "f8bcefd4-ed54-4432-a10e-ccc66cdc3b97",
+    "relativePath": "references/validation.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 526,
+    "contentText": "# Curator Skill Validation\n\nRuntime validation is performed by schema parsing and workflow routing.\n\nManual validation checklist:\n\n- Score matches the stated gaps.\n- `passed` is false for critical frontend or QA omissions.\n- `missingItems` are concrete and actionable.\n- `fixTarget` matches the failing responsibility.\n- Notes are concise and explain the decision.\n- Data model requirements are checked against both HTML and QA cases.\n- Future apiEndpoints are checked as frontend route-readiness, not live backend execution.\n",
+    "contentSha256": "ac0a5fb2b57e47e42a5f20cd122e523d1c343507bb56f71847161c1eaab03b59"
+  },
+  {
+    "id": "84e8866f-c366-4d3b-b5d1-a7417d57a1d5",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "relativePath": "references/anti-patterns.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 2524,
+    "contentText": "# Frontend Anti-Patterns\n\nVersion: 1.0.0\nOwner: Horus Front Agent and Curator Agent\nPurpose: make subjective UI failures observable enough for generation, review, and retry.\n\n## Universal Reject List\n\n- Generic landing page for an app/tool/workbench request.\n- One-note palette dominated by one hue family without hierarchy.\n- High-saturation highlight colors used as surface, background, or repeated decoration.\n- Gradient/orb/bokeh decoration when it does not express the product object or gameplay.\n- Card nested inside card or repeated frames that create visual clutter.\n- Hero-scale typography inside compact panels, cards, dashboards, drawers, or chat.\n- Text overflow, button label clipping, content overlap, or layout shift on hover.\n- Icon-only actions without accessible labels.\n- External CDN, unverified package import, or invented asset/API.\n- Static HTML implementation for a reachable framework project.\n- Orphan component/file not imported by the app entrypoint.\n- Mock/fake adapter in runtime project code.\n\n## Pattern-Specific Checks\n\noperational-dashboard:\n- No marketing hero.\n- No oversized decorative metric grid as the primary interface.\n- No uncontrolled accent color spam.\n- Controls must be scannable and grouped.\n\nchat-preview-workbench:\n- No message overlap.\n- No large repeated progress blocks.\n- No activity UI that pushes the composer away from a stable position.\n- Streaming/thinking states must be visually distinct and compact.\n\nworkflow-map:\n- No unreadable node text.\n- No edge clutter without simplified/full mode when edge count is high.\n- No color-only status.\n- Avoid unnecessary edge labels.\n\nform-crud-tool:\n- No unlabeled inputs.\n- No missing validation state.\n- No destructive action styled as a primary action.\n- No ambiguous save/cancel placement.\n\ncontent-landing:\n- No gradient-only hero.\n- No generic SaaS layout for a specific venue/person/product.\n- No dark blurred stock-like media when the object should be inspectable.\n- No hero text inside a floating card when immersive presentation is required.\n\n## Curator Feedback Format\n\nWhen rejecting a visual or component-policy issue, use concrete prefixes:\n- `[front:pattern] selected pattern was not followed`\n- `[front:component] component policy was violated`\n- `[front:visual] visual identity or hierarchy drift`\n- `[responsive] overflow or mobile/desktop layout failure`\n- `[accessibility] missing labels, landmarks, focus, or contrast`\n\nEvery missing item should name the observable failure and the expected correction.\n",
+    "contentSha256": "3470fc33c2bf78fcec055735df7f3469b0df65d44789f46834fa361ad0b8dfd9"
+  },
+  {
+    "id": "dc6b9d31-82e9-4f26-befd-7bf1044698e9",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "relativePath": "references/architecture.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 416,
+    "contentText": "# Front Skill Architecture Notes\n\n- The Front Agent produces a single static artifact, not a project scaffold.\n- The artifact must be complete HTML with embedded CSS and JavaScript.\n- The source of truth is the approved spec plus curator feedback on retries.\n- The output is consumed by the Curator and by artifact download/preview flows.\n- No provider SDK, backend, or workflow state concerns belong in this skill.\n",
+    "contentSha256": "51f9f26802f0c53337cd7e0ff2c24d2440b73a67c8bf07cc4a8e2d276ced0095"
+  },
+  {
+    "id": "257f71b4-0470-4c3d-8b4e-64dfe90ee25a",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "relativePath": "references/component-policy.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 2958,
+    "contentText": "# Component Policy\n\nVersion: 1.0.0\nOwner: Horus Front Agent\nPurpose: choose components without inventing dependencies or fighting the existing project identity.\n\n## Priority Order\n\n1. Existing local components, tokens, styles, layout primitives, routes, and utility APIs.\n2. Installed project libraries proven by `package.json`, imports, or source files.\n3. Native HTML/CSS/TypeScript primitives.\n4. New dependency proposals only when explicitly requested by the user or allowed by the project manifest.\n\n## Existing Project First\n\n- Inspect current entrypoints and the smallest useful set of source files before adding new UI primitives.\n- Reuse local button, input, card, table, modal, tabs, badge, tooltip, icon, and layout conventions when present.\n- Keep names, file locations, import style, CSS strategy, and state management consistent with the app.\n- Do not create duplicate primitives when a local equivalent exists.\n\n## Library Use\n\n- Lucide icons are acceptable only if the project already has `lucide-react` or the runtime scaffold includes it.\n- shadcn/ui, Radix, Tailwind, Material, Chakra, Ant, or other libraries may be used only when already installed and consistent with project code.\n- Do not mention or import library components unless the package/source evidence proves they exist.\n- Do not add CDN dependencies.\n\n## Button And Control Rules\n\n- Action buttons should use icon plus visible name when a familiar icon exists.\n- Icon-only buttons are allowed for navigation/chrome controls and must include `aria-label`.\n- Text labels must be short and stable; hover/focus/active states must not resize controls.\n- Use toggles for binary settings, segmented controls for mutually exclusive modes, tabs for major views, menus/selects for option sets, sliders/steppers/inputs for numeric values, and dialogs only for focused confirmation or editing.\n\n## Layout And Surface Rules\n\n- Cards are for repeated items, modals, and genuinely framed tools; do not place cards inside cards.\n- Page sections should be full-width bands or unframed constrained layouts.\n- Dense tools should use separators, spacing, subtle strokes, typography, and grouping before adding extra frames.\n- Keep fixed-format elements stable with grid tracks, aspect ratio, min/max constraints, or container-relative sizing.\n\n## Data And State Rules\n\n- Do not add mock/fake adapters in runtime project code.\n- If development data is unavoidable for a blank local artifact, name it explicitly as local development data and keep the adapter replaceable.\n- Implement visible loading, empty, error, success, selected, disabled, and focus states when the selected pattern or spec requires them.\n\n## Output Rules\n\n- In project mode, return complete file operations for reachable source files.\n- In artifact/static mode, return complete HTML only when the selected stack allows it.\n- The summary should mention the selected pattern id and files touched, without verbose design prose.\n",
+    "contentSha256": "7a5617a09ac15d8f5e55f22627cafb805dcf95eb93c353969cd463a53dac7878"
+  },
+  {
+    "id": "a0c18655-7767-4dc8-8a0d-da1d1370c030",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "relativePath": "references/examples.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 495,
+    "contentText": "# Front Skill Examples\n\nGood output:\n\n- Starts with `<!DOCTYPE html>`.\n- Implements the named sections from the spec.\n- Uses realistic local mock data.\n- Handles mobile and desktop widths.\n- Has visible focus and meaningful labels.\n\nBad output:\n\n- Explains what it would build instead of returning HTML.\n- Uses CDN assets or framework imports.\n- Creates a generic hero page unrelated to the user story.\n- Omits acceptance criteria or interactions.\n- Lets text overlap cards, buttons, or panels.\n",
+    "contentSha256": "633ce1900f3730da41e13d392a1780bfccdc79f2086e68f08f140932edf83be9"
+  },
+  {
+    "id": "05b22f51-401a-431f-9938-564028d3400e",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "relativePath": "references/pattern-library.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 5102,
+    "contentText": "# Frontend Pattern Library\n\nVersion: 1.0.0\nOwner: Horus Front Agent\nPurpose: choose the product-surface pattern before writing UI code. Patterns describe structure and quality constraints; they are not fixed templates and must inherit the current visualContract and DesignContextBundle.\n\n## Selection Protocol\n\n1. Identify the product surface from the user story, execution brief, visualContract, existing files, and design context.\n2. Choose exactly one primary pattern id and optionally one secondary pattern id.\n3. Mention the selected pattern in the implementation summary or technical approach.\n4. Apply the pattern through existing project components, tokens, density, and routing.\n5. If no pattern fits, choose `custom-product-surface` and state the reason in one sentence.\n\n## Patterns\n\n### operational-dashboard\n\nUse when the surface is monitoring, admin, CRM, observability, project control, file browsing, run control, analytics, internal tooling, data operations, or a repeated work console.\n\nLayout rules:\n- Prioritize dense but readable information, scan paths, compact controls, tables, lists, filters, segmented controls, and predictable navigation.\n- Prefer neutral surfaces, subtle strokes, stable rows, and one controlled accent.\n- Avoid hero sections, oversized marketing headings, decorative illustrations, and large metric cards unless the story explicitly needs them.\n\nExpected states:\n- loading, empty, error, success, selected, focus, disabled.\n\nCommon components:\n- toolbar, path/filter bar, table/list/grid, detail drawer, status chips, command buttons, compact form controls.\n\nReject if:\n- the UI becomes a landing page, one card per concept, a color-saturated dashboard, or a nested-card layout.\n\n### chat-preview-workbench\n\nUse when the surface combines chat, agent progress, live preview, visual editor, generated output, or execution controls.\n\nLayout rules:\n- Keep chat readable and stable while the preview remains primary.\n- Use compact activity indicators rather than repeated verbose status cards.\n- Keep input pinned and history scroll stable.\n- Separate user messages, agent messages, progress, and evidence with spacing and restrained surfaces.\n\nExpected states:\n- thinking, streaming, running, retrying, failed, completed, offline, reconnecting.\n\nCommon components:\n- chat list, composer, compact run activity, evidence details, preview toolbar, device toggle, reload/start/stop controls.\n\nReject if:\n- messages overlap, progress floods the chat, status panels are oversized, or the preview is visually secondary without user intent.\n\n### workflow-map\n\nUse when the surface is an agent graph, dependency map, execution topology, flowchart, pipeline, or system state diagram.\n\nLayout rules:\n- Prefer top-to-bottom or grouped lanes when the process has phases.\n- Offer simplified and complete edge modes without hiding nodes.\n- Keep labels meaningful and sparse; avoid labeling every trivial edge.\n- Use color plus shape/text, not color alone, for status.\n\nExpected states:\n- idle, active, completed, failed, waiting, skipped.\n\nCommon components:\n- graph canvas, node cards, edge labels, minimap, zoom controls, inspector, toggle for simplified/full edges.\n\nReject if:\n- edges cross excessively, nodes are tiny, labels are unreadable, or semantic status depends only on color.\n\n### form-crud-tool\n\nUse when the surface is settings, create/edit/delete, profile management, configuration, key management, table editing, or validation-heavy workflows.\n\nLayout rules:\n- Use clear field groups, labels, descriptions only where needed, validation messages, and primary/secondary action grouping.\n- Keep destructive actions separated but not theatrical.\n- Preserve dirty, saving, saved, validation error, and server error states.\n\nExpected states:\n- pristine, dirty, saving, saved, validation_error, server_error, disabled.\n\nCommon components:\n- form sections, inputs, selects, toggles, inline validation, action bar, confirmation dialog, audit metadata.\n\nReject if:\n- inputs are unlabeled, destructive and primary actions have the same weight, or validation state is hidden.\n\n### content-landing\n\nUse only when the story is public marketing, portfolio, product/venue/person page, launch page, or brand storytelling.\n\nLayout rules:\n- Use real or generated visual assets when available.\n- The first viewport must signal the product/person/place/object.\n- Use immersive hero treatment only when the story is actually about promotion or presentation.\n- Keep a hint of next content visible in the first viewport.\n\nExpected states:\n- responsive_desktop, responsive_mobile, media_loaded, media_fallback.\n\nCommon components:\n- hero, media background, primary CTA, proof/feature sections, gallery, details, footer.\n\nReject if:\n- a SaaS hero is used for an operational tool, the hero is gradient-only, the image is generic/dark/blurred, or core content is hidden inside a floating card.\n\n### custom-product-surface\n\nUse when no known pattern fits. State why, then define:\n- primary task;\n- information hierarchy;\n- interaction model;\n- required states;\n- anti-patterns to avoid.\n",
+    "contentSha256": "f70ad3b1249857d6908598bbdf9ce469fe32fe9b4a5dbeb682315792c67b6cd6"
+  },
+  {
+    "id": "5877f544-e3f8-4a27-ad0f-4148ffacaeec",
+    "revisionId": "b0cb0a49-4633-44b0-b4e2-377431171224",
+    "relativePath": "references/validation.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 356,
+    "contentText": "# Front Skill Validation\n\nRuntime validation is performed by the Curator Agent.\n\nManual validation checklist:\n\n- Open the HTML directly in a browser.\n- Check mobile, tablet, and desktop widths.\n- Verify all acceptance criteria are visible or interactive.\n- Verify controls have labels and focus states.\n- Verify no external network dependency is required.\n",
+    "contentSha256": "2a5d198d3e85edf8a0037f8e6a6377802214273db6489e82dd47c2eda25df387"
+  },
+  {
+    "id": "1e8ca834-8654-4a25-80ba-9cc5f451631a",
+    "revisionId": "906702df-97eb-41e9-bd0f-40aa2872f44b",
+    "relativePath": "references/architecture.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 782,
+    "contentText": "# QA Skill Architecture Notes\n\n- The QA Agent produces structured test cases, not executable test files.\n- Test cases are consumed by the Curator and exported as artifacts.\n- The source of truth is the approved spec plus curator feedback on retries.\n- QA must evaluate the frontend as a user-facing browser artifact.\n- Real backend, provider, and storage implementation concerns are out of scope.\n- Future backend contracts in `apiEndpoints` are in scope as frontend readiness checks.\n- Route-readiness tests must validate adapter/mock behavior, loading/error/empty states, and response-shape compatibility without assuming a live endpoint exists.\n- Data models in the spec should appear in tests as visible fields, formatting expectations, fallback behavior, or state transitions.\n",
+    "contentSha256": "367c5bc5611c75f085893fa49a77afe7b14fa3a0a7c458b6ebe1f27e3026dac0"
+  },
+  {
+    "id": "d510ca57-1a9c-40c9-b30c-a25f77e0b7a9",
+    "revisionId": "906702df-97eb-41e9-bd0f-40aa2872f44b",
+    "relativePath": "references/examples.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 1105,
+    "contentText": "# QA Skill Examples\n\nGood test case:\n\n- Has an ID like `TC-01`.\n- Names the criterion being tested.\n- Provides concrete browser steps.\n- Defines an observable expected result.\n- Covers a real user or layout risk.\n- Covers data model fields or route-readiness when the spec includes them.\n\nBad test case:\n\n- Says only \"verify page loads\".\n- Uses vague expectations like \"looks good\".\n- Tests behavior not present in the spec.\n- Ignores mobile/responsive behavior for layout-heavy UI.\n- Ignores accessibility for forms and icon controls.\n- Assumes a real backend endpoint exists when the spec only defines a future contract.\n\nGood route-readiness test:\n\n- Criterion: `The frontend exposes adapter-backed loading and error states for GET /api/items.`\n- Steps:\n  1. Open the static page.\n  2. Locate the item list region.\n  3. Trigger the local demo/error state if the UI exposes one, or inspect the visible fallback state described by the spec.\n- Expected: `The list renders mock data using the same fields described by the future route response and shows a clear empty/error fallback without layout shift.`\n",
+    "contentSha256": "bfb326445fb8bd05c98d7ba0cc4ac964ab9ca468a2c1f356fbf2522dec25f496"
+  },
+  {
+    "id": "f2dd464a-a40f-4e82-a144-f56e52705775",
+    "revisionId": "906702df-97eb-41e9-bd0f-40aa2872f44b",
+    "relativePath": "references/validation.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 608,
+    "contentText": "# QA Skill Validation\n\nRuntime validation is performed by schema parsing and Curator review.\n\nManual validation checklist:\n\n- Every acceptance criterion appears in at least one test case.\n- Steps can be executed manually in a browser.\n- Expected results are visible and objective.\n- Responsive behavior is covered when layout matters.\n- Accessibility basics are covered when controls exist.\n- Future apiEndpoints are covered as frontend route-readiness checks without requiring live backend calls.\n- Data model fields are covered through visible rendering, formatting, fallback, or interaction expectations.\n",
+    "contentSha256": "af109cfc000a2c179e03f2bf8bbf611b8518dd891d7405860da31335eaa60f6f"
+  },
+  {
+    "id": "52d294be-e4db-43ee-9138-44ca8a5664ea",
+    "revisionId": "262dc45e-2665-4354-9aec-c3218c86c0bf",
+    "relativePath": "references/architecture.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 1496,
+    "contentText": "# Frontend Spec Architecture Reference\n\n## Spec Boundaries\n\nThe Spec Agent plans the frontend contract. It does not implement HTML, CSS, JavaScript, backend routes, tests, or curator verdicts.\n\nThe generated spec must be immediately useful to:\n\n- Front Agent: implementation details, components, state, data adapter, responsive rules, accessibility rules.\n- QA Agent: observable acceptance criteria and edge states.\n- Curator Agent: concrete comparison surface between spec, frontend output, and QA coverage.\n\n## Frontend-First Architecture\n\nA strong spec separates these responsibilities:\n\n- UI structure: semantic sections and controls.\n- Styling: tokens, layout, spacing, responsive behavior, visual hierarchy.\n- State: selected items, filters, form state, validation, loading/error/empty/success.\n- Data adapter: one replaceable boundary where mock data can later become route calls.\n- Route contracts: future endpoints and schemas when dynamic data is implied.\n\n## Backend Route Readiness\n\nUse `apiEndpoints` as contracts when the story implies:\n\n- loading remote lists or detail records;\n- submitting forms;\n- saving user choices;\n- refreshing server-derived status;\n- filtering/searching server data;\n- downloading or exporting generated artifacts.\n\nDo not add endpoints for purely static informational pages.\n\nWhen endpoints are present, `technicalApproach` must say the current static frontend should use local mock data behind adapter functions until real backend routes are available.\n",
+    "contentSha256": "509ef2d217591192e19148cfcb448ac859e2d6da9cea1088edea43d73b530e51"
+  },
+  {
+    "id": "3523723b-11ae-4bf5-9749-01676ccf62ed",
+    "revisionId": "262dc45e-2665-4354-9aec-c3218c86c0bf",
+    "relativePath": "references/examples.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 1283,
+    "contentText": "# Frontend Spec Examples\n\n## Good Component Description\n\n```yaml\nname: \"StoryFolderRail\"\ntype: \"ui\"\ndescription: \"Left navigation rail that lists workspace folders and their stories, supports selected, empty, and loading states, and exposes stable labels for QA.\"\ndependencies:\n  - \"WorkspaceFolderModel\"\n```\n\nWhy it is good:\n\n- names a real product responsibility;\n- includes states;\n- tells QA what should be visible;\n- declares dependency.\n\n## Weak Component Description\n\n```yaml\nname: \"CardSection\"\ntype: \"ui\"\ndescription: \"Displays cards.\"\ndependencies: []\n```\n\nWhy it is weak:\n\n- generic name;\n- no product purpose;\n- no states, interactions, or validation surface.\n\n## Good Future Route Contract\n\n```yaml\nmethod: \"GET\"\npath: \"/api/workspace/folders\"\ndescription: \"Future contract for loading workspace folders used by the folder rail; current static artifact must use a mock adapter with this same response shape.\"\nrequestSchema: {}\nresponseSchema:\n  folders:\n    - id: \"string\"\n      name: \"string\"\n      storyCount: \"number\"\n      updatedAt: \"string\"\n```\n\n## Good Acceptance Criterion\n\n```text\nThe interface renders loading, empty, error, and populated states for the folder list without layout shift, using the same data shape expected from GET /api/workspace/folders.\n```\n",
+    "contentSha256": "c8ee9be6b4314de2dddc8d3b3a69f846559c0110d4f0b501a7d4de8a0d6b3b61"
+  },
+  {
+    "id": "57135f40-10f8-47f6-9ce4-8c8122d6bc57",
+    "revisionId": "262dc45e-2665-4354-9aec-c3218c86c0bf",
+    "relativePath": "references/validation.md",
+    "mediaType": "text/markdown",
+    "sizeBytes": 731,
+    "contentText": "# Frontend Spec Validation Reference\n\nThe Spec Agent does not run validation itself during structured LLM output, but it must generate specs that make validation possible.\n\n## Minimum Validation Surfaces\n\nA generated spec should let QA validate:\n\n- every acceptance criterion;\n- primary user journey;\n- interactive controls;\n- loading, empty, error, and success states when data/forms exist;\n- responsive layout;\n- accessibility basics;\n- future API contract compatibility when route contracts exist.\n\n## Validation-Ready Wording\n\nPrefer:\n\n```text\nSubmitting an invalid form keeps the layout stable, marks invalid fields with accessible text, and does not call the data adapter.\n```\n\nAvoid:\n\n```text\nThe form should work well.\n```\n",
+    "contentSha256": "8d954dde25054b360ab85baceb1067aab7aebdcbd5cfe56fe3730291db0d119d"
+  }
+]

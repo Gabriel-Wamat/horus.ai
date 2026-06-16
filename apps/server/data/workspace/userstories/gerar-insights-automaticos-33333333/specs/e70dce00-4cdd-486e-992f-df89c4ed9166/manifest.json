@@ -1,0 +1,15 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "storyId": "33333333-3333-4333-8333-333333333333",
+  "specId": "e70dce00-4cdd-486e-992f-df89c4ed9166",
+  "createdAt": "2026-05-26T16:47:51.980Z",
+  "updatedAt": "2026-05-26T16:47:51.980Z",
+  "activeRevision": 1,
+  "revisions": [
+    {
+      "revision": 1,
+      "file": "revisions/0001-spec.json",
+      "createdAt": "2026-05-26T16:47:51.980Z"
+    }
+  ]
+}

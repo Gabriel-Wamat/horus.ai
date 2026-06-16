@@ -603,6 +603,7 @@ function completedEventTypeForAgent(agentName: AgentName): AgentRunLoopEventType
 function toolLabel(toolName: string): string {
   switch (toolName) {
     case "edit_file":
+    case "rewrite_file":
       return "Editar arquivo";
     case "write_file":
       return "Criar arquivo";
@@ -648,6 +649,7 @@ function operationTypeForWorkflowEvent(event: WorkflowEvent): AgentFileOperation
     case "write_file":
       return "create";
     case "edit_file":
+    case "rewrite_file":
     case "replace_file_range":
     case "save_file":
       return "update";
@@ -703,6 +705,7 @@ function changeTypeForWorkflowEvent(
   if (event.toolName === "write_file") return "create";
   if (
     event.toolName === "edit_file" ||
+    event.toolName === "rewrite_file" ||
     event.toolName === "replace_file_range" ||
     event.toolName === "save_file"
   ) {

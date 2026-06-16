@@ -33,6 +33,7 @@ export * from "./entities/OperationalMemory.js";
 export * from "./entities/SpecTraceability.js";
 export * from "./entities/AgentContextProfile.js";
 export * from "./entities/AgentContextReceipt.js";
+export * from "./entities/ContextRetrievalEvaluation.js";
 export * from "./entities/ValidationStrategy.js";
 export * from "./entities/ProjectContextSnapshot.js";
 export * from "./entities/AgentDebugTrace.js";

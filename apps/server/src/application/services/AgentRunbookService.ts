@@ -373,6 +373,7 @@ function hasDedicatedEvidenceEvent(toolName: AgentToolName): boolean {
     toolName === "inspect_project" ||
     toolName === "read_file" ||
     toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
     toolName === "write_file" ||
     toolName === "save_file" ||
     toolName === "delete_file" ||
@@ -388,6 +389,7 @@ function actionForTool(toolName: AgentToolName | null | undefined): AgentRunbook
   if (toolName === "read_file") return "read_file";
   if (
     toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
     toolName === "write_file" ||
     toolName === "save_file" ||
     toolName === "delete_file" ||
@@ -407,7 +409,7 @@ function runningToolTitle(
   target?: string
 ): string {
   if (toolName === "read_file") return target ? `Lendo ${target}` : "Lendo arquivo";
-  if (toolName === "edit_file" || toolName === "save_file") {
+  if (toolName === "edit_file" || toolName === "rewrite_file" || toolName === "save_file") {
     return target ? `Editando ${target}` : "Editando arquivo";
   }
   if (toolName === "write_file") return target ? `Criando ${target}` : "Criando arquivo";
@@ -431,6 +433,7 @@ function toolLabel(toolName: AgentToolName | null | undefined): string {
     inspect_project: "Inspeção do projeto",
     read_file: "Leitura",
     edit_file: "Edição",
+    rewrite_file: "Reescrita",
     save_file: "Salvamento",
     write_file: "Criação",
     delete_file: "Remoção",

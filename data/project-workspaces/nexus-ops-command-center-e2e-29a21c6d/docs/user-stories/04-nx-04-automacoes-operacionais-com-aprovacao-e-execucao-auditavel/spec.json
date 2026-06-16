@@ -1,0 +1,94 @@
+{
+  "id": "39dea96b-df77-4cb0-ac86-973557b19747",
+  "userStoryId": "c4d5bbee-8a8c-477c-82c1-494fb4c485c9",
+  "version": 1,
+  "summary": "Interface React/TypeScript para gerenciar playbooks de automação com criação, aprovação, execução auditável e logs progressivos.",
+  "technicalApproach": "Pattern: form-crud-tool. Implementar em React + TypeScript seguindo a arquitetura frontend existente (componentes atômicos, containers, hooks, context providers). UI: lista de playbooks (table/list), detalhe lateral ou página para criação/edição em multiple-step wizard (seleção de alvo -> parâmetros -> revisão -> confirmação -> execução). Cada passo é um form controlado com validação inline (aria-invalid, role=status). Estados: idle/dirty/saving/saved/error; execução: queued/running/success/failed with progressive streaming logs. Data layer via adapters injetáveis (PlaybookAPIAdapter) que implementam contratos REST (ver apiEndpoints); não usar mocks em runtime — injetar implementações reais ou test adapters. Component pattern: preferir componentes existentes do repo (Buttons, FormField, Modal, Table, Toast), fallback para libs já instaladas (ex: react-router, axios) e por último HTML/CSS nativo. Responsividade: list/detail collapsible em <768px; acessibilidade: keyboard-first, roles, focus management no wizard, live regions para logs; evitar cores high-light e separar ações por estilo (primary/secondary/destructive).",
+  "components": [
+    {
+      "name": "PlaybookListView",
+      "type": "ui",
+      "description": "Lista filtrável e paginada de playbooks exibindo status, risco, tempo estimado, pré-requisitos e histórico recente; ações: abrir, duplicar, iniciar execução (prévia).",
+      "dependencies": []
+    },
+    {
+      "name": "PlaybookEditorWizard",
+      "type": "ui",
+      "description": "Wizard multi-step para criar/editar/executar playbooks com passos: alvo, parâmetros (validação inline), revisão e confirmação; expõe estados dirty/saving/saved/error e emits save/execute events.",
+      "dependencies": [
+        "PlaybookModel",
+        "ValidationService",
+        "PlaybookAPI"
+      ]
+    },
+    {
+      "name": "ExecutionRunPanel",
+      "type": "ui",
+      "description": "Painel de execução que mostra estado progressivo, comandos planejados, comandos concluídos, falhas, métrica de tempo e botões de retry/cancel quando aplicável; usa live region para logs.",
+      "dependencies": [
+        "ExecutionService",
+        "ExecutionModel"
+      ]
+    },
+    {
+      "name": "PlaybookAPI",
+      "type": "api",
+      "description": "Adapter-injetável que implementa contratos REST para CRUD de playbooks, iniciar execuções e streaming de logs; encapsula axios/fetch e trata auth boundary já presente no app.",
+      "dependencies": [
+        "AuthBoundary",
+        "NetworkUtility"
+      ]
+    },
+    {
+      "name": "ExecutionService",
+      "type": "service",
+      "description": "Orquestrações client-side para iniciar runs, reconciliar status por polling/streaming, aplicar retry/backoff e persistir state local (context/store) durante a execução.",
+      "dependencies": [
+        "PlaybookAPI",
+        "ToastUtility"
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "method": "GET",
+      "path": "/playbooks",
+      "description": "Listagem paginada e filtrável de playbooks com status, risco, tempo_estimado, pre_requisitos e histórico_recente (últimas N execuções)."
+    },
+    {
+      "method": "GET",
+      "path": "/playbooks/:id",
+      "description": "Detalhes do playbook incluindo parâmetros esperados, esquema de validação e pré-requisitos."
+    },
+    {
+      "method": "POST",
+      "path": "/playbooks",
+      "description": "Criar novo playbook; retorna recurso criado."
+    },
+    {
+      "method": "PUT",
+      "path": "/playbooks/:id",
+      "description": "Atualizar playbook existente; respeitar versionamento/optimistic-lock se suportado."
+    },
+    {
+      "method": "POST",
+      "path": "/playbooks/:id/execute",
+      "description": "Iniciar execução com payload de alvo e parâmetros; retorna execution_id e initial status."
+    }
+  ],
+  "dataModels": [
+    "Playbook { id:string, name:string, status: 'draft'|'active'|'disabled', risk: 'low'|'medium'|'high', estimated_time_seconds:number, prerequisites:string[], recent_runs:ExecutionSummary[] }",
+    "PlaybookDetail extends Playbook { parameters: ParameterSchema[], description?:string, version:number }",
+    "ParameterSchema { name:string, type:string, required:boolean, default?:any, validation?:{ pattern?:string, min?:number, max?:number } }",
+    "ExecutionSummary { execution_id:string, status:'queued'|'running'|'success'|'failed', started_at:string, finished_at?:string, outcome?:string }",
+    "ExecutionLogStreamEvent { execution_id:string, timestamp:string, level:'info'|'warn'|'error', message:string, command_index?:number, status?:'planned'|'completed'|'failed' }"
+  ],
+  "acceptanceCriteria": [
+    "Listagem: PlaybookListView exibe cada playbook com status, risk label, estimated_time_seconds formatado, pré-requisitos (lista resumida) e até 3 itens de recent_runs; filtros e paginação funcionais e testáveis.",
+    "Criação/Execução: PlaybookEditorWizard conduz passos (alvo -> parâmetros -> revisão -> confirmação -> execução); cada passo valida campos inline e impede avanço se obrigatório inválido.",
+    "Form state: campos obrigatórios mostram aria-invalid e mensagens inline; o wizard reflete estados dirty (modificações), saving (spinner no primary), saved (toasts) e server error (banner com texto sem overflow).",
+    "Execução: ExecutionRunPanel mostra logs progressivos em live region, lista de comandos planejados, marca comandos concluídos/failed, exibe falhas com botão retry que reenvia apenas passos permitidos; estado final success/failed visível.",
+    "Acessibilidade e visual: todos os fluxos suportam navegação por teclado, foco logicamente ordenado, contraste adequado; UI diferencia actions (primary/secondary/destructive) sem usar cores high-light; textos truncam com ellipsis quando necessário e possuem tooltip para conteúdo completo."
+  ],
+  "generatedAt": "2026-05-27T05:52:18.339Z"
+}

@@ -504,7 +504,12 @@ function operationTypeFromToolName(
 ): AgentFileOperationType {
   if (toolName === "read_file" || toolName === "read_file_readonly") return "read";
   if (toolName === "write_file") return "create";
-  if (toolName === "edit_file" || toolName === "save_file" || toolName === "replace_file_range") {
+  if (
+    toolName === "edit_file" ||
+    toolName === "rewrite_file" ||
+    toolName === "save_file" ||
+    toolName === "replace_file_range"
+  ) {
     return "update";
   }
   if (toolName === "delete_file") return "delete";

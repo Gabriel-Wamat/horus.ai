@@ -25,6 +25,7 @@ export interface AgentToolRuntimeContext {
   agentProfileId: AgentProfileId;
   projectId?: string | undefined;
   runId?: string | undefined;
+  previewSessionId?: string | undefined;
   projectRootOverride?: string | undefined;
   workflowThreadId?: string | undefined;
   userStoryId?: string | undefined;
@@ -180,6 +181,12 @@ export class AgentToolRuntime {
       payload["runId"] = this.context.runId;
     }
     if (
+      this.context.previewSessionId &&
+      payload["previewSessionId"] === undefined
+    ) {
+      payload["previewSessionId"] = this.context.previewSessionId;
+    }
+    if (
       this.context.workflowThreadId &&
       payload["workflowThreadId"] === undefined
     ) {
@@ -222,6 +229,9 @@ export class AgentToolRuntime {
 
     if (toolName === "edit_file") {
       this.assertIncrementalEditInput(payload);
+    }
+    if (toolName === "rewrite_file") {
+      this.assertRewriteFileInput(payload);
     }
     if (toolName === "replace_file_range") {
       this.assertLineRangeEditInput(payload);
@@ -322,6 +332,13 @@ export class AgentToolRuntime {
       this.assertWriteSize("replace_file_range", payload["replacement"]);
     }
     this.assertReadEvidenceForMutation("replace_file_range", payload);
+  }
+
+  private assertRewriteFileInput(payload: Record<string, unknown>): void {
+    if (typeof payload["content"] === "string") {
+      this.assertWriteSize("rewrite_file", payload["content"]);
+    }
+    this.assertReadEvidenceForMutation("rewrite_file", payload);
   }
 
   private assertReadEvidenceForMutation(

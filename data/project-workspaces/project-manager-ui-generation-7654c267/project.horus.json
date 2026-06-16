@@ -1,0 +1,10 @@
+{
+  "name": "project-manager-ui-generation",
+  "bootstrapMode": "generated_from_horus",
+  "frontendStack": "typescript-react",
+  "frontendEntrypoints": [
+    "index.html",
+    "src/main.tsx",
+    "src/App.tsx"
+  ]
+}

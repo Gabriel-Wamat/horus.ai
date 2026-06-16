@@ -346,6 +346,7 @@ function projectWorkflowEventToChatMessage(
 function formatToolName(toolName: string): string {
   switch (toolName) {
     case "edit_file":
+    case "rewrite_file":
       return "Edição de arquivo";
     case "write_file":
       return "Criação de arquivo";
