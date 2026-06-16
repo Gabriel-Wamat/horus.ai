@@ -186,8 +186,8 @@ export function selectWorkflowReplayEvents(
 
 export function parseWorkflowProgressEventPayload(
   data: string
-): WorkflowProgressEvent | null {
-  if (!data || data === "undefined") return null;
+): ParseWorkflowProgressEventResult {
+  if (!data || data === "undefined") return { kind: "ignore" };
   try {
     const parsed = JSON.parse(data) as Partial<WorkflowProgressEvent>;
     if (
@@ -198,17 +198,24 @@ export function parseWorkflowProgressEventPayload(
       typeof parsed.sequence !== "number" ||
       typeof parsed.type !== "string"
     ) {
-      return null;
+      return {
+        kind: "error",
+        message: "Invalid workflow progress event payload contract.",
+      };
     }
-    return parsed as WorkflowProgressEvent;
+    return { kind: "event", event: parsed as WorkflowProgressEvent };
   } catch (err) {
-    console.warn(
-      "[VisualPreviewConsole] Ignoring invalid workflow progress event:",
-      err instanceof Error ? err.message : String(err)
-    );
-    return null;
+    return {
+      kind: "error",
+      message: `Invalid workflow progress event JSON: ${errorMessage(err)}`,
+    };
   }
 }
+
+export type ParseWorkflowProgressEventResult =
+  | { kind: "event"; event: WorkflowProgressEvent }
+  | { kind: "ignore" }
+  | { kind: "error"; message: string };
 
 export function workflowActivityFromEvent(
   event: WorkflowProgressEvent
@@ -499,4 +506,8 @@ function runbookStatusText(status: AgentRunbookEntry["status"]): string {
   if (status === "blocked") return "Ação bloqueada.";
   if (status === "waiting_for_decision") return "Aguardando decisão.";
   return "Ação pendente.";
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

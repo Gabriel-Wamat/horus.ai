@@ -168,7 +168,19 @@ export function useWorkflowProgressRuntime({
           );
           const handleEvent = (event: MessageEvent<string>): void => {
             const parsed = parseWorkflowProgressEventPayload(event.data);
-            if (parsed) appendWorkflowProgressEvent(parsed);
+            if (parsed.kind === "event") {
+              appendWorkflowProgressEvent(parsed.event);
+              return;
+            }
+            if (parsed.kind === "error") {
+              setWorkflowActivityState({
+                phase: "failed",
+                label: "Evento inválido",
+                detail: parsed.message,
+                active: false,
+                updatedAt: new Date().toISOString(),
+              });
+            }
           };
           source.onerror = () => {
             setWorkflowActivityState({
