@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
-import type { ShellCommandResult } from "@u-build/shared";
+import type { ExecutionTaskRecord, ShellCommandResult } from "@u-build/shared";
 import { ShellCommandOutputEventSchema, ShellCommandResultSchema } from "@u-build/shared";
-import type { ExecutionTaskRecord, ExecutionTaskResult } from "./ExecutionTaskRuntime.js";
+import type { ExecutionTaskResult } from "./ExecutionTaskRuntime.js";
 import type {
   ShellCommandRuntimeExecuteInput,
   ShellCommandRuntimePort,

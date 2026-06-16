@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { ShellCommandResultSchema } from "@u-build/shared";
+import { ExecutionTaskRecordSchema } from "@u-build/shared";
 
-export const ExecutionTaskSnapshotSchema = ShellCommandResultSchema.extend({
-  commandId: z.string().trim().min(1),
-  taskId: z.string().trim().min(1),
-});
+export const ExecutionTaskSnapshotSchema = ExecutionTaskRecordSchema;
 
 const ExecutionTaskListResponseSchema = z.object({
   tasks: z.array(ExecutionTaskSnapshotSchema),

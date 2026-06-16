@@ -40,6 +40,7 @@ export * from "./entities/AgentDebugTrace.js";
 export * from "./entities/AgentArtifact.js";
 export * from "./entities/CodingRuntime.js";
 export * from "./entities/CodingValidation.js";
+export * from "./entities/ExecutionTask.js";
 export * from "./entities/ShellCommand.js";
 
 export type { IAgentProvider, AgentRunContext } from "./ports/IAgentProvider.js";

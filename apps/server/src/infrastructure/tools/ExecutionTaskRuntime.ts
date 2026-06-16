@@ -4,6 +4,11 @@ import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import {
+  ExecutionTaskRecordSchema,
+  type ExecutionTaskRecord,
+  type ExecutionTaskStatus,
+} from "@u-build/shared";
 import type {
   CliCommandSpec,
   NormalizedCliCommandSpec,
@@ -13,62 +18,6 @@ import {
   buildAllowlistedChildEnv,
   DEFAULT_INHERITED_CHILD_ENV_KEYS,
 } from "../process/ChildProcessEnv.js";
-
-export type ExecutionTaskStatus =
-  | "queued"
-  | "awaiting_approval"
-  | "running"
-  | "completed"
-  | "failed"
-  | "timed_out"
-  | "aborted"
-  | "rejected";
-
-export interface ExecutionTaskRecord {
-  taskId: string;
-  commandId: string;
-  traceId: string | null;
-  spanId: string | null;
-  parentSpanId: string | null;
-  toolCallId: string | null;
-  runId: string | null;
-  operationalSessionId: string | null;
-  projectId: string | null;
-  agentId: string | null;
-  filePath: string | null;
-  diffId: string | null;
-  executable: string;
-  args: string[];
-  cwd: string;
-  env: Record<string, string>;
-  timeoutMs: number | null;
-  status: ExecutionTaskStatus;
-  retryOfTaskId: string | null;
-  attempt: number;
-  approvalRequired: boolean;
-  risk: "low" | "medium" | "high";
-  policyReason: string | null;
-  approved: boolean;
-  approvedBy: string | null;
-  approvalReason: string | null;
-  processId: number | null;
-  stdoutPath: string;
-  stderrPath: string;
-  stdoutBytes: number;
-  stderrBytes: number;
-  stdoutTail: string;
-  stderrTail: string;
-  exitCode: number | null;
-  signal: NodeJS.Signals | null;
-  errorMessage: string | null;
-  interactivePromptDetected: boolean;
-  interactivePromptText: string | null;
-  timedOut: boolean;
-  startedAt: string;
-  finishedAt: string | null;
-  lastOutputAt: string | null;
-  durationMs: number;
-}
 
 export interface ExecutionTaskResult {
   task: ExecutionTaskRecord;
@@ -473,7 +422,7 @@ export class ExecutionTaskRuntime {
       args: [...input.spec.args],
       cwd: input.spec.cwd,
       env: { ...input.spec.env },
-      timeoutMs: input.spec.timeoutMs,
+      timeoutMs: input.spec.timeoutMs ?? null,
       status: "running",
       retryOfTaskId: input.options.retryOfTaskId ?? null,
       attempt: input.options.attempt ?? 1,
@@ -623,25 +572,37 @@ export class ExecutionTaskRuntime {
         void Promise.all([closeStream(stdoutStream), closeStream(stderrStream)]).then(
           async () => {
             await metadataWrite;
-            const persisted = await this.readPersistedTask(input.metadataPath);
+            let persisted: ExecutionTaskRecord | null = null;
+            let persistedReadError: Error | null = null;
+            try {
+              persisted = await this.readPersistedTask(input.metadataPath);
+            } catch (err) {
+              persistedReadError =
+                err instanceof Error ? err : new Error(String(err));
+            }
             const externallyAborted =
               persisted?.status === "aborted" || (await this.isMarkedAborted(input.taskId));
-            const status: ExecutionTaskStatus = timedOut
-              ? "timed_out"
-              : aborted || externallyAborted
-                ? "aborted"
-                : exitCode === 0
-                  ? "completed"
-                  : "failed";
+            const status: ExecutionTaskStatus =
+              persistedReadError !== null
+                ? "failed"
+                : timedOut
+                  ? "timed_out"
+                  : aborted || externallyAborted
+                    ? "aborted"
+                    : exitCode === 0
+                      ? "completed"
+                      : "failed";
             const task: ExecutionTaskRecord = {
               ...taskBase(),
               status,
               exitCode,
               signal,
               errorMessage:
-                status === "completed"
-                  ? null
-                  : this.buildFailureMessage(status, exitCode, signal),
+                persistedReadError !== null
+                  ? persistedReadError.message
+                  : status === "completed"
+                    ? null
+                    : this.buildFailureMessage(status, exitCode, signal),
               timedOut,
               finishedAt: isoNow(),
               durationMs: nowMs() - input.start,
@@ -668,8 +629,7 @@ export class ExecutionTaskRuntime {
     const activeSnapshot = this.activeTaskSnapshots.get(taskId);
     if (activeSnapshot) return activeSnapshot;
     try {
-      const raw = await fs.readFile(this.metadataPath(taskId), "utf-8");
-      return JSON.parse(raw) as ExecutionTaskRecord;
+      return await this.readTaskMetadata(this.metadataPath(taskId));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw err;
@@ -683,12 +643,15 @@ export class ExecutionTaskRuntime {
     const tasks: ExecutionTaskRecord[] = [];
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
+      const path = join(this.outputBaseDir, entry.name, "task.json");
       try {
-        const raw = await fs.readFile(join(this.outputBaseDir, entry.name, "task.json"), "utf-8");
-        tasks.push(JSON.parse(raw) as ExecutionTaskRecord);
-      } catch {
-        // Ignore incomplete task folders; writers persist task.json atomically enough
-        // for the next poll to pick them up.
+        tasks.push(await this.readTaskMetadata(path));
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          // Incomplete task folders can exist between mkdir and the first atomic metadata write.
+          continue;
+        }
+        throw err;
       }
     }
     return tasks
@@ -777,13 +740,34 @@ export class ExecutionTaskRuntime {
 
   private async readPersistedTask(path: string): Promise<ExecutionTaskRecord | null> {
     try {
-      const raw = await fs.readFile(path, "utf-8");
-      return JSON.parse(raw) as ExecutionTaskRecord;
+      return await this.readTaskMetadata(path);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-      if (err instanceof SyntaxError) return null;
       throw err;
     }
+  }
+
+  private async readTaskMetadata(path: string): Promise<ExecutionTaskRecord> {
+    let payload: unknown;
+    try {
+      payload = JSON.parse(await fs.readFile(path, "utf-8"));
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new Error(`Invalid execution task metadata at ${path}: malformed JSON`);
+      }
+      throw err;
+    }
+    const parsed = ExecutionTaskRecordSchema.safeParse(payload);
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .map((issue) => {
+          const fieldPath = issue.path.length > 0 ? issue.path.join(".") : "<root>";
+          return `${fieldPath}: ${issue.message}`;
+        })
+        .join("; ");
+      throw new Error(`Invalid execution task metadata at ${path}: ${issues}`);
+    }
+    return parsed.data;
   }
 
   private metadataPath(taskId: string): string {
@@ -821,7 +805,7 @@ export class ExecutionTaskRuntime {
   private buildFailureMessage(
     status: ExecutionTaskStatus,
     exitCode: number | null,
-    signal: NodeJS.Signals | null
+    signal: string | null
   ): string {
     if (status === "timed_out") return "command timed out";
     if (status === "aborted") return "command aborted";
