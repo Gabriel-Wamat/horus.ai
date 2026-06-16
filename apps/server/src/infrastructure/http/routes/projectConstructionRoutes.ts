@@ -21,7 +21,13 @@ export function createProjectConstructionRouter(
   const router = Router();
 
   router.get("/workspaces", async (_req: Request, res: Response) => {
-    res.json({ projectWorkspaces: await deps.projectConstruction.listProjectWorkspaces() });
+    try {
+      res.json({
+        projectWorkspaces: await deps.projectConstruction.listProjectWorkspaces(),
+      });
+    } catch (err) {
+      handleProjectConstructionError(res, err);
+    }
   });
 
   router.post("/runs", async (req: Request, res: Response) => {
