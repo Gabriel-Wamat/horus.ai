@@ -1,29 +1,12 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { ExecutionTaskRecordSchema } from "@u-build/shared";
-
-export const ExecutionTaskSnapshotSchema = ExecutionTaskRecordSchema;
-
-const ExecutionTaskListResponseSchema = z.object({
-  tasks: z.array(ExecutionTaskSnapshotSchema),
-});
-
-const ExecutionTaskOutputResponseSchema = z.object({
-  taskId: z.string().trim().min(1),
-  stream: z.enum(["stdout", "stderr"]),
-  offset: z.number().int().nonnegative(),
-  nextOffset: z.number().int().nonnegative(),
-  chunk: z.string(),
-});
-
-const ExecutionTaskErrorResponseSchema = z
-  .object({
-    message: z.string().optional(),
-    error: z.string().optional(),
-  })
-  .passthrough();
-
-export type ExecutionTaskSnapshot = z.output<typeof ExecutionTaskSnapshotSchema>;
+import {
+  ExecutionTaskErrorResponseSchema,
+  ExecutionTaskListResponseSchema,
+  ExecutionTaskOutputResponseSchema,
+  ExecutionTaskSnapshotSchema,
+  type ExecutionTaskSnapshot,
+} from "@u-build/shared";
 
 export class ExecutionTaskApiError extends Error {
   readonly status: number;

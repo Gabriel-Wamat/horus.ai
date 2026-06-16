@@ -283,6 +283,17 @@ test("execution console validates execution task route contracts before exposing
     join(repositoryRoot, "apps/web/src/components/ExecutionConsolePanel.tsx"),
     "utf8"
   );
+  const sharedSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/entities/ExecutionTask.ts"),
+    "utf8"
+  );
+  const routeSource = await readFile(
+    join(
+      repositoryRoot,
+      "apps/server/src/infrastructure/http/routes/executionTaskRoutes.ts"
+    ),
+    "utf8"
+  );
 
   const forbiddenExecutionTaskCasts = [
     "const body = (await response.json()) as { tasks?: ExecutionTaskSnapshot[] }",
@@ -301,7 +312,8 @@ test("execution console validates execution task route contracts before exposing
   }
 
   assert.equal(hookSource.includes("ShellCommandResultSchema"), false);
-  assert.match(hookSource, /ExecutionTaskRecordSchema/);
+  assert.equal(hookSource.includes("z.object({\n  tasks:"), false);
+  assert.equal(hookSource.includes("z.object({\n  taskId:"), false);
   assert.match(hookSource, /ExecutionTaskSnapshotSchema/);
   assert.match(hookSource, /ExecutionTaskListResponseSchema/);
   assert.match(hookSource, /ExecutionTaskOutputResponseSchema/);
@@ -309,6 +321,11 @@ test("execution console validates execution task route contracts before exposing
   assert.match(panelSource, /ExecutionTaskSnapshotSchema/);
   assert.match(panelSource, /readExecutionTaskJson/);
   assert.match(panelSource, /requireExecutionTaskOk/);
+  assert.match(sharedSource, /ExecutionTaskListResponseSchema/);
+  assert.match(sharedSource, /ExecutionTaskOutputResponseSchema/);
+  assert.match(routeSource, /ExecutionTaskListResponseSchema\.parse/);
+  assert.match(routeSource, /ExecutionTaskOutputResponseSchema\.parse/);
+  assert.match(routeSource, /ExecutionTaskSnapshotSchema\.parse/);
 });
 
 test("workflow API validates workspace response contracts before exposing state", async () => {

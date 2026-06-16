@@ -1,14 +1,17 @@
 import { useCallback, useMemo, useState, type JSX } from "react";
-import type { AgentFileOperationTelemetry, FrontendProject } from "@u-build/shared";
-import type { PreviewChatMessage } from "./PreviewConversationPanel.js";
 import {
   ExecutionTaskSnapshotSchema,
+  type AgentFileOperationTelemetry,
+  type ExecutionTaskSnapshot,
+  type FrontendProject,
+} from "@u-build/shared";
+import type { PreviewChatMessage } from "./PreviewConversationPanel.js";
+import {
   executionTaskStatusLabel,
   readExecutionTaskJson,
   requireExecutionTaskOk,
   useExecutionTaskRows,
   useExecutionTaskOutputs,
-  type ExecutionTaskSnapshot,
   type TerminalRow,
 } from "./execution-console/useExecutionTaskOutputs.js";
 import {

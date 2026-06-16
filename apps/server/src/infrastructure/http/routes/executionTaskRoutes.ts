@@ -1,6 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { join } from "node:path";
 import { z, ZodError } from "zod";
+import {
+  ExecutionTaskListResponseSchema,
+  ExecutionTaskOutputResponseSchema,
+  ExecutionTaskSnapshotSchema,
+} from "@u-build/shared";
 import type { ProjectConstructionRepository } from "../../../application/ports/index.js";
 import { CliCommandPolicy } from "../../tools/CliCommandPolicy.js";
 import { ExecutionTaskRuntime } from "../../tools/ExecutionTaskRuntime.js";
@@ -47,7 +52,11 @@ export function createExecutionTaskRouter(deps: ExecutionTaskRouteDeps): Router 
         const { projectId } = z.object({ projectId: z.string().uuid() }).parse(req.params);
         const query = ExecutionTaskListQuerySchema.parse(req.query);
         const runtime = await runtimeForProject(deps, projectId);
-        res.json({ tasks: await runtime.listTasks({ limit: query.limit }) });
+        res.json(
+          ExecutionTaskListResponseSchema.parse({
+            tasks: await runtime.listTasks({ limit: query.limit }),
+          })
+        );
       } catch (err) {
         handleExecutionTaskRouteError(err, res);
       }
@@ -65,7 +74,7 @@ export function createExecutionTaskRouter(deps: ExecutionTaskRouteDeps): Router 
           res.status(404).json({ error: "Execution task not found" });
           return;
         }
-        res.json(task);
+        res.json(ExecutionTaskSnapshotSchema.parse(task));
       } catch (err) {
         handleExecutionTaskRouteError(err, res);
       }
@@ -80,12 +89,14 @@ export function createExecutionTaskRouter(deps: ExecutionTaskRouteDeps): Router 
         const query = ExecutionTaskOutputQuerySchema.parse(req.query);
         const runtime = await runtimeForProject(deps, projectId);
         res.json(
-          await runtime.readOutput({
-            taskId,
-            stream: query.stream,
-            offset: query.offset,
-            limit: query.limit,
-          })
+          ExecutionTaskOutputResponseSchema.parse(
+            await runtime.readOutput({
+              taskId,
+              stream: query.stream,
+              offset: query.offset,
+              limit: query.limit,
+            })
+          )
         );
       } catch (err) {
         handleExecutionTaskRouteError(err, res);
@@ -99,7 +110,7 @@ export function createExecutionTaskRouter(deps: ExecutionTaskRouteDeps): Router 
       try {
         const { projectId, taskId } = ExecutionTaskParamsSchema.parse(req.params);
         const runtime = await runtimeForProject(deps, projectId);
-        res.json(await runtime.kill(taskId));
+        res.json(ExecutionTaskSnapshotSchema.parse(await runtime.kill(taskId)));
       } catch (err) {
         handleExecutionTaskRouteError(err, res);
       }
@@ -113,7 +124,7 @@ export function createExecutionTaskRouter(deps: ExecutionTaskRouteDeps): Router 
         const { projectId, taskId } = ExecutionTaskParamsSchema.parse(req.params);
         const runtime = await runtimeForProject(deps, projectId);
         const handle = await runtime.retry(taskId);
-        res.status(202).json(handle.task);
+        res.status(202).json(ExecutionTaskSnapshotSchema.parse(handle.task));
       } catch (err) {
         handleExecutionTaskRouteError(err, res);
       }
@@ -128,7 +139,7 @@ export function createExecutionTaskRouter(deps: ExecutionTaskRouteDeps): Router 
         const body = ExecutionTaskApprovalBodySchema.parse(req.body ?? {});
         const runtime = await runtimeForProject(deps, projectId);
         const handle = await runtime.approve(taskId, body);
-        res.status(202).json(handle.task);
+        res.status(202).json(ExecutionTaskSnapshotSchema.parse(handle.task));
       } catch (err) {
         handleExecutionTaskRouteError(err, res);
       }
