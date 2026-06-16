@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 
 const baseUrl = normalizeBaseUrl(
-  process.env.HORUS_E2E_BASE_URL ?? "http://localhost:3001"
+  process.env.HORUS_E2E_BASE_URL ??
+    `http://${readEnv("HORUS_E2E_HOST", "127.0.0.1")}:${readEnv(
+      "HORUS_E2E_PORT",
+      "3001"
+    )}`
 );
 
 const required = {
@@ -90,6 +94,11 @@ async function readCheckedJson(response, url) {
 
 function normalizeBaseUrl(value) {
   return value.endsWith("/") ? value.slice(0, -1) : value;
+}
+
+function readEnv(name, fallback) {
+  const value = process.env[name]?.trim();
+  return value && value.length > 0 ? value : fallback;
 }
 
 function fail(message, details) {

@@ -148,8 +148,16 @@ export async function buildSeedFrontendProject(
     await resolveProjectRootInput(repositoryRoot, env)
   );
   const packageName = await readPackageName(rootPath);
-  const host = readEnv(env, "HORUS_WEB_PREVIEW_HOST", "localhost");
-  const port = readEnv(env, "HORUS_WEB_PREVIEW_PORT", "5174");
+  const host = readEnv(
+    env,
+    "HORUS_WEB_PREVIEW_HOST",
+    readEnv(env, "HORUS_WEB_DEV_HOST", "127.0.0.1")
+  );
+  const port = readEnv(
+    env,
+    "HORUS_WEB_PREVIEW_PORT",
+    readEnv(env, "HORUS_WEB_DEV_PORT", "5174")
+  );
   const previewUrl = readEnv(
     env,
     "HORUS_WEB_PREVIEW_URL",

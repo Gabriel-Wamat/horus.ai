@@ -440,7 +440,7 @@ function inspectCommand(
   return {
     id,
     label,
-    executable: process.execPath,
+    executable: "node",
     args: ["-e", inlineScript],
     cwd: ".",
     env: {},

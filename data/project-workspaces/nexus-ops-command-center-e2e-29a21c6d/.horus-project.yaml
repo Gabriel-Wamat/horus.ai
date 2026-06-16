@@ -11,7 +11,7 @@
     {
       "id": "inspect-repo-tree",
       "label": "Inspect repository tree",
-      "executable": "/Users/wamat/.asdf/installs/nodejs/25.2.1/bin/node",
+      "executable": "node",
       "args": [
         "-e",
         "const fs=require('node:fs');const path=require('node:path');const ignored=new Set([\".git\",\".hg\",\".svn\",\".idea\",\".vscode\",\"__pycache__\",\".mypy_cache\",\".pytest_cache\",\".ruff_cache\",\".venv\",\"venv\",\"node_modules\",\"dist\",\"build\",\".next\",\".turbo\",\".cache\",\"coverage\"]);let count=0;function walk(dir,depth){if(depth>3||count>=300)return;for(const name of fs.readdirSync(dir).sort()){if(ignored.has(name)||name.startsWith('.'))continue;const abs=path.join(dir,name);const rel=path.relative(process.cwd(),abs).split(path.sep).join('/');const stat=fs.statSync(abs);if(stat.isDirectory())walk(abs,depth+1);else{console.log(rel);count++;if(count>=300)return;}}}walk(process.cwd(),0);"
@@ -23,7 +23,7 @@
     {
       "id": "inspect-project-manifests",
       "label": "Inspect project manifests",
-      "executable": "/Users/wamat/.asdf/installs/nodejs/25.2.1/bin/node",
+      "executable": "node",
       "args": [
         "-e",
         "const fs=require('node:fs');const path=require('node:path');const ignored=new Set([\".git\",\".hg\",\".svn\",\".idea\",\".vscode\",\"__pycache__\",\".mypy_cache\",\".pytest_cache\",\".ruff_cache\",\".venv\",\"venv\",\"node_modules\",\"dist\",\"build\",\".next\",\".turbo\",\".cache\",\"coverage\"]);const manifests=new Set([\"package.json\",\"pyproject.toml\",\"requirements.txt\",\"Cargo.toml\",\"go.mod\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"Makefile\",\"makefile\"]);const found=[];function walk(dir){for(const name of fs.readdirSync(dir).sort()){if(ignored.has(name)||name.startsWith('.'))continue;const abs=path.join(dir,name);const stat=fs.statSync(abs);if(stat.isDirectory())walk(abs);else if(manifests.has(name))found.push(path.relative(process.cwd(),abs).split(path.sep).join('/'));}}walk(process.cwd());console.log(found.length?found.join('\\n'):'NO_MANIFESTS_FOUND');"

@@ -21,7 +21,7 @@
     "status": "running",
     "message": "Preview session started",
     "data": {
-      "previewUrl": "http://localhost:5174"
+      "previewUrl": null
     }
   }
 ]

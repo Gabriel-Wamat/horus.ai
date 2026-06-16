@@ -2,15 +2,20 @@
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-const DEFAULT_BASE_URL = "http://localhost:5174";
+const DEFAULT_BASE_URL = `http://${readEnv("HORUS_PREVIEW_SMOKE_HOST", "127.0.0.1")}:${readEnv("HORUS_PREVIEW_SMOKE_PORT", "5174")}`;
 const SCREENSHOT_TIMEOUT_MS = Number(process.env.HORUS_PREVIEW_SMOKE_TIMEOUT_MS ?? 45000);
 
 function inferApiBaseUrl(pageBaseUrl) {
   const parsed = new URL(pageBaseUrl);
   if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-    return `${parsed.protocol}//${parsed.hostname}:3000`;
+    return `${parsed.protocol}//${parsed.hostname}:${readEnv("HORUS_PREVIEW_SMOKE_API_PORT", "3000")}`;
   }
   return pageBaseUrl;
+}
+
+function readEnv(name, fallback) {
+  const value = process.env[name]?.trim();
+  return value && value.length > 0 ? value : fallback;
 }
 
 function timestamp() {

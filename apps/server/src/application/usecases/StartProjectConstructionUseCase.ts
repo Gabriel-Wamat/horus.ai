@@ -328,10 +328,12 @@ export class StartProjectConstructionUseCase {
     const bindHost =
       this.env["HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST"]?.trim() ||
       this.env["HORUS_GENERATED_PROJECT_PREVIEW_HOST"]?.trim() ||
+      this.env["HORUS_WEB_PREVIEW_HOST"]?.trim() ||
       "127.0.0.1";
     const publicHost =
       this.env["HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST"]?.trim() ||
-      (bindHost === "0.0.0.0" ? "localhost" : bindHost);
+      this.env["HORUS_WEB_PREVIEW_PUBLIC_HOST"]?.trim() ||
+      (bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost);
     const previewCommand = buildPreviewCommand(config, bindHost, port);
     const commandCatalog = [
       ...config.commandCatalog,
@@ -393,7 +395,9 @@ function resolveGeneratedPreviewPort(
   if (configured) return configured;
 
   const basePort = Number.parseInt(
-    env["HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT"]?.trim() || "5184",
+    env["HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT"]?.trim() ||
+      env["HORUS_WEB_PREVIEW_PORT"]?.trim() ||
+      "5184",
     10
   );
   const safeBasePort = Number.isFinite(basePort) && basePort > 0 ? basePort : 5184;
@@ -437,8 +441,8 @@ function buildPreviewBootstrapScript(): string {
     "const { spawn, spawnSync } = require('node:child_process');",
     "const packageManager = process.env.HORUS_PREVIEW_PACKAGE_MANAGER || 'npm';",
     "const runArgs = JSON.parse(process.env.HORUS_PREVIEW_RUN_ARGS_JSON || '[]');",
-    "const host = process.env.HORUS_PREVIEW_HOST || '127.0.0.1';",
-    "const port = process.env.HORUS_PREVIEW_PORT || '5173';",
+    "const host = process.env.HORUS_PREVIEW_HOST || process.env.HOST || '127.0.0.1';",
+    "const port = process.env.HORUS_PREVIEW_PORT || process.env.PORT || '5173';",
     "if (!existsSync('node_modules')) {",
     "  const install = spawnSync(packageManager, ['install'], { stdio: 'inherit', shell: false });",
     "  if (install.error) { console.error(install.error.message); process.exit(1); }",
