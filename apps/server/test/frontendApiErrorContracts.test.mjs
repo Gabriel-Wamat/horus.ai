@@ -43,6 +43,8 @@ const forbiddenFragments = [
   "if (parsed) onOperation(parsed);",
   "if (parsed) appendWorkflowProgressEvent(parsed);",
   "Failed to parse event:",
+  "execution_task_poll_failed",
+  "execution_task_output_poll_failed",
 ];
 
 test("frontend API clients do not silently coerce HTTP failures to empty values", async () => {

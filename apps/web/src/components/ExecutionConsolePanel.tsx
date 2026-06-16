@@ -96,13 +96,13 @@ export function ExecutionConsolePanel({
       }),
     [retriedTasks, terminalRows]
   );
-  const canonicalTerminalRows = useExecutionTaskRows(
+  const executionTaskRows = useExecutionTaskRows(
     executionProjectId,
     effectiveTerminalRows
   );
-  const followedTasks = useExecutionTaskOutputs(
+  const followedTaskOutputs = useExecutionTaskOutputs(
     executionProjectId,
-    canonicalTerminalRows
+    executionTaskRows.rows
   );
   const [killingTaskIds, setKillingTaskIds] = useState<Set<string>>(
     () => new Set()
@@ -249,10 +249,11 @@ export function ExecutionConsolePanel({
           error={fileOperationsError}
         />
         <ExecutionTerminalSection
-          rows={canonicalTerminalRows}
-          commandCount={canonicalTerminalRows.length}
-          followedTasks={followedTasks}
+          rows={executionTaskRows.rows}
+          commandCount={executionTaskRows.rows.length}
+          followedTasks={followedTaskOutputs.outputs}
           actionError={executionTaskActionError}
+          runtimeError={executionTaskRows.error ?? followedTaskOutputs.error}
           selectedProjectId={executionProjectId}
           killingTaskIds={killingTaskIds}
           retryingTaskIds={retryingTaskIds}
