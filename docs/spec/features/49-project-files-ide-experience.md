@@ -63,7 +63,7 @@ business_context:
     - "Project file write/persistence layer"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express routes under apps/server/src/infrastructure/http/routes/projectFileRoutes.ts"
@@ -478,7 +478,7 @@ validation_commands:
     - "node --test apps/server/test/projectFileRoutes.test.mjs"
 
 manual_browser_smoke:
-  - "Open http://localhost:5174/?mode=files&projectId=<id>&file=package.json."
+  - "Open http://<HORUS_PUBLIC_HOST>:5174/?mode=files&projectId=<id>&file=package.json."
   - "Confirm file tree remains expanded."
   - "Confirm package.json opens as editable code with syntax highlighting."
   - "Type a small harmless whitespace/comment change."

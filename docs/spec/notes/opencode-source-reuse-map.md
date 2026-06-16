@@ -9,7 +9,7 @@ This note defines how implementation agents should reuse code from the local ope
 ## Reference Root
 
 ```text
-/Users/wamat/Desktop/My Apps/Códigos/opencode
+<OPENCODE_REFERENCE_ROOT>
 ```
 
 Use this checkout as the primary reference for specs 97-108. The reference is MIT-licensed, so substantial copied portions must preserve the required copyright/license notice in an appropriate source header, NOTICE entry or third-party attribution file, depending on how much is copied.

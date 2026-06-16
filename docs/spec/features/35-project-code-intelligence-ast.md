@@ -12,14 +12,14 @@ spec_version: "0.1.0"
 status: "planned"
 depends_on:
   - "spec/features/33-project-file-browser-backend.md"
-reference_repo: "/Users/wamat/Desktop/zup-sdd-agents"
+reference_repo: "<REFERENCE_REPO_ROOT>"
 reference_files:
-  - "/Users/wamat/Desktop/zup-sdd-agents/app/services/code_intelligence/ast_parser_service.py"
-  - "/Users/wamat/Desktop/zup-sdd-agents/app/services/code_intelligence/tree_sitter_parser.py"
-  - "/Users/wamat/Desktop/zup-sdd-agents/app/services/code_intelligence/dependency_graph_service.py"
-  - "/Users/wamat/Desktop/zup-sdd-agents/app/services/code_intelligence/impact_analyzer.py"
-  - "/Users/wamat/Desktop/zup-sdd-agents/app/services/code_intelligence_service.py"
-  - "/Users/wamat/Desktop/zup-sdd-agents/app/services/odin_workflow/specialist/code_intelligence_adapter.py"
+  - "<REFERENCE_REPO_ROOT>/app/services/code_intelligence/ast_parser_service.py"
+  - "<REFERENCE_REPO_ROOT>/app/services/code_intelligence/tree_sitter_parser.py"
+  - "<REFERENCE_REPO_ROOT>/app/services/code_intelligence/dependency_graph_service.py"
+  - "<REFERENCE_REPO_ROOT>/app/services/code_intelligence/impact_analyzer.py"
+  - "<REFERENCE_REPO_ROOT>/app/services/code_intelligence_service.py"
+  - "<REFERENCE_REPO_ROOT>/app/services/odin_workflow/specialist/code_intelligence_adapter.py"
 ---
 
 # 1. Original User Request
@@ -62,7 +62,7 @@ business_context:
     - "Quality/risk analysis de mudanças"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node.js"
@@ -561,19 +561,19 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared Code Intelligence contracts."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend TypeScript."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/projectAstParser.test.mjs apps/server/test/projectDependencyGraph.test.mjs apps/server/test/projectImpactAnalyzer.test.mjs apps/server/test/projectCodeIntelligenceRoutes.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate focused AST/Code Intelligence behavior."
       success_condition: "Exit code 0."
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run regression suite."
       success_condition: "Exit code 0 or documented unrelated failures."
 

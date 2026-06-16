@@ -63,7 +63,7 @@ business_context:
     - "Operator/debug inspection"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "LangGraph agents"

@@ -171,11 +171,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test -- agentRunbookService"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate projection."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend progress rendering."
       success_condition: "Exit code 0."
 implementation_notes:

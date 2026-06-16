@@ -66,7 +66,7 @@ business_context:
     - "Runtime event/chat/memory projection"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -642,27 +642,27 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm lint"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove global lint gate is repaired."
       success_condition: "exit code 0"
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove TypeScript contracts remain valid across packages."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove backend build remains valid after service extraction."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/web test:guards"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove frontend workflow/event consumers are not regressed."
       success_condition: "exit code 0"
     - command: "node --test packages/shared/test/*.test.mjs apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run shared/server regression tests, including new security/preflight/workflow tests."
       success_condition: "exit code 0"
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove production build remains valid after refactor."
       success_condition: "exit code 0; pre-existing chunk-size warnings may be documented separately"
 
@@ -883,31 +883,31 @@ implementation_log:
           result: "WorkflowOrchestrator keeps its public API but delegates event/chat/memory projection, state persistence/project-run sync and CodeChangeSet candidate/apply lifecycle to dedicated services. Curator command profile no longer allows install/dev/start by default."
       validation:
         - command: "pnpm --filter @u-build/docs lint"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
         - command: "pnpm --filter @u-build/server build"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
         - command: "node --test apps/server/test/safeCliRunner.test.mjs apps/server/test/codeChangeSetPreflightService.test.mjs apps/server/test/projectConstructionWorkspace.test.mjs apps/server/test/workflowOrchestratorCodeChangeSet.test.mjs apps/server/test/agentExecutionLedger.test.mjs"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
           result: "26 tests passed"
         - command: "pnpm lint"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
         - command: "pnpm type-check"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
         - command: "pnpm --filter @u-build/web test:guards"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
           result: "17 tests passed"
         - command: "node --test packages/shared/test/*.test.mjs apps/server/test/*.test.mjs"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
           result: "236 tests passed"
         - command: "pnpm build"
-          cwd: "/Users/wamat/Desktop/horus.ai"
+          cwd: "<REPOSITORY_ROOT>"
           exit_code: 0
           notes: "Build passed. Vite still warns that the web JS chunk is over 500 kB, and Turbo warns that docs build has no configured output files."
       residual_risks:

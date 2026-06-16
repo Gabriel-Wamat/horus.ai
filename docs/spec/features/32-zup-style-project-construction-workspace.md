@@ -594,19 +594,19 @@ execution_plan:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @horus/shared test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared contracts."
       success_condition: "exit code 0"
     - command: "pnpm --filter @horus/server test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate services, repositories, orchestrator and quality gates."
       success_condition: "exit code 0"
     - command: "pnpm --filter @horus/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate TypeScript compilation."
       success_condition: "exit code 0"
     - command: "pnpm --filter @horus/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate UI contracts."
       success_condition: "exit code 0"
 

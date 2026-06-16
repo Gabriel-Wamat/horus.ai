@@ -156,11 +156,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate QA smoke service build."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/qaPreviewSmokeValidation.test.mjs apps/server/test/buildCuratorPrompt.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate smoke result and curator consumption."
       success_condition: "Exit code 0."
 ```

@@ -166,11 +166,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test -- worktreeIsolationService"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate isolation lifecycle."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test -- agentToolLoopIsolation"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate agent loop isolation."
       success_condition: "Exit code 0."
 implementation_notes:

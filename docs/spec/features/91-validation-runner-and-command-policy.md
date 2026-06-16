@@ -63,7 +63,7 @@ business_context:
     - "Future patch review UI"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -372,15 +372,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate validation contracts."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate runner and command policy integration."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/codingValidation.test.mjs apps/server/test/codingValidationRunner.test.mjs apps/server/test/validationCommandSelector.test.mjs apps/server/test/safeCliRunnerPolicy.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate validation runner behavior."
       success_condition: "All tests pass."
 ```

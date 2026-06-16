@@ -63,7 +63,7 @@ business_context:
     - "Project export/download action"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express"
@@ -490,7 +490,7 @@ execution_plan:
   - step: 8
     name: "Validate runtime"
     agent: "qa_specialist"
-    action: "Run typecheck/build/tests and a browser smoke against localhost Files screen."
+    action: "Run typecheck/build/tests and a browser smoke against loopback host Files screen."
     expected_output: "Validation evidence with commands, exit codes and observed behavior."
 ```
 
@@ -573,27 +573,27 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schemas/types if changed."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Compile backend route/service changes."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run backend tests covering archive service and routes."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend types."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web test:guards"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend regression guard."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate production bundle."
       success_condition: "Exit code 0."
   runtime_checks:
@@ -871,19 +871,19 @@ implementation_log:
     - "apps/web/test/frontendRegressionGuards.test.mjs"
   validation:
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       result: "passed"
     - command: "node --test apps/server/test/projectFileBrowser.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       result: "passed"
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       result: "passed"
     - command: "pnpm --filter @u-build/web test:guards"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       result: "passed"
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       result: "passed"
     - check: "Browser smoke"
       result: "Files toolbar shows enabled Baixar button with aria-label Baixar projeto como ZIP."

@@ -61,7 +61,7 @@ business_context:
     - "Preview chat evidence"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -348,15 +348,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate AST contract compilation."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate Tree-sitter integration compilation."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/astAnalysis.test.mjs apps/server/test/treeSitterAstAnalyzer.test.mjs apps/server/test/astAnalysisService.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate parser behavior and AST result contracts."
       success_condition: "All tests pass."
 ```

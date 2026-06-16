@@ -56,7 +56,7 @@ business_context:
     - "QA/Curator validation"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "SpecAgentImpl"
@@ -310,15 +310,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate surface contracts."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/server type-check && pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate registry and agent integration."
       success_condition: "exit code 0"
     - command: "node --test apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run surface/fallback/design intelligence tests."
       success_condition: "all tests pass"
 ```

@@ -59,7 +59,7 @@ business_context:
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -342,17 +342,17 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate TypeScript contracts across workspace."
       success_condition: "Exit code 0."
 
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run offline regression tests, including provider config tests."
       success_condition: "Exit code 0 and all tests pass."
 
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate production build output."
       success_condition: "Exit code 0."
 
@@ -606,8 +606,8 @@ agent_result:
 - 2026-05-26: Added `.env.example` with required global provider/model settings, provider keys, optional base URLs, per-agent overrides, and per-agent tuning.
 - 2026-05-26: Added offline provider config tests in `apps/server/test/providerConfig.test.mjs`.
 - 2026-05-26: Validation passed:
-  - `pnpm type-check` from `/Users/wamat/Desktop/horus.ai`: exit 0.
-  - `pnpm test` from `/Users/wamat/Desktop/horus.ai`: exit 0; build completed and 17 tests passed.
+  - `pnpm type-check` from `<REPOSITORY_ROOT>`: exit 0.
+  - `pnpm test` from `<REPOSITORY_ROOT>`: exit 0; build completed and 17 tests passed.
 
 ## Implementation Result
 
@@ -636,28 +636,28 @@ agent_result:
     - "spec/features/07-multi-provider-llm.md"
     - "spec/CHANGELOG.md"
   commands_run:
-    - command: "pnpm add @langchain/openai @langchain/openrouter @langchain/groq --filter @u-build/server --store-dir /Users/wamat/Library/pnpm/store/v3"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+    - command: "pnpm add @langchain/openai @langchain/openrouter @langchain/groq --filter @u-build/server --store-dir <PNPM_STORE_DIR>"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "Provider packages installed."
-    - command: "pnpm add @langchain/core@^1.1.48 --filter @u-build/server --store-dir /Users/wamat/Library/pnpm/store/v3"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+    - command: "pnpm add @langchain/core@^1.1.48 --filter @u-build/server --store-dir <PNPM_STORE_DIR>"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "LangChain core aligned with provider package peer dependencies."
-    - command: "pnpm remove @langchain/anthropic --filter @u-build/server --store-dir /Users/wamat/Library/pnpm/store/v3"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+    - command: "pnpm remove @langchain/anthropic --filter @u-build/server --store-dir <PNPM_STORE_DIR>"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "Unused Anthropic package removed."
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "TypeScript contracts passed across workspace."
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "Build completed and 17 offline tests passed."
     - command: "rg \"ChatAnthropic|@langchain/anthropic\" apps/server packages apps -g '!dist'"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 1
       result: "No remaining source references found."
   validation:

@@ -62,7 +62,7 @@ business_context:
     - "Project Files save/edit pipeline"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -382,15 +382,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate structural patch contracts."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate patch planner/applier compilation."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/structuralPatch.test.mjs apps/server/test/astPatchPlanner.test.mjs apps/server/test/diffBuilder.test.mjs apps/server/test/codeChangeSetRollback.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate patch planning, diffs, conflict detection and rollback."
       success_condition: "All tests pass."
 ```

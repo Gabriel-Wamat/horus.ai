@@ -60,7 +60,7 @@ business_context:
     - "Global shell/navigation"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     frontend:
       - "React"

@@ -157,15 +157,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate chat runtime evidence integration."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate chat UI rendering."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/horusChatTurn.test.mjs apps/server/test/qaPreviewSmokeValidation.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate evidence-backed chat behavior."
       success_condition: "Exit code 0."
 ```

@@ -51,7 +51,7 @@ expected_engineering_result: |
 business_context:
   user_problem: "The project currently risks depending on this checkout, this machine, or OS-specific behavior through local persistence and runtime paths."
   target_user: "Developers running Horus.AI locally on macOS, Windows, or Linux."
-  expected_outcome: "Fresh clones and moved checkouts remain usable with predictable local state and no hidden dependency on /Users/wamat or process cwd."
+  expected_outcome: "Fresh clones and moved checkouts remain usable with predictable local state and no hidden dependency on /<USER_HOME>/wamat or process cwd."
   product_surface:
     - "Local development startup"
     - "Workflow execution and resume"
@@ -62,7 +62,7 @@ business_context:
     - "Agent skill metadata"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node.js >=20"
@@ -298,11 +298,11 @@ integration_context:
       owner: "infrastructure/agentSkills"
       direction: "consumer_depends_on_this_spec"
       contract_exposed: "Project-local SKILL.md metadata and prompt-visible context"
-      compatibility_obligation: "must not expose machine-specific /Users/wamat path"
+      compatibility_obligation: "must not expose machine-specific /<USER_HOME>/wamat path"
       expected_consumer_behavior: "Skills rely on runtime cwd/repo root, not a hardcoded local path."
       migration_or_notification_required: false
       verification:
-        - "rg '/Users/wamat|repository_root: \"/Users' skills apps packages returns no project-local hits."
+        - "rg '/<USER_HOME>/wamat|repository_root: \"/Users' skills apps packages returns no project-local hits."
 
   bidirectional_integrations:
     - name: "Preview session runtime"
@@ -518,7 +518,7 @@ execution_plan:
   - step: 5
     name: "Remove machine-specific skill metadata"
     agent: "backend_specialist"
-    action: "Replace or remove repository_root values containing /Users/wamat from project-local skill files."
+    action: "Replace or remove repository_root values containing /<USER_HOME>/wamat from project-local skill files."
     expected_output: "No project-local skill contains this machine path."
 
   - step: 6
@@ -605,7 +605,7 @@ acceptance_criteria:
   functional:
     - "With PERSISTENCE_DRIVER=file and HORUS_DATA_DIR set to a temp directory, all Horus-managed local persistence is written under that directory."
     - "With no HORUS_DATA_DIR, development defaults to a repo-local .horus/data path, not cwd-dependent ./data."
-    - "No project-local skill metadata contains /Users/wamat or another developer-specific path."
+    - "No project-local skill metadata contains /<USER_HOME>/wamat or another developer-specific path."
     - "Built-in frontend project records remain valid after moving the repository checkout."
     - "Server restart does not leave preview sessions falsely marked as controllable by current process."
     - "File-mode workflow resume behavior after restart is durable or explicitly reported as unrecoverable with actionable detail."
@@ -632,19 +632,19 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Verify TypeScript build across workspace."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/*.test.mjs apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run shared and backend regression tests."
       success_condition: "Exit code 0 or documented unrelated pre-existing failures."
-    - command: "rg -n '/Users/wamat|repository_root: \"/Users' skills apps packages"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+    - command: "rg -n '/<USER_HOME>/wamat|repository_root: \"/Users' skills apps packages"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove machine-specific paths were removed from project-controlled files."
       success_condition: "No project-local matches except docs describing the removed issue, if intentionally kept."
     - command: "rg -n 'constructor\\(.*= \"\\./data|data/project-workspaces|data/project-run-worktrees' apps/server/src"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Detect remaining production defaults that bypass HORUS_DATA_DIR."
       success_condition: "No production construction path bypasses runtimeConfig; test fixtures may remain."
 
@@ -928,7 +928,7 @@ agent_result:
 - Made file-backed frontend project registry persist repo-internal project roots as repo-relative paths while returning canonical absolute paths at runtime.
 - Added preview-session recovery after server restart: stale `starting`, `running`, `inspecting`, and `applying` sessions are marked stopped, `processId` is cleared, and a `preview_recovered_after_restart` event is recorded.
 - Added `listSessions()` to preview session repositories for file and Postgres implementations.
-- Removed machine-specific `repository_root: "/Users/wamat/Desktop/horus.ai"` metadata from active project skills.
+- Removed machine-specific `repository_root: "<REPOSITORY_ROOT>"` metadata from active project skills.
 - Clarified workflow resume failure messaging for missing active checkpointer state, including file-mode and Postgres-mode behavior.
 - Added tests for runtime config, repo-relative project persistence, preview session listing, and stale preview recovery.
 

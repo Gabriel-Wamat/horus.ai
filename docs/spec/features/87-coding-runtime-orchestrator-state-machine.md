@@ -70,7 +70,7 @@ business_context:
     - "Agent Flow execution timeline"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -448,15 +448,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared coding runtime contract compilation."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate server orchestration compilation."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/codingRuntime.test.mjs apps/server/test/codingStateMachine.test.mjs apps/server/test/codingRuntimeOrchestrator.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate lifecycle contracts."
       success_condition: "All tests pass."
   runtime_checks:

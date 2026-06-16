@@ -69,7 +69,7 @@ affected_entities:
     static:
       - "pnpm type-check"
     runtime:
-      - "Visual check in Chrome at http://localhost:5174"
+      - "Visual check in Chrome at http://<HORUS_PUBLIC_HOST>:5174"
 ```
 
 ## 5. Integration Context
@@ -105,10 +105,10 @@ acceptance_criteria:
 validation_protocol:
   static_checks:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
   runtime_checks:
-    - command: "Open http://localhost:5174 in Chrome"
+    - command: "Open http://<HORUS_PUBLIC_HOST>:5174 in Chrome"
       expected: "Folder row visible with nested user stories under it."
 ```
 
@@ -125,7 +125,7 @@ implementation_log:
     validation:
       - "pnpm type-check passed."
       - "pnpm test passed with 36 passing tests."
-      - "Chrome visual validation passed at http://localhost:5174: userstories folder renders with three indented user stories."
+      - "Chrome visual validation passed at http://<HORUS_PUBLIC_HOST>:5174: userstories folder renders with three indented user stories."
   - version: "0.2.0"
     date: "2026-05-26"
     changes:

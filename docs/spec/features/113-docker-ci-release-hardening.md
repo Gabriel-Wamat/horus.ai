@@ -207,19 +207,19 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm verify:ci"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run repo CI equivalent."
       success_condition: "exit code 0"
     - command: "pnpm verify:docker"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run Docker smoke."
       success_condition: "exit code 0"
     - command: "docker compose up --build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Manual operator proof when needed."
       success_condition: "services healthy and documented URLs reachable"
     - command: "git status --short"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Confirm no generated noise before commit/push."
       success_condition: "only intended files are modified"
 ```

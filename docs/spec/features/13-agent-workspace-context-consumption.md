@@ -107,7 +107,7 @@ validation:
     - command: "pnpm test"
       result: "passed, 43 tests"
   runtime_checks:
-    - "Restarted backend on http://localhost:3000 from compiled dist."
+    - "Restarted backend on http://<HORUS_PUBLIC_HOST>:3000 from compiled dist."
     - "GET /health returned ok."
     - "GET /api/workspace/folders/:folderId/artifacts returned artifact metadata."
     - "GET /api/workspace/folders/:folderId/user-stories kept the existing userStories contract."

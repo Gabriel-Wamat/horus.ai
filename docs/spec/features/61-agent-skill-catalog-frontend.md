@@ -20,7 +20,7 @@ depends_on:
 
 ```yaml
 raw_user_request: |
-  em seguida, quero que crie uma tela nova onde o usuário pode ver todas as skills do projeto, além disso criar novas skills de forma que os agentes possam usar. exatamente como funciona no codex ou claude code. pesquise na internet como isso é feito, em seguida use a skill de criar spec para planejar essa tarefa, crie primeiro a spec de back(incluindo BD) e depois a de front. garanta que ambas estarão versionadas em /Users/wamat/Desktop/horus.ai/spec/features
+  em seguida, quero que crie uma tela nova onde o usuário pode ver todas as skills do projeto, além disso criar novas skills de forma que os agentes possam usar. exatamente como funciona no codex ou claude code. pesquise na internet como isso é feito, em seguida use a skill de criar spec para planejar essa tarefa, crie primeiro a spec de back(incluindo BD) e depois a de front. garanta que ambas estarão versionadas em <REPOSITORY_ROOT>/spec/features
 ```
 
 ## 2. Research Basis
@@ -77,7 +77,7 @@ business_context:
     - "Agent binding controls"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Spec 60 agent skill registry APIs"
@@ -587,21 +587,21 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Typecheck and build all frontend/backend/shared consumers."
       success_condition: "exit code 0"
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run regression suite including new frontend tests."
       success_condition: "exit code 0 and all tests pass"
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Focused web build if full build is too slow."
       success_condition: "exit code 0"
   runtime_checks:
     - name: "Skills page smoke"
       method: "browser"
-      expected: "Open http://localhost:<port>/?mode=skills and see catalog or backend-unavailable state."
+      expected: "Open http://<HORUS_PUBLIC_HOST>:<port>/?mode=skills and see catalog or backend-unavailable state."
     - name: "Create skill validation smoke"
       method: "browser"
       expected: "Open builder, enter minimal SKILL.md, run validation, see backend validation result."

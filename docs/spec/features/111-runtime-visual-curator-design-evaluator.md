@@ -62,7 +62,7 @@ business_context:
     - "Execution console"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "CuratorAgentImpl"
@@ -314,23 +314,23 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate DesignEvaluationEvidence contracts."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/server type-check && pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate evaluator and curator integration."
       success_condition: "exit code 0"
     - command: "node --test apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run curated bad-fixture and runtime evidence tests."
       success_condition: "all tests pass"
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate UI evidence consumers."
       success_condition: "exit code 0"
     - command: "pnpm preview:smoke"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Collect browser evidence for visual gate."
       success_condition: "exit code 0"
   runtime_checks:
@@ -369,7 +369,7 @@ agent_result:
     - "<shared/backend/frontend/tests>"
   commands_run:
     - command: "<validation command>"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: "<exit>"
       result: "<result>"
   validation:

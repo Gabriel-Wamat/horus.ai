@@ -112,7 +112,7 @@ validation:
     - command: "pnpm test"
       result: "passed, 46 tests"
   runtime_checks:
-    - "Restarted backend on http://localhost:3000 from compiled dist."
+    - "Restarted backend on http://<HORUS_PUBLIC_HOST>:3000 from compiled dist."
     - "POST /api/chat/sessions created a session scoped to a real workspace folder/story."
     - "POST /api/chat/sessions/:sessionId/messages persisted a user message with userStoryRevisionId."
     - "GET /api/chat/sessions/:sessionId/context returned session, message count, active user story, artifact context, and previous output count."

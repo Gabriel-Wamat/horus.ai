@@ -60,7 +60,7 @@ business_context:
     - "Workflow/event timeline"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express routes"
@@ -264,7 +264,7 @@ coding_rules:
   frontend:
     - "Render all lifecycle states without blank canvases."
     - "Do not require manual refresh to see active project files."
-    - "Keep fullscreen/open-localhost controls accessible and stable."
+    - "Keep fullscreen/open-loopback host controls accessible and stable."
   tests:
     - "Cover missing dependency, stale process, project-created-before-preview and error projection."
 ```
@@ -342,7 +342,7 @@ acceptance_criteria:
     - "Starting a spec/agent execution creates an active project record before agent completion."
     - "File tree displays the active project and file update count during execution."
     - "Preview canvas shows lifecycle states and then renders the app when ready."
-    - "Open-localhost and fullscreen controls work for the active preview."
+    - "Open-loopback host and fullscreen controls work for the active preview."
     - "If preview cannot start, the UI shows the failing command/stage and next action."
   integration:
     - "workflow events, preview sessions and file browser reference the same projectId."
@@ -360,23 +360,23 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared lifecycle contracts."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/server type-check && pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend lifecycle and emitted test imports."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/web type-check && pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend lifecycle consumers."
       success_condition: "exit code 0"
     - command: "node --test apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run focused and existing runtime regressions."
       success_condition: "all tests pass"
     - command: "pnpm preview:smoke"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove browser-visible preview behavior."
       success_condition: "exit code 0"
   runtime_checks:
@@ -423,7 +423,7 @@ agent_result:
     - "<shared/backend/frontend/tests>"
   commands_run:
     - command: "<command>"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: "<exit>"
       result: "<short result>"
   validation:

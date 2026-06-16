@@ -65,7 +65,7 @@ business_context:
     - "Spec/changelog local"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -128,7 +128,7 @@ scope:
 | Scenario | Current Symptom | Risk | Required Behavior |
 | --- | --- | --- | --- |
 | Browser dependency missing | `import('playwright')` fails with `ERR_MODULE_NOT_FOUND` | Agents claim visual validation without doing it | Repo provides local install/script or detects missing dependency and fails with clear instruction |
-| App server not running | Browser test cannot open `localhost:5174` | False visual failure | Script checks `/health` first and prints actionable startup requirement |
+| App server not running | Browser test cannot open `<HORUS_PUBLIC_HOST>:5174` | False visual failure | Script checks `/health` first and prints actionable startup requirement |
 | Preview selected project is canonical | API passes but UI selector/canvas may still be broken | API-only validation misses real user bug | Browser asserts select contains curated options and screenshot includes Preview surface |
 | Invalid-project toggle | Hidden projects exist but UI toggle may not render or may overflow | User cannot inspect archived/broken entries | Browser toggles all/invalid mode and verifies blocked labels/reasons fit |
 | Canonical preview loads | `preview_ready` API can pass while iframe is blank/occluded | Blank visual delivery | Browser captures canvas screenshot and checks non-empty iframe/container dimensions |
@@ -211,7 +211,7 @@ integration_context:
       contract_used: "GET /api/preview/projects?visibility=visible|all, POST /api/preview/sessions, POST /api/preview/sessions/:id/start"
       required_for: "Seed deterministic UI states before browser screenshot checks."
       assumptions:
-        - "Server runs on localhost:5174 during local validation."
+        - "Server runs on <HORUS_PUBLIC_HOST>:5174 during local validation."
       failure_modes:
         - "Browser test fails because backend is down, not because UI is broken."
       fallback_or_recovery: "Preflight /health check with explicit startup instructions."
@@ -256,7 +256,7 @@ integration_context:
       contract_used: "git status --short, git diff --name-only, git diff --cached --name-only"
       required_for: "Detect mixed worktree and produce safe commit grouping."
       assumptions:
-        - "Implementation runs inside /Users/wamat/Desktop/horus.ai."
+        - "Implementation runs inside <REPOSITORY_ROOT>."
       failure_modes:
         - "Tool sees changes outside repo or misclassifies ignored spec files."
       fallback_or_recovery: "Abort when not inside repo; report ignored/local spec files separately."
@@ -353,7 +353,7 @@ integration_context:
 architecture_rules:
   browser_validation:
     - "Browser validation must run from repo-local dependencies, not a global package."
-    - "Browser validation must verify the actual localhost app, not mocked HTML."
+    - "Browser validation must verify the actual loopback host app, not mocked HTML."
     - "Prefer semantic selectors and user-visible assertions."
     - "Store screenshots/traces in a local ignored artifact directory."
     - "A browser smoke failure must include a screenshot path and concise diagnosis."
@@ -379,7 +379,7 @@ contracts:
     name: "Preview browser smoke"
     proposed_script: "pnpm preview:smoke"
     inputs:
-      - "HORUS_BASE_URL default http://localhost:5174"
+      - "HORUS_BASE_URL default http://<HORUS_PUBLIC_HOST>:5174"
       - "artifact directory default .horus/artifacts/browser-smoke/<timestamp>"
     outputs:
       - "JSON report with status, checked project ids, screenshot paths and failure reasons"
@@ -493,7 +493,7 @@ acceptance_criteria:
   validation:
     - "pnpm test passes."
     - "pnpm --filter @u-build/web test:guards passes."
-    - "new browser smoke passes against localhost."
+    - "new browser smoke passes against loopback host."
     - "new worktree audit tests pass."
 ```
 
@@ -528,7 +528,7 @@ error_mitigation:
     response: "Fail with install/bootstrap command and do not claim visual validation."
   server_down:
     detection: "/health request fails."
-    response: "Stop browser test and print localhost/server startup requirement."
+    response: "Stop browser test and print loopback host/server startup requirement."
   flaky_render:
     detection: "Selector not visible before timeout."
     response: "Retry bounded wait, capture failure screenshot, include DOM summary."

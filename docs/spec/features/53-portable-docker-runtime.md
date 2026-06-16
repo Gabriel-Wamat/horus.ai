@@ -25,7 +25,7 @@ raw_user_request: |
 system_translation: |
   Prepare an execution-ready Dockerization plan for Horus.AI so the monorepo can be built
   and run on macOS, Windows, and Linux without machine-specific paths, OS-specific shell
-  assumptions, or hardcoded localhost/absolute filesystem dependencies. The implementation
+  assumptions, or hardcoded loopback host/absolute filesystem dependencies. The implementation
   must define Dockerfiles, compose files, runtime env conventions, volumes, health checks,
   optional Postgres wiring, file-mode persistence, generated-project preview behavior,
   and validation commands.
@@ -86,7 +86,7 @@ technical_context:
   known_existing_patterns:
     - "Runtime config must derive paths from env and repository root."
     - "File-mode persistence must live under HORUS_DATA_DIR."
-    - "No absolute /Users/... paths in runtime code or generated config."
+    - "No absolute /<USER_HOME>/... paths in runtime code or generated config."
     - "Postgres mode is selected by PERSISTENCE_DRIVER=postgres."
     - "File mode is selected by PERSISTENCE_DRIVER=file."
 ```
@@ -215,7 +215,7 @@ integration_context:
       required_for: "Bind container interfaces and select persistence mode."
       assumptions: []
       failure_modes:
-        - "Server binds only to localhost inside container and is unreachable from host."
+        - "Server binds only to loopback host inside container and is unreachable from host."
         - "Data is written into image layer instead of mounted volume."
       fallback_or_recovery: "Default container HOST=0.0.0.0 and HORUS_DATA_DIR=/var/lib/horus/data."
       verification:
@@ -319,7 +319,7 @@ integration_context:
 ```yaml
 architecture_rules:
   - "Do not hardcode absolute filesystem paths."
-  - "Do not hardcode host-only localhost into source code for container communication."
+  - "Do not hardcode host-only loopback host into source code for container communication."
   - "Use env vars and Docker Compose variable substitution for ports, hosts, persistence mode, and preview URLs."
   - "Container-internal paths must be generic Linux container paths such as /app and /var/lib/horus/data."
   - "Host-mounted paths must be relative project paths or named volumes, never user-specific absolute paths."
@@ -519,12 +519,12 @@ preview_runtime_rules:
     - "If supported, expose or proxy preview ports through documented compose ranges."
     - "If not supported, fail clearly with documentation and leave normal Horus API/web runtime working."
   required_config:
-    - "HORUS_WEB_PREVIEW_HOST must not assume host localhost unless it is browser-facing."
+    - "HORUS_WEB_PREVIEW_HOST must not assume host loopback host unless it is browser-facing."
     - "HORUS_WEB_PREVIEW_URL must be configurable."
     - "Generated preview port defaults must avoid colliding with app server port."
   forbidden:
     - "Hardcoding host.docker.internal in source code."
-    - "Hardcoding 127.0.0.1 for browser-facing URLs."
+    - "Hardcoding <HORUS_PUBLIC_HOST> for browser-facing URLs."
 ```
 
 ## 12. Validation Protocol
@@ -544,11 +544,11 @@ validation_protocol:
       cwd: "<repo-root>"
       purpose: "Start file-mode runtime."
       success_condition: "App container healthy and web/API reachable."
-    - command: "curl -fsS http://localhost:${HORUS_HTTP_PORT:-3000}/health"
+    - command: "curl -fsS http://<HORUS_PUBLIC_HOST>:${HORUS_HTTP_PORT:-3000}/health"
       cwd: "<repo-root>"
       purpose: "Verify API health through host port."
       success_condition: "HTTP 2xx."
-    - command: "docker compose down && docker compose up -d && curl -fsS http://localhost:${HORUS_HTTP_PORT:-3000}/health"
+    - command: "docker compose down && docker compose up -d && curl -fsS http://<HORUS_PUBLIC_HOST>:${HORUS_HTTP_PORT:-3000}/health"
       cwd: "<repo-root>"
       purpose: "Verify restart behavior."
       success_condition: "HTTP 2xx after restart."
@@ -597,7 +597,7 @@ error_mitigation:
   - "Do not use local node_modules as evidence that the image works."
   - "Do not copy .env into the Docker image."
   - "Do not bake provider keys into compose files."
-  - "Do not rely on this machine's /Users/wamat path."
+  - "Do not rely on this machine's /<USER_HOME>/wamat path."
   - "If Docker is unavailable, still create artifacts but mark validation as blocked with exact error."
   - "If preview process support in Docker is not complete, document the limitation explicitly and fail that path clearly at runtime."
   - "Keep implementation changes separate from unrelated frontend/backend refactors."

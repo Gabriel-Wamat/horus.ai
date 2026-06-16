@@ -59,7 +59,7 @@ business_context:
     - "Chat history persistence"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express SSE"

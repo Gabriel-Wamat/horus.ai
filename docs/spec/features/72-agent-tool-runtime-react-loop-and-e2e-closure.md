@@ -70,7 +70,7 @@ business_context:
     - "Generated project runtime"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -638,31 +638,31 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schemas and exported contracts."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend TypeScript integration."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/agentToolRegistry.test.mjs apps/server/test/agentToolRuntime.test.mjs apps/server/test/frontAgentNodeToolRuntime.test.mjs apps/server/test/projectAgentTools.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Preserve current tool runtime guarantees."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/agentToolLoop.test.mjs apps/server/test/workflowToolEvents.test.mjs apps/server/test/previewChatProjectContext.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate new loop, event replay and project chat isolation."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend build after event/status UI changes."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web test:guards"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend regression guards."
       success_condition: "Exit code 0."
     - command: "git diff --check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Reject whitespace and patch hygiene issues."
       success_condition: "Exit code 0."
   runtime_checks:

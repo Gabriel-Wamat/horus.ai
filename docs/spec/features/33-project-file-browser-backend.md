@@ -11,7 +11,7 @@ source_skill: "agentic-sdd-spec"
 spec_version: "0.1.0"
 status: "planned"
 companion_frontend_spec: "spec/features/34-project-file-browser-frontend.md"
-reference_repo: "/Users/wamat/Desktop/zup-sdd-agents"
+reference_repo: "<REFERENCE_REPO_ROOT>"
 ---
 
 # 1. Original User Request
@@ -53,7 +53,7 @@ business_context:
     - "SPEC/User Stories project context"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node.js"
@@ -476,15 +476,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared API contracts."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend TypeScript."
       success_condition: "Exit code 0."
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run regression suite."
       success_condition: "Exit code 0 or documented unrelated failures with evidence."
 
@@ -523,7 +523,7 @@ validation_protocol:
 agent_error_mitigation:
   anti_hallucination:
     - "Do not invent project root fields. Inspect ProjectWorkspace and ProjectConstructionRun first."
-    - "Do not claim zup behavior unless verified in /Users/wamat/Desktop/zup-sdd-agents."
+    - "Do not claim zup behavior unless verified in <REFERENCE_REPO_ROOT>."
   read_before_write:
     - "Read server route mounting and repository contracts before adding routes."
     - "Search for all ProjectPathSafety consumers before extending it."

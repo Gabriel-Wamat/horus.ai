@@ -60,7 +60,7 @@ business_context:
     - "Agent Flow"
     - "Coding runtime validation"
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node child_process"
@@ -274,15 +274,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test -- shellCommandRuntime"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate governed shell runtime."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test -- safeCliRunnerPolicy"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate command blocking and normalization."
       success_condition: "Exit code 0."
     - command: "pnpm typecheck"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared/backend typing."
       success_condition: "Exit code 0."
 ```

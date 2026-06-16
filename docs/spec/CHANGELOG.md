@@ -90,7 +90,7 @@
 
 ## 1.85.0 - 2026-05-28
 
-- Fixed the feature spec 85 chat incident: moved the local Horus backend/proxy default away from the occupied `localhost:3000`, added stream-empty fallback to avoid completed blank/generic assistant replies, skipped code retrieval cards for direct conversational replies, and validated a real in-browser chat response with no `Failed to fetch`.
+- Fixed the feature spec 85 chat incident: moved the local Horus backend/proxy default away from the occupied `<HORUS_PUBLIC_HOST>:3000`, added stream-empty fallback to avoid completed blank/generic assistant replies, skipped code retrieval cards for direct conversational replies, and validated a real in-browser chat response with no `Failed to fetch`.
 
 ## 1.84.0 - 2026-05-28
 
@@ -407,7 +407,7 @@
 - Wired preview runtime in `server.ts` to use the process-backed adapter.
 - Updated `PreviewRuntimeManager` to persist `error` state and emit `preview_error` when startup fails.
 - Added focused adapter lifecycle tests and recorded server build plus CLI/preview lifecycle validation.
-- Noted local runtime smoke constraint: an existing Vite process was already occupying `localhost:5174`, so the adapter now includes post-readiness process stability protection.
+- Noted local runtime smoke constraint: an existing Vite process was already occupying `<HORUS_PUBLIC_HOST>:5174`, so the adapter now includes post-readiness process stability protection.
 
 ## 1.22.0 - 2026-05-26
 
