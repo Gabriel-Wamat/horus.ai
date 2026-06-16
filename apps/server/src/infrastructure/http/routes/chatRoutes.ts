@@ -3,6 +3,11 @@ import type { Request, Response } from "express";
 import { ZodError } from "zod";
 import {
   AppendChatMessageInputSchema,
+  ChatContextResponseSchema,
+  ChatMessageResponseSchema,
+  ChatMessagesResponseSchema,
+  ChatSessionResponseSchema,
+  ChatSessionsResponseSchema,
   CreateChatSessionInputSchema,
 } from "@u-build/shared";
 import {
@@ -31,7 +36,11 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
           ? { userStoryId: req.query["userStoryId"] }
           : {}),
       });
-      res.json({ sessions });
+      res.json(
+        parseChatRouteResponse("GET /chat/sessions", ChatSessionsResponseSchema, {
+          sessions,
+        })
+      );
     } catch (err) {
       handleChatRouteError(err, res);
     }
@@ -41,7 +50,11 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
     try {
       const input = CreateChatSessionInputSchema.parse(req.body);
       const session = await deps.chatMemoryStore.createSession(input);
-      res.status(201).json({ session });
+      res.status(201).json(
+        parseChatRouteResponse("POST /chat/sessions", ChatSessionResponseSchema, {
+          session,
+        })
+      );
     } catch (err) {
       handleChatRouteError(err, res);
     }
@@ -56,7 +69,13 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
           ? { afterSequence: rawAfterSequence }
           : undefined
       );
-      res.json({ messages });
+      res.json(
+        parseChatRouteResponse(
+          "GET /chat/sessions/:sessionId/messages",
+          ChatMessagesResponseSchema,
+          { messages }
+        )
+      );
     } catch (err) {
       handleChatRouteError(err, res);
     }
@@ -69,7 +88,13 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
         req.params["sessionId"] ?? "",
         input
       );
-      res.status(201).json({ message });
+      res.status(201).json(
+        parseChatRouteResponse(
+          "POST /chat/sessions/:sessionId/messages",
+          ChatMessageResponseSchema,
+          { message }
+        )
+      );
     } catch (err) {
       handleChatRouteError(err, res);
     }
@@ -80,7 +105,13 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
       const context = await deps.chatMemoryStore.buildAgentContext(
         req.params["sessionId"] ?? ""
       );
-      res.json({ context });
+      res.json(
+        parseChatRouteResponse(
+          "GET /chat/sessions/:sessionId/context",
+          ChatContextResponseSchema,
+          { context }
+        )
+      );
     } catch (err) {
       handleChatRouteError(err, res);
     }
@@ -89,7 +120,34 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
   return router;
 }
 
+interface ChatRouteContract<T> {
+  parse(input: unknown): T;
+}
+
+class ChatRouteResponseContractError extends Error {
+  constructor(route: string, cause: unknown) {
+    super(`Chat route response contract violated at ${route}`, { cause });
+    this.name = "ChatRouteResponseContractError";
+  }
+}
+
+function parseChatRouteResponse<T>(
+  route: string,
+  contract: ChatRouteContract<T>,
+  payload: unknown
+): T {
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new ChatRouteResponseContractError(route, err);
+  }
+}
+
 function handleChatRouteError(err: unknown, res: Response): void {
+  if (err instanceof ChatRouteResponseContractError) {
+    res.status(500).json({ error: "Internal server error", message: err.message });
+    return;
+  }
   if (err instanceof ZodError) {
     res.status(400).json({ error: "Validation failed", issues: err.issues });
     return;

@@ -190,6 +190,17 @@ test("Horus chat API validates response and stream contracts before exposing cha
     join(repositoryRoot, "apps/web/src/api/horusChatApi.ts"),
     "utf8"
   );
+  const sharedSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/entities/ChatMemory.ts"),
+    "utf8"
+  );
+  const routeSource = await readFile(
+    join(
+      repositoryRoot,
+      "apps/server/src/infrastructure/http/routes/chatRoutes.ts"
+    ),
+    "utf8"
+  );
 
   const forbiddenHorusChatCasts = [
     "const body = (await res.json()) as { sessions: ChatSession[] }",
@@ -197,6 +208,10 @@ test("Horus chat API validates response and stream contracts before exposing cha
     "const body = (await res.json()) as { messages: ChatMessage[] }",
     "return res.json() as Promise<HorusChatTurnResponse>",
     "JSON.parse(data) as HorusChatStreamEvent",
+    "const ChatSessionsResponseSchema = z.object",
+    "const ChatSessionResponseSchema = z.object",
+    "const ChatMessagesResponseSchema = z.object",
+    "import { z } from \"zod\";",
   ];
 
   for (const fragment of forbiddenHorusChatCasts) {
@@ -205,12 +220,38 @@ test("Horus chat API validates response and stream contracts before exposing cha
 
   assert.match(source, /readHorusChatJson/);
   assert.match(source, /parseHorusChatStreamEvent/);
-  assert.match(source, /ChatSessionSchema/);
-  assert.match(source, /ChatMessageSchema/);
   assert.match(source, /HorusChatTurnResponseSchema/);
   assert.match(source, /HorusChatStreamEventSchema/);
   assert.match(source, /ChatSessionsResponseSchema/);
+  assert.match(source, /ChatSessionResponseSchema/);
   assert.match(source, /ChatMessagesResponseSchema/);
+  assert.match(sharedSource, /ChatSessionsResponseSchema/);
+  assert.match(sharedSource, /ChatSessionResponseSchema/);
+  assert.match(sharedSource, /ChatMessagesResponseSchema/);
+  assert.match(sharedSource, /ChatMessageResponseSchema/);
+  assert.match(sharedSource, /ChatContextResponseSchema/);
+  assert.match(
+    routeSource,
+    /parseChatRouteResponse\("GET \/chat\/sessions", ChatSessionsResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseChatRouteResponse\("POST \/chat\/sessions", ChatSessionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseChatRouteResponse\(\s*"GET \/chat\/sessions\/:sessionId\/messages",\s*ChatMessagesResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseChatRouteResponse\(\s*"POST \/chat\/sessions\/:sessionId\/messages",\s*ChatMessageResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseChatRouteResponse\(\s*"GET \/chat\/sessions\/:sessionId\/context",\s*ChatContextResponseSchema/
+  );
+  assert.match(routeSource, /contract\.parse\(payload\)/);
+  assert.match(routeSource, /ChatRouteResponseContractError/);
 });
 
 test("agent skills API validates catalog response contracts before exposing state", async () => {
