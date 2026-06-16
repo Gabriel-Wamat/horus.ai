@@ -1,21 +1,29 @@
-import { z } from "zod";
 import {
-  AgentProfileSchema,
-  AgentSkillBindingSchema,
   AgentSkillDetailSchema,
-  AgentSkillFileSchema,
-  AgentSkillRevisionSchema,
-  AgentSkillSummarySchema,
-  AgentSkillValidationReportSchema,
+  AgentProfilesResponseSchema,
+  AgentSkillBindingsResponseSchema,
+  AgentSkillSummaryResponseSchema,
+  AgentSkillsListResponseSchema,
+  CreateAgentSkillResponseSchema,
+  PublishAgentSkillResponseSchema,
+  ValidateAgentSkillResponseSchema,
   type AgentProfile,
   type AgentSkillDetail,
   type AgentSkillListQuery,
   type AgentSkillSummary,
-  type AgentSkillValidationReport,
+  type CreateAgentSkillResponse,
   type CreateAgentSkillInput,
+  type PublishAgentSkillResponse,
   type PublishAgentSkillInput,
   type UpdateAgentSkillBindingsInput,
+  type ValidateAgentSkillResponse,
   type ValidateAgentSkillInput,
+} from "@u-build/shared";
+
+export type {
+  CreateAgentSkillResponse,
+  PublishAgentSkillResponse,
+  ValidateAgentSkillResponse,
 } from "@u-build/shared";
 
 const BASE = "/api/agent-skills";
@@ -30,60 +38,6 @@ export class AgentSkillsApiError extends Error {
     this.name = "AgentSkillsApiError";
   }
 }
-
-export interface CreateAgentSkillResponse {
-  skill: AgentSkillSummary;
-  draftRevision: AgentSkillDetail["revisions"][number];
-  files: AgentSkillDetail["files"];
-  validationReport: AgentSkillValidationReport;
-  bindings: AgentSkillDetail["bindings"];
-}
-
-export interface ValidateAgentSkillResponse {
-  validationReport: AgentSkillValidationReport;
-  contentHash: string;
-}
-
-export interface PublishAgentSkillResponse {
-  skill: AgentSkillSummary;
-  activeRevision: AgentSkillDetail["revisions"][number];
-  bindings: AgentSkillDetail["bindings"];
-}
-
-const AgentSkillsListResponseSchema = z.object({
-  skills: z.array(AgentSkillSummarySchema),
-});
-
-const AgentProfilesResponseSchema = z.object({
-  profiles: z.array(AgentProfileSchema),
-});
-
-const ValidateAgentSkillResponseSchema = z.object({
-  validationReport: AgentSkillValidationReportSchema,
-  contentHash: z.string().trim().min(32),
-});
-
-const CreateAgentSkillResponseSchema = z.object({
-  skill: AgentSkillSummarySchema,
-  draftRevision: AgentSkillRevisionSchema,
-  files: z.array(AgentSkillFileSchema),
-  validationReport: AgentSkillValidationReportSchema,
-  bindings: z.array(AgentSkillBindingSchema),
-});
-
-const PublishAgentSkillResponseSchema = z.object({
-  skill: AgentSkillSummarySchema,
-  activeRevision: AgentSkillRevisionSchema,
-  bindings: z.array(AgentSkillBindingSchema),
-});
-
-const AgentSkillBindingsResponseSchema = z.object({
-  bindings: z.array(AgentSkillBindingSchema),
-});
-
-const AgentSkillSummaryResponseSchema = z.object({
-  skill: AgentSkillSummarySchema,
-});
 
 async function requireOk(response: Response, action: string): Promise<void> {
   if (response.ok) return;

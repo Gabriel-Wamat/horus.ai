@@ -1,10 +1,19 @@
 import { Router, type Request, type Response } from "express";
 import { ZodError } from "zod";
 import {
+  AgentProfilesResponseSchema,
+  AgentSkillBindingsResponseSchema,
+  AgentSkillDetailSchema,
   AgentSkillListQuerySchema,
+  AgentSkillSummaryResponseSchema,
+  AgentSkillsListResponseSchema,
   CreateAgentSkillInputSchema,
+  CreateAgentSkillResponseSchema,
   PublishAgentSkillInputSchema,
+  PublishAgentSkillResponseSchema,
+  RuntimeAgentSkillsResponseSchema,
   UpdateAgentSkillBindingsInputSchema,
+  ValidateAgentSkillResponseSchema,
   ValidateAgentSkillInputSchema,
 } from "@u-build/shared";
 import {
@@ -29,14 +38,24 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
   router.get("/", async (req: Request, res: Response) => {
     try {
       const filter = AgentSkillListQuerySchema.parse(req.query);
-      res.json({ skills: await deps.registry.listSummaries(filter) });
+      res.json(
+        parseAgentSkillRouteResponse("GET /agent-skills", AgentSkillsListResponseSchema, {
+          skills: await deps.registry.listSummaries(filter),
+        })
+      );
     } catch (err) {
       handleAgentSkillError(res, err);
     }
   });
 
   router.get("/agent-profiles", (_req: Request, res: Response) => {
-    res.json({ profiles: defaultAgentProfileRegistry.listProfiles() });
+    res.json(
+      parseAgentSkillRouteResponse(
+        "GET /agent-skills/agent-profiles",
+        AgentProfilesResponseSchema,
+        { profiles: defaultAgentProfileRegistry.listProfiles() }
+      )
+    );
   });
 
   router.get(
@@ -46,7 +65,13 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
         const skills = await deps.registry.resolveRuntimeSkillsForAgent(
           req.params["agentName"] ?? ""
         );
-        res.json({ skills });
+        res.json(
+          parseAgentSkillRouteResponse(
+            "GET /agent-skills/runtime/agents/:agentName",
+            RuntimeAgentSkillsResponseSchema,
+            { skills }
+          )
+        );
       } catch (err) {
         handleAgentSkillError(res, err);
       }
@@ -56,7 +81,13 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
   router.post("/", async (req: Request, res: Response) => {
     try {
       const input = CreateAgentSkillInputSchema.parse(req.body);
-      res.status(201).json(await deps.registry.createSkill(input));
+      res.status(201).json(
+        parseAgentSkillRouteResponse(
+          "POST /agent-skills",
+          CreateAgentSkillResponseSchema,
+          await deps.registry.createSkill(input)
+        )
+      );
     } catch (err) {
       handleAgentSkillError(res, err);
     }
@@ -65,7 +96,13 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
   router.post("/validate", async (req: Request, res: Response) => {
     try {
       const input = ValidateAgentSkillInputSchema.parse(req.body);
-      res.json(await deps.registry.validateDraft(input));
+      res.json(
+        parseAgentSkillRouteResponse(
+          "POST /agent-skills/validate",
+          ValidateAgentSkillResponseSchema,
+          await deps.registry.validateDraft(input)
+        )
+      );
     } catch (err) {
       handleAgentSkillError(res, err);
     }
@@ -73,7 +110,13 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
 
   router.get("/:skillId", async (req: Request, res: Response) => {
     try {
-      res.json(await deps.registry.getDetail(req.params["skillId"] ?? ""));
+      res.json(
+        parseAgentSkillRouteResponse(
+          "GET /agent-skills/:skillId",
+          AgentSkillDetailSchema,
+          await deps.registry.getDetail(req.params["skillId"] ?? "")
+        )
+      );
     } catch (err) {
       handleAgentSkillError(res, err);
     }
@@ -85,10 +128,14 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
       try {
         const input = PublishAgentSkillInputSchema.parse(req.body);
         res.json(
-          await deps.registry.publishRevision(
-            req.params["skillId"] ?? "",
-            req.params["revisionId"] ?? "",
-            input
+          parseAgentSkillRouteResponse(
+            "POST /agent-skills/:skillId/revisions/:revisionId/publish",
+            PublishAgentSkillResponseSchema,
+            await deps.registry.publishRevision(
+              req.params["skillId"] ?? "",
+              req.params["revisionId"] ?? "",
+              input
+            )
           )
         );
       } catch (err) {
@@ -100,12 +147,18 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
   router.put("/:skillId/bindings", async (req: Request, res: Response) => {
     try {
       const input = UpdateAgentSkillBindingsInputSchema.parse(req.body);
-      res.json({
-        bindings: await deps.registry.replaceBindings(
-          req.params["skillId"] ?? "",
-          input.bindings
-        ),
-      });
+      res.json(
+        parseAgentSkillRouteResponse(
+          "PUT /agent-skills/:skillId/bindings",
+          AgentSkillBindingsResponseSchema,
+          {
+            bindings: await deps.registry.replaceBindings(
+              req.params["skillId"] ?? "",
+              input.bindings
+            ),
+          }
+        )
+      );
     } catch (err) {
       handleAgentSkillError(res, err);
     }
@@ -113,7 +166,13 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
 
   router.post("/:skillId/archive", async (req: Request, res: Response) => {
     try {
-      res.json({ skill: await deps.registry.archiveSkill(req.params["skillId"] ?? "") });
+      res.json(
+        parseAgentSkillRouteResponse(
+          "POST /agent-skills/:skillId/archive",
+          AgentSkillSummaryResponseSchema,
+          { skill: await deps.registry.archiveSkill(req.params["skillId"] ?? "") }
+        )
+      );
     } catch (err) {
       handleAgentSkillError(res, err);
     }
@@ -122,7 +181,34 @@ export function createAgentSkillRouter(deps: AgentSkillRouteDeps): Router {
   return router;
 }
 
+interface AgentSkillRouteContract<T> {
+  parse(input: unknown): T;
+}
+
+class AgentSkillRouteResponseContractError extends Error {
+  constructor(route: string, cause: unknown) {
+    super(`Agent skill route response contract violated at ${route}`, { cause });
+    this.name = "AgentSkillRouteResponseContractError";
+  }
+}
+
+function parseAgentSkillRouteResponse<T>(
+  route: string,
+  contract: AgentSkillRouteContract<T>,
+  payload: unknown
+): T {
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new AgentSkillRouteResponseContractError(route, err);
+  }
+}
+
 function handleAgentSkillError(res: Response, err: unknown): void {
+  if (err instanceof AgentSkillRouteResponseContractError) {
+    res.status(500).json({ error: "Internal server error", message: err.message });
+    return;
+  }
   if (err instanceof ZodError) {
     res.status(400).json({ error: "Validation failed", issues: err.issues });
     return;
