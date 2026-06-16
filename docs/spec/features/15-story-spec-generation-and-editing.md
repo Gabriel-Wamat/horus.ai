@@ -88,7 +88,7 @@ acceptance_criteria:
 validation_protocol:
   static_checks:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
   tests:
     - "Workspace store update user story creates a new revision."

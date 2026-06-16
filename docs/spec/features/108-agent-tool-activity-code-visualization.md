@@ -60,7 +60,7 @@ business_context:
     - "Agent Flow"
     - "Future run detail view"
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Workflow events"
@@ -221,15 +221,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/web test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate React projection and rendering."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web test:guards"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend guardrails."
       success_condition: "Exit code 0."
     - command: "pnpm typecheck"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate cross-package types."
       success_condition: "Exit code 0."
   manual_checks:

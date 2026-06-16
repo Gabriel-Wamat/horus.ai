@@ -46,7 +46,7 @@ business_context:
     - "Project file change notifications"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -642,19 +642,19 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schemas and projections."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test -- agentToolLoop workflowToolEvents agentOperationalSessionRepository"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend telemetry producers and route/projection behavior."
       success_condition: "Exit code 0 or document exact test runner limitation and run equivalent targeted tests."
     - command: "pnpm --filter @u-build/web test -- frontendRegressionGuards workflowProgressRunbook"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend telemetry wiring and regression guards."
       success_condition: "Exit code 0."
     - command: "pnpm typecheck"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Catch cross-package TypeScript contract drift."
       success_condition: "Exit code 0 or exact unrelated blockers documented."
   runtime_checks:

@@ -123,7 +123,7 @@ validation:
     - command: "pnpm test"
       result: "passed, 40 tests"
   runtime_checks:
-    - "Restarted backend on http://localhost:3000 from compiled dist."
+    - "Restarted backend on http://<HORUS_PUBLIC_HOST>:3000 from compiled dist."
     - "PATCH /api/workspace/folders/:folderId/user-stories/:storyId returned the unchanged UserStory contract."
     - "Inspected disk and confirmed active.json, manifest.json, revisions/0001-user-story.json, and user-story.json."
     - "GET /api/workspace/folders/:folderId/artifacts returned revision metadata."

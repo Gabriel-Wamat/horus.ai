@@ -160,11 +160,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "node --test apps/server/test/safeCliRunner.test.mjs apps/server/test/processBrowserPreviewAdapter.test.mjs apps/server/test/previewLifecycle.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate real CLI and preview lifecycle."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend build."
       success_condition: "Exit code 0."
   runtime_checks:
@@ -187,16 +187,16 @@ implementation_log:
     - "Wired the Express app preview runtime from NoopBrowserPreviewAdapter to ProcessBrowserPreviewAdapter."
     - "Added startup readiness polling, post-readiness process stability check, stop/kill handling, and bounded process evidence."
     - "Updated PreviewRuntimeManager to persist error state and emit preview_error when adapter startup fails."
-    - "Updated seeded web preview command to run Vite on 127.0.0.1:5174 with strictPort for fresh registries."
+    - "Updated seeded web preview command to run Vite on <HORUS_PUBLIC_HOST>:5174 with strictPort for fresh registries."
     - "Added focused tests for real managed process start/stop, missing command rejection, runtime preview_error, and preserved noop adapter compatibility."
   validation:
     passed:
       - "pnpm --filter @u-build/server build"
       - "node --test apps/server/test/safeCliRunner.test.mjs apps/server/test/processBrowserPreviewAdapter.test.mjs apps/server/test/previewLifecycle.test.mjs"
-      - "Runtime smoke: backend health endpoint responded on localhost:3100 after escalated local bind permission."
+      - "Runtime smoke: backend health endpoint responded on <HORUS_PUBLIC_HOST>:3100 after escalated local bind permission."
       - "Runtime smoke: preview session create/start/stop endpoints responded and recorded timeline events."
     notes:
-      - "A pre-existing Vite process was already occupying localhost:5174 in the local environment, so the smoke was used to validate API lifecycle behavior rather than a clean port ownership scenario."
+      - "A pre-existing Vite process was already occupying <HORUS_PUBLIC_HOST>:5174 in the local environment, so the smoke was used to validate API lifecycle behavior rather than a clean port ownership scenario."
       - "The adapter now includes a post-readiness stability check to avoid declaring success when a spawned process exits immediately after an already-running preview URL responds."
 ```
 

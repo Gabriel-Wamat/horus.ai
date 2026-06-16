@@ -47,7 +47,7 @@ business_context:
     - "Tooling foundation"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node.js"
@@ -258,11 +258,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend TypeScript build."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/safeCliRunner.test.mjs apps/server/test/cliCapabilityGate.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove real CLI capability and safety gates."
       success_condition: "Exit code 0 and evidence asserts real spawned command."
   runtime_checks:

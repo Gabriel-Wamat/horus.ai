@@ -141,15 +141,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend event/evidence code."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend timeline display."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/previewRuntimeEvidence.test.mjs apps/server/test/previewLifecycle.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate evidence persistence and truncation."
       success_condition: "Exit code 0."
 ```

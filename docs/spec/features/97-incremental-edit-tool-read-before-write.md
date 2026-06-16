@@ -62,7 +62,7 @@ business_context:
     - "Agent Flow execution"
     - "Project Files editor"
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -316,15 +316,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared tool schemas."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test -- agentToolRuntimeIncrementalEdit"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate edit tool safety behavior."
       success_condition: "Exit code 0."
     - command: "pnpm typecheck"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate cross-package typing."
       success_condition: "Exit code 0."
   runtime_checks:

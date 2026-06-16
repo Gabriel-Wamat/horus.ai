@@ -47,7 +47,7 @@ expected_engineering_result: |
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   known_entrypoints:
     - "apps/server/src/application/services/AgentMemoryService.ts"
     - "apps/server/src/application/services/ChatContextAssembler.ts"

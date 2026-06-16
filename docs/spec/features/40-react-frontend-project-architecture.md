@@ -45,7 +45,7 @@ business_context:
     - "Chat-driven code changes"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "ProjectWorkspaceService"
@@ -399,15 +399,15 @@ execution_plan:
 validation_protocol:
   static_checks:
     - command: "pnpm --filter @u-build/server type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   tests:
     - command: "node --test apps/server/test/projectConstructionWorkspace.test.mjs apps/server/test/frontendChangeSetQualityGate.test.mjs apps/server/test/frontAgentNodeCodeContext.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   runtime_checks:

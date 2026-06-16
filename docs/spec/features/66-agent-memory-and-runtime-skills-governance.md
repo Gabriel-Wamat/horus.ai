@@ -60,7 +60,7 @@ business_context:
     - "Agent flow inspector"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "AgentSkillRegistryService"

@@ -46,7 +46,7 @@ business_context:
     - "Chat progress"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express"
@@ -354,23 +354,23 @@ execution_plan:
 validation_protocol:
   static_checks:
     - command: "pnpm --filter @u-build/server type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   tests:
     - command: "node --test apps/server/test/buildCuratorPrompt.test.mjs apps/server/test/projectConstructionWorkspace.test.mjs apps/server/test/previewRuntimeEvidence.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "node --test apps/server/test/horusChatTurn.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   runtime_checks:
     - command: "Start generated project preview from UI or API"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       expected: "Preview evidence appears in run flow."
 
   manual_checks:

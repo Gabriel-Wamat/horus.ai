@@ -117,7 +117,7 @@ business_context:
     - "Project/code context evidence"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -690,8 +690,8 @@ implementation_log:
       - "pnpm --filter @u-build/web type-check: passed."
       - "node --test apps/server/test/horusChatTurn.test.mjs: passed, 21 tests."
       - "pnpm --filter @u-build/web test:guards: passed, 18 tests."
-      - "curl http://127.0.0.1:3001/health: returned status ok."
-      - "curl http://127.0.0.1:5173/api/preview/projects?visibility=visible: returned real project records through the Vite proxy."
+      - "curl http://<HORUS_PUBLIC_HOST>:3001/health: returned status ok."
+      - "curl http://<HORUS_PUBLIC_HOST>:5173/api/preview/projects?visibility=visible: returned real project records through the Vite proxy."
       - "In-app browser real chat send: message 'diga exatamente: ok sem fontes' produced completed Horus reply 'ok sem fontes', composer returned to Pronto, no Failed to fetch text and no console errors."
     residual_risks:
       - "The in-app browser screenshot API timed out while capturing evidence, so this validation used DOM state, console logs and live API checks instead of a fresh screenshot artifact."
@@ -722,10 +722,10 @@ implementation_log:
       - "pnpm --filter @u-build/web type-check: passed."
       - "pnpm --filter @u-build/web build: passed."
       - "pnpm --filter @u-build/server build: passed."
-      - "PORT=3001 HOST=127.0.0.1 pnpm --filter @u-build/server dev: live backend started successfully."
-      - "HORUS_API_PROXY_TARGET=http://127.0.0.1:3001 pnpm --filter @u-build/web dev -- --host 127.0.0.1 --port 5173: live web started successfully."
-      - "HORUS_BASE_URL=http://localhost:5173 HORUS_API_BASE_URL=http://127.0.0.1:3001 HORUS_PREVIEW_SMOKE_ARTIFACT_DIR=/tmp/horus-phase5-preview-smoke pnpm preview:smoke: passed with real project project-manager-ui-generation, chat status Pronto, textarea enabled, desktop/mobile no horizontal overflow and screenshots written to /tmp/horus-phase5-preview-smoke."
-      - "In-app browser DOM check at http://localhost:5173/?mode=preview: passed; title U-Build, project project-manager-ui-generation, status Pronto, textarea enabled, hasPanel=true, hasScope=true, messageCount=6, no horizontal overflow, no console errors."
+      - "PORT=3001 HOST=<HORUS_PUBLIC_HOST> pnpm --filter @u-build/server dev: live backend started successfully."
+      - "HORUS_API_PROXY_TARGET=http://<HORUS_PUBLIC_HOST>:3001 pnpm --filter @u-build/web dev -- --host <HORUS_PUBLIC_HOST> --port 5173: live web started successfully."
+      - "HORUS_BASE_URL=http://<HORUS_PUBLIC_HOST>:5173 HORUS_API_BASE_URL=http://<HORUS_PUBLIC_HOST>:3001 HORUS_PREVIEW_SMOKE_ARTIFACT_DIR=/tmp/horus-phase5-preview-smoke pnpm preview:smoke: passed with real project project-manager-ui-generation, chat status Pronto, textarea enabled, desktop/mobile no horizontal overflow and screenshots written to /tmp/horus-phase5-preview-smoke."
+      - "In-app browser DOM check at http://<HORUS_PUBLIC_HOST>:5173/?mode=preview: passed; title U-Build, project project-manager-ui-generation, status Pronto, textarea enabled, hasPanel=true, hasScope=true, messageCount=6, no horizontal overflow, no console errors."
     residual_risks:
       - "The phase 5 browser gate proves real local Preview/chat readiness, layout and evidence surfaces, but it intentionally does not submit a live LLM chat turn because that would spend provider quota and mutate user chat history."
       - "The current smoke still depends on the local data set having at least one visible frontend project."
@@ -765,7 +765,7 @@ implementation_log:
       - "pnpm --filter @u-build/web type-check: passed."
       - "pnpm --filter @u-build/web test:guards: passed, 18 tests."
       - "pnpm --filter @u-build/web build: passed."
-      - "Browser validation at http://localhost:5173/?mode=preview: passed at 869px wide; composer status Pronto, input enabled, no horizontal overflow, no workflow/composer overlap."
+      - "Browser validation at http://<HORUS_PUBLIC_HOST>:5173/?mode=preview: passed at 869px wide; composer status Pronto, input enabled, no horizontal overflow, no workflow/composer overlap."
       - "Playwright screenshots/checks: desktop 1440x900, narrow 863x954 and mobile 390x844 passed with no horizontal overflow and enabled composer."
     residual_risks:
       - "Phase 85.5 still needs real component/browser behavior tests beyond the strengthened source guards."

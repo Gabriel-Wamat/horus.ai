@@ -51,7 +51,7 @@ business_context:
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express"
@@ -268,14 +268,14 @@ acceptance_criteria:
 validation_protocol:
   static_checks:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
   tests:
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
   manual_checks:
     - "Open modal and verify folder select/create controls."
@@ -342,5 +342,5 @@ implementation_log:
       - "pnpm type-check passed."
       - "pnpm test passed with 36 passing tests."
       - "Runtime smoke passed: backend and Vite proxy returned 3 persisted user stories for the userstories folder."
-      - "Visual validation passed in Chrome at http://localhost:5174: the screen showed TOTAL 3, the three persisted stories, and the selected story details."
+      - "Visual validation passed in Chrome at http://<HORUS_PUBLIC_HOST>:5174: the screen showed TOTAL 3, the three persisted stories, and the selected story details."
 ```

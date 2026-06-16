@@ -17,7 +17,7 @@ depends_on:
   - "ID_VISUAL.md"
 reference_repos:
   - name: "zup-sdd-agents"
-    path: "/Users/wamat/Desktop/zup-sdd-agents"
+    path: "<REFERENCE_REPO_ROOT>"
     finding: "Useful read-only project tree/file viewer patterns; no persistent editor or write endpoint in the code screen."
 ---
 
@@ -54,7 +54,7 @@ expected_engineering_result: |
 
 ```yaml
 horus_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   current_feature_surface:
     - "apps/web/src/features/project-files"
     - "apps/web/src/api/projectFilesApi.ts"

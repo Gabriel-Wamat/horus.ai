@@ -60,7 +60,7 @@ business_context:
     - "Project Files save/delete"
     - "Preview chat code changes"
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -235,15 +235,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test -- fileMutationPreflightApplier"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate canonical mutation behavior."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test -- projectCodeChangeSetApplier"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate existing applier compatibility."
       success_condition: "Exit code 0."
     - command: "pnpm typecheck"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate types."
       success_condition: "Exit code 0."
 implementation_notes:

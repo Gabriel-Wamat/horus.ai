@@ -82,7 +82,7 @@ business_context:
     - "runtime operations docs"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"

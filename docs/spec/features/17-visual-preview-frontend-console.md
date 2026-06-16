@@ -75,7 +75,7 @@ business_context:
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express API"
@@ -473,17 +473,17 @@ Good criteria are testable. Avoid vague criteria like “make it better”.
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend TypeScript and Vite build."
       success_condition: "Command exits 0."
 
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend/shared contract compatibility."
       success_condition: "Command exits 0."
 
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared/server test suite after contract changes."
       success_condition: "All tests pass."
 
@@ -816,11 +816,11 @@ implementation_log:
         result: "passed"
       - command: "pnpm test"
         result: "passed: 57 tests"
-      - command: "curl -s http://localhost:3000/health"
+      - command: "curl -s http://<HORUS_PUBLIC_HOST>:3000/health"
         result: "passed"
-      - command: "curl -s http://localhost:3000/api/preview/projects"
+      - command: "curl -s http://<HORUS_PUBLIC_HOST>:3000/api/preview/projects"
         result: "passed"
-      - command: "curl -s -o /tmp/horus_front_status.txt -w \"%{http_code}\" \"http://localhost:5174/?mode=preview\""
+      - command: "curl -s -o /tmp/horus_front_status.txt -w \"%{http_code}\" \"http://<HORUS_PUBLIC_HOST>:5174/?mode=preview\""
         result: "passed: 200"
       - command: "Chrome visual validation"
         result: "passed: Preview navigation, stopped state, start action, iframe render, SSE live state, and timeline events were visually confirmed"

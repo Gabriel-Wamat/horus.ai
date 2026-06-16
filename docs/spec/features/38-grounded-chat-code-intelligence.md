@@ -121,7 +121,7 @@ business_context:
     - "Chat memory/evidence display"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Express"

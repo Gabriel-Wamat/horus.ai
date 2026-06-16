@@ -67,7 +67,7 @@ business_context:
     - "Curator approval/apply flow"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -437,7 +437,7 @@ validation_commands:
     - "pnpm --filter @u-build/web test:guards"
     - "git diff --check"
   conditional:
-    - "Browser smoke on http://localhost:5174/?mode=preview when Preview UI behavior changes."
+    - "Browser smoke on http://<HORUS_PUBLIC_HOST>:5174/?mode=preview when Preview UI behavior changes."
     - "Postgres migration smoke only if repository storage shape changes."
 ```
 

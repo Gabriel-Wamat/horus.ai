@@ -45,7 +45,7 @@ expected_engineering_result: |
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   known_entrypoints:
     - "apps/server/src/application/ports/EmbeddingProviderPort.ts"
     - "apps/server/src/application/ports/VectorStorePort.ts"

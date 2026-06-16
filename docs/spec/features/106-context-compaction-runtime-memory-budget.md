@@ -157,11 +157,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test -- agentContextCompactor"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate compaction."
       success_condition: "Exit code 0."
     - command: "pnpm typecheck"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate types."
       success_condition: "Exit code 0."
 implementation_notes:

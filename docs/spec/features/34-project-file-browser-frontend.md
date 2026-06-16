@@ -11,7 +11,7 @@ source_skill: "agentic-sdd-spec"
 spec_version: "0.1.0"
 status: "planned"
 companion_backend_spec: "spec/features/33-project-file-browser-backend.md"
-reference_repo: "/Users/wamat/Desktop/zup-sdd-agents"
+reference_repo: "<REFERENCE_REPO_ROOT>"
 ---
 
 # 1. Original User Request
@@ -52,7 +52,7 @@ business_context:
     - "SPEC/User Stories context"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Project file browser backend from spec 33"
@@ -460,15 +460,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend TypeScript."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate production bundle."
       success_condition: "Exit code 0."
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run regression tests."
       success_condition: "Exit code 0 or documented unrelated failures with evidence."
 

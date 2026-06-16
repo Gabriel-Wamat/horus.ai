@@ -58,7 +58,7 @@ business_context:
     - "Preview chat"
     - "Runtime diagnostics"
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "AgentProfileRegistry"
@@ -209,11 +209,11 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test -- agentProfileRegistry"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate profile registry."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test -- agentToolRuntimePolicy"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate runtime enforcement."
       success_condition: "Exit code 0."
 implementation_notes:

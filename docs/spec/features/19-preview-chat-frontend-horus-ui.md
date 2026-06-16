@@ -159,8 +159,8 @@ validation:
     - "pnpm --filter @u-build/server build"
     - "pnpm --filter @u-build/web build"
     - "pnpm test"
-    - "Chrome visual validation at http://127.0.0.1:5174/?mode=preview&v=horus-chat-ui-20260526"
+    - "Chrome visual validation at http://<HORUS_PUBLIC_HOST>:5174/?mode=preview&v=horus-chat-ui-20260526"
     - "Sent a preview chat question and verified Horus answered as answer_question, not spec generation."
   notes:
-    - "The old cached Chrome tab still showed stale Vite modules; validation used a new Chrome window with 127.0.0.1 cache-buster."
+    - "The old cached Chrome tab still showed stale Vite modules; validation used a new Chrome window with <HORUS_PUBLIC_HOST> cache-buster."
 ```

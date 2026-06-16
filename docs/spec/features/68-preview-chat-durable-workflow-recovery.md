@@ -66,7 +66,7 @@ business_context:
     - "Agent flow map SSE stream"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -672,27 +672,27 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schema/type changes."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend TypeScript and integration wiring."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web test:guards"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend regression guards."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/horusChatTurn.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate chat submit behavior, context guards and workflow linkage."
       success_condition: "Exit code 0."
     - command: "node --test apps/server/test/agentExecutionLedger.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate ledger/outbox and stale recovery behavior."
       success_condition: "Exit code 0."
     - command: "git diff --check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Detect whitespace errors before handoff."
       success_condition: "Exit code 0."
   runtime_checks:

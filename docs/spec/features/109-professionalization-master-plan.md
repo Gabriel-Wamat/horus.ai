@@ -72,7 +72,7 @@ business_context:
     - "Docker/CI/release path"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -153,7 +153,7 @@ missing_work_inventory:
       title: "Operator needs recovery, run history, failed-step explanations and retry controls"
       target_spec: "114-ops-recovery-observability-control-plane"
     - id: "p2.visual-regression"
-      title: "Preview needs screenshot checks for blank page, overflow, mobile and fullscreen/open-localhost controls"
+      title: "Preview needs screenshot checks for blank page, overflow, mobile and fullscreen/open-loopback host controls"
       target_spec: "111-runtime-visual-curator-design-evaluator"
     - id: "p2.agent-capability-matrix"
       title: "Agent skills and tool profiles need product-surface capabilities, not only generic edit/build tools"
@@ -334,23 +334,23 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schemas and generated types."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/server type-check && pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend contracts and emitted JS for Node tests."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/web type-check && pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend contract consumers and production bundle."
       success_condition: "exit code 0"
     - command: "node --test apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run focused backend/runtime regression coverage."
       success_condition: "all tests pass"
     - command: "pnpm preview:smoke"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove preview UI/runtime path when the stack is available."
       success_condition: "smoke exits 0 and records visible preview evidence"
   runtime_checks:

@@ -53,7 +53,7 @@ business_context:
     - "Story/spec review UI"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -560,15 +560,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schema compatibility."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate DesignContextService, agent prompts, repositories, and workflow compatibility."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend type/build compatibility."
       success_condition: "Exit code 0."
   runtime_checks:

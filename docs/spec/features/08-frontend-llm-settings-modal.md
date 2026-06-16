@@ -64,7 +64,7 @@ business_context:
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -428,17 +428,17 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate TypeScript contracts across workspace."
       success_condition: "Exit code 0."
 
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run offline regression tests."
       success_condition: "Exit code 0 and all tests pass."
 
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate production build output."
       success_condition: "Exit code 0."
 
@@ -709,10 +709,10 @@ agent_result:
 - 2026-05-26: Added offline tests for shared LLM settings validation, start payload validation, runtime provider override, and thread-scoped runtime settings.
 - 2026-05-26: Added regression coverage confirming `StartWorkflowUseCase` forwards `llmSettings` to the orchestrator.
 - 2026-05-26: Validation passed:
-  - `pnpm type-check` from `/Users/wamat/Desktop/horus.ai`: exit 0.
-  - `pnpm test` from `/Users/wamat/Desktop/horus.ai`: exit 0; build completed and 26 tests passed.
-  - `pnpm build` from `/Users/wamat/Desktop/horus.ai`: exit 0.
-  - Chrome visual check at `http://localhost:5174/`: settings button opens modal; provider/model/API-key fields render; API-key reveal control is an eye icon; API-key autofill was reduced with `autocomplete="new-password"` and stable field names.
+  - `pnpm type-check` from `<REPOSITORY_ROOT>`: exit 0.
+  - `pnpm test` from `<REPOSITORY_ROOT>`: exit 0; build completed and 26 tests passed.
+  - `pnpm build` from `<REPOSITORY_ROOT>`: exit 0.
+  - Chrome visual check at `http://<HORUS_PUBLIC_HOST>:5174/`: settings button opens modal; provider/model/API-key fields render; API-key reveal control is an eye icon; API-key autofill was reduced with `autocomplete="new-password"` and stable field names.
 
 ## Implementation Result
 
@@ -762,21 +762,21 @@ agent_result:
     - "spec/CHANGELOG.md"
   commands_run:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "TypeScript contracts passed across workspace."
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "Build completed and 26 offline tests passed."
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: 0
       result: "Production build passed."
     - command: "pnpm dev"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       exit_code: "running"
-      result: "Backend running at http://localhost:3000 and frontend at http://localhost:5174."
+      result: "Backend running at http://<HORUS_PUBLIC_HOST>:3000 and frontend at http://<HORUS_PUBLIC_HOST>:5174."
   validation:
     passed:
       - "Settings button opens modal."

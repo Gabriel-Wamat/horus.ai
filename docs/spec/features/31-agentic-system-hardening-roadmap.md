@@ -612,7 +612,7 @@ implementation_log:
       - "node --test packages/shared/test/*.test.mjs"
       - "pnpm --filter @u-build/server db:migrate"
       - "PORT=3101 pnpm --filter @u-build/server start"
-      - "curl -sS http://127.0.0.1:3101/health"
+      - "curl -sS http://<HORUS_PUBLIC_HOST>:3101/health"
   - date: "2026-05-26"
     status: "phase_3_foundation_phase_5_6_guardrails_completed"
     summary:

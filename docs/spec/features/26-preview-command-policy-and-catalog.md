@@ -146,15 +146,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared schema compatibility."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend command policy."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/preview.test.mjs apps/server/test/previewCommandPolicy.test.mjs apps/server/test/processBrowserPreviewAdapter.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate command catalog and adapter integration."
       success_condition: "Exit code 0."
 ```

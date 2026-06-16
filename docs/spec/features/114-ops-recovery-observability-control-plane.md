@@ -219,19 +219,19 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate operator snapshot contracts."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/server type-check && pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate recovery and observability services."
       success_condition: "exit code 0"
     - command: "pnpm --filter @u-build/web type-check && pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate control plane UI."
       success_condition: "exit code 0"
     - command: "node --test apps/server/test/*.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run recovery/projection regressions."
       success_condition: "all tests pass"
   runtime_checks:

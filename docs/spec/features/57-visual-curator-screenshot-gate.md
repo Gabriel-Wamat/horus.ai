@@ -53,7 +53,7 @@ business_context:
     - "Curator approval"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -165,7 +165,7 @@ affected_entities:
       - "apps/server/test/workflowOrchestratorCodeChangeSet.test.mjs"
       - "apps/server/test/previewLifecycle.test.mjs"
     e2e:
-      - "browser smoke check against localhost preview"
+      - "browser smoke check against loopback host preview"
 ```
 
 ## 6. Integration Context Map
@@ -558,15 +558,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate visual gate, Curator integration, event lifecycle, and non-delivery behavior."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend event/status rendering."
       success_condition: "Exit code 0."
     - command: "node --test apps/web/test/frontendRegressionGuards.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate compact visual activity UX and avoid chat spam regressions."
       success_condition: "Exit code 0."
   runtime_checks:

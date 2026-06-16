@@ -57,7 +57,7 @@ expected_engineering_result: |
 ```yaml
 local_evidence:
   - "GET /api/preview/projects retornou 13 projetos visíveis no select."
-  - "12 projetos diferentes estavam registrados com previewUrl http://127.0.0.1:5184."
+  - "12 projetos diferentes estavam registrados com previewUrl http://<HORUS_PUBLIC_HOST>:5184."
   - "A porta 5184 estava ocupada por processo Vite do workspace project-manager-beautiful-ui-spec59-status-76a48be0."
   - "Selecionar project-manager-beautiful-ui-spec59-clean resultou em erro Preview URL did not become reachable before timeout."
   - "9 projetos React/Vite diferentes tinham o mesmo hash de src/App.tsx e renderizavam apenas <WelcomeScreen />."
@@ -92,7 +92,7 @@ business_context:
     - "Agent generated project registry"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -165,7 +165,7 @@ scope:
 
 | Scenario | Example Evidence | User Symptom | Required System Behavior |
 | --- | --- | --- | --- |
-| Multiple projects share one previewUrl | 12 projects registered as `http://127.0.0.1:5184` | Selecting one project loads another or errors | Detect collision, assign project-scoped port, update commandCatalog, block wrong-owner reuse |
+| Multiple projects share one previewUrl | 12 projects registered as `http://<HORUS_PUBLIC_HOST>:5184` | Selecting one project loads another or errors | Detect collision, assign project-scoped port, update commandCatalog, block wrong-owner reuse |
 | Port owned by another project | `lsof :5184` cwd = `project-manager-beautiful-ui-spec59-status` while selected = `spec59-clean` | Timeout generic | Error: "Port 5184 is serving project X, not selected project Y" |
 | Scaffold project visible | `src/App.tsx` renders only `<WelcomeScreen />` | User sees empty/default project after "generation" | Mark `health=scaffold_only`, default hidden unless admin filter enabled |
 | Logical duplicate/retry visible | `project-manager-beautiful-ui`, `retry`, `final`, `fixed`, etc. | Select has many meaningless versions | Group by family/canonical base, show only published latest valid by default |
@@ -741,23 +741,23 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared Preview contract changes."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend schemas, repositories and routes."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend API and UI consumers."
       success_condition: "Exit code 0."
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Run full regression suite after contract changes."
       success_condition: "Exit code 0 with no failed tests."
     - command: "node --test apps/server/test/previewProjectHealthService.test.mjs apps/server/test/processBrowserPreviewAdapter.test.mjs apps/server/test/frontendProjectRegistry.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Focused backend health/preview/registry validation."
       success_condition: "All tests pass."
 
@@ -766,16 +766,16 @@ validation_protocol:
       method: "curl or test helper"
       expected: "Report shows collisions, scaffold-only projects, canonical project and proposed non-destructive archive/repair actions."
     - name: "Preview list visible mode"
-      method: "curl http://localhost:5174/api/preview/projects"
+      method: "curl http://<HORUS_PUBLIC_HOST>:5174/api/preview/projects"
       expected: "Default response excludes archived/superseded/scaffold projects."
     - name: "Preview list all mode"
-      method: "curl http://localhost:5174/api/preview/projects?visibility=all&includeHealth=true"
+      method: "curl http://<HORUS_PUBLIC_HOST>:5174/api/preview/projects?visibility=all&includeHealth=true"
       expected: "Response includes archived/unhealthy projects with healthReasons."
     - name: "Wrong-owner port"
       method: "controlled test server or existing process fixture"
       expected: "Start fails with wrong_owner_port and identifies expected vs actual project."
     - name: "Canonical preview"
-      method: "Browser on http://localhost:5174/?mode=preview"
+      method: "Browser on http://<HORUS_PUBLIC_HOST>:5174/?mode=preview"
       expected: "Selecting canonical project and clicking Iniciar renders its actual UI in iframe."
 
   integration_checks:
@@ -1043,7 +1043,7 @@ validation:
   - "pnpm --filter @u-build/web test:guards: passed, 15 tests."
   - "GET /api/preview/projects?visibility=visible returned 2 curated projects instead of the 13 raw entries."
   - "GET /api/preview/projects?visibility=all returned hidden scaffold/duplicate entries with reasons and canonicalProjectId."
-  - "Starting the canonical project project-manager-beautiful-ui-spec59-status returned preview_ready at http://127.0.0.1:5184/."
+  - "Starting the canonical project project-manager-beautiful-ui-spec59-status returned preview_ready at http://<HORUS_PUBLIC_HOST>:5184/."
   - "Starting hidden project project-manager-beautiful-ui-spec59-clean returned preview_error with reason scaffold_only."
 known_limits:
   - "No destructive deletion was implemented; bad entries are dynamically hidden/superseded instead of physically removed."

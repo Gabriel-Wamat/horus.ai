@@ -62,7 +62,7 @@ business_context:
     - "Project Files code intelligence"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "TypeScript"
@@ -374,15 +374,15 @@ acceptance_criteria:
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/shared build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared retrieval contracts."
       success_condition: "Exit code 0."
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate scanner/retriever compilation."
       success_condition: "Exit code 0."
     - command: "node --test packages/shared/test/repositoryRetrieval.test.mjs apps/server/test/repositoryScanner.test.mjs apps/server/test/textRepositoryRetriever.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate safe repository access and retrieval ranking."
       success_condition: "All tests pass."
 ```

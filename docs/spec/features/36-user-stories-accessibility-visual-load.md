@@ -59,7 +59,7 @@ business_context:
     - "Acoes Gerar specs e Iniciar projeto"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Out of scope"
@@ -71,7 +71,7 @@ technical_context:
     database:
       - "Out of scope"
     infrastructure:
-      - "Local dev server on localhost:5174"
+      - "Local dev server on <HORUS_PUBLIC_HOST>:5174"
       - "Visual verification through browser/Chrome or Browser plugin when available"
   known_entrypoints:
     - "apps/web/src/App.tsx"
@@ -138,7 +138,7 @@ affected_entities:
       - "Create user-stories modal in App"
       - "Shell sidebar buttons, only if focus-visible or aria-current requires adjustment"
     routes:
-      - "User Stories default screen at http://localhost:5174/"
+      - "User Stories default screen at http://<HORUS_PUBLIC_HOST>:5174/"
   workflow:
     graph_nodes: []
     agents: []
@@ -409,7 +409,7 @@ implementation_plan:
     owner: "qa_agent"
     steps:
       - "Run pnpm --filter @u-build/web build."
-      - "Open localhost:5174 and verify the User Stories screen visually."
+      - "Open <HORUS_PUBLIC_HOST>:5174 and verify the User Stories screen visually."
       - "Use keyboard-only navigation through sidebar, Create modal, folder/story list, tabs and actions."
       - "Check modal close via Escape and focus return."
       - "Check one mobile-sized viewport if browser tooling is available."
@@ -483,19 +483,19 @@ acceptance_criteria:
 validation_protocol:
   static_checks:
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
   tests:
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: false
       run_when: "Only if implementation touches shared behavior or test suite is already passing quickly."
   runtime_checks:
-    - command: "curl -s -o /tmp/horus_web_status.txt -w \"%{http_code}\" http://localhost:5174/"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+    - command: "curl -s -o /tmp/horus_web_status.txt -w \"%{http_code}\" http://<HORUS_PUBLIC_HOST>:5174/"
+      cwd: "<REPOSITORY_ROOT>"
       expected: "200"
-    - command: "Open http://localhost:5174/ in browser"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+    - command: "Open http://<HORUS_PUBLIC_HOST>:5174/ in browser"
+      cwd: "<REPOSITORY_ROOT>"
       expected: "User Stories screen renders with no framework overlay."
   manual_checks:
     - "Keyboard: sidebar User Stories -> Criar -> modal focus loop -> Escape -> focus returns."

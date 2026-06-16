@@ -55,7 +55,7 @@ business_context:
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     frontend:
       - "React"
@@ -538,20 +538,20 @@ acceptance_criteria:
 validation_protocol:
   static_checks:
     - command: "pnpm type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "pnpm build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   tests:
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   runtime_checks:
     - command: "pnpm dev"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
       expected: "Frontend loads locally and both interfaces are accessible."
 
@@ -625,7 +625,7 @@ implementation_log:
       - "pnpm type-check passed."
       - "pnpm build passed."
       - "pnpm test passed with 29 passing tests."
-      - "curl -I http://localhost:5174/ returned HTTP 200 during local dev smoke check."
+      - "curl -I http://<HORUS_PUBLIC_HOST>:5174/ returned HTTP 200 during local dev smoke check."
   - version: "0.3.0"
     date: "2026-05-26"
     changes:

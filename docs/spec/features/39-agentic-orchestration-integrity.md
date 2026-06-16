@@ -45,7 +45,7 @@ business_context:
     - "Workflow timeline / run flow"
 
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node.js"
@@ -347,23 +347,23 @@ execution_plan:
 validation_protocol:
   static_checks:
     - command: "pnpm --filter @u-build/server type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "pnpm --filter @u-build/web type-check"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
 
   tests:
     - command: "node --test apps/server/test/workflowOrchestratorCodeChangeSet.test.mjs apps/server/test/projectConstructionWorkspace.test.mjs apps/server/test/horusChatTurn.test.mjs"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: true
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       required: false
 
   runtime_checks:
     - command: "./scripts/run_local_api.sh"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       expected: "Backend health OK and workflow APIs reachable."
 
   manual_checks:

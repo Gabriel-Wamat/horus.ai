@@ -73,7 +73,7 @@ business_context:
 
 ```yaml
 technical_context:
-  repository_root: "/Users/wamat/Desktop/horus.ai"
+  repository_root: "<REPOSITORY_ROOT>"
   relevant_stack:
     backend:
       - "Node.js"
@@ -540,17 +540,17 @@ Good criteria are testable. Avoid vague criteria like “make it better”.
 validation_protocol:
   required_commands:
     - command: "pnpm --filter @u-build/server build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate backend TypeScript compilation."
       success_condition: "Command exits 0."
 
     - command: "pnpm --filter @u-build/web build"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate frontend compatibility with shared preview contracts."
       success_condition: "Command exits 0."
 
     - command: "pnpm test"
-      cwd: "/Users/wamat/Desktop/horus.ai"
+      cwd: "<REPOSITORY_ROOT>"
       purpose: "Validate shared and server tests."
       success_condition: "All node --test suites pass."
 
