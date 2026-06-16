@@ -1,0 +1,30 @@
+[
+  {
+    "id": "02ecbdff-c9d2-4390-a0cf-78f08a112ac9",
+    "sessionId": "40fcaf9d-b480-4386-a3c0-24c995200b4b",
+    "role": "user",
+    "body": "olá",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:11:22.416Z"
+  },
+  {
+    "id": "b2fab48c-a23f-433a-bd1a-28344a7834fd",
+    "sessionId": "40fcaf9d-b480-4386-a3c0-24c995200b4b",
+    "role": "agent",
+    "body": "Olá! Como posso ajudar você hoje?",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:11:24.591Z"
+  }
+]

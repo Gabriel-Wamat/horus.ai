@@ -1,0 +1,82 @@
+{
+  "threadId": "a307e5e2-1a19-4351-b4d8-53b40b0112b7",
+  "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "workflowMode": "chat_code_change",
+  "sourceChatSessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+  "sourceChatMessageId": "e82ef894-ccb1-4628-861a-05db3d66d94c",
+  "executionBrief": "Ajuste o botão de enviar para ficar mais claro no modo executor.",
+  "userStories": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "title": "Processar empresa pelo ticker",
+      "description": "Como analista de investimentos, quero digitar o ticker de uma empresa para que o sistema descubra automaticamente o site de RI, baixe documentos e indexe tudo para consulta.",
+      "acceptanceCriteria": [
+        "Informar o ticker e iniciar o processamento com um clique",
+        "O sistema encontra o site de RI da empresa sem configuração manual",
+        "Os PDFs são baixados automaticamente",
+        "Ao final, uma mensagem confirma quantos documentos foram indexados"
+      ],
+      "priority": "high",
+      "labels": [],
+      "createdAt": "2026-05-26T10:00:00.000Z"
+    }
+  ],
+  "currentUSIndex": 0,
+  "specs": {
+    "11111111-1111-4111-8111-111111111111": {
+      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "version": 1,
+      "summary": "Spec inexistente",
+      "technicalApproach": "Nao deve criar spec via PATCH.",
+      "components": [
+        {
+          "name": "MissingSpecProbe",
+          "type": "ui",
+          "description": "Probe valida contrato de PATCH.",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [],
+      "dataModels": [],
+      "acceptanceCriteria": [
+        "Rejeita upsert"
+      ],
+      "generatedAt": "2026-05-26T10:01:00.000Z"
+    }
+  },
+  "workspaceArtifactContext": {
+    "11111111-1111-4111-8111-111111111111": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    }
+  },
+  "humanFeedback": {},
+  "agentResults": {
+    "11111111-1111-4111-8111-111111111111": [
+      {
+        "status": "success",
+        "agentName": "odin",
+        "userStoryId": "11111111-1111-4111-8111-111111111111",
+        "output": {
+          "routing": [
+            "frontAgent",
+            "qaAgent"
+          ],
+          "retryCount": 0,
+          "workflowMode": "chat_code_change",
+          "executionBrief": "Ajuste o botão de enviar para ficar mais claro no modo executor."
+        },
+        "executionTimeMs": 1,
+        "completedAt": "2026-05-26T14:43:52.098Z",
+        "chatSessionId": "6e3dc2b9-d1c6-4b7b-ac27-091e852ee4ec",
+        "sourceMessageId": "e82ef894-ccb1-4628-861a-05db3d66d94c"
+      }
+    ]
+  },
+  "status": "error",
+  "startedAt": "2026-05-26T14:43:52.087Z",
+  "completedAt": "2026-05-26T14:43:52.109Z",
+  "errorMessage": "Multiple errors occurred during superstep 2. See the \"errors\" field of this exception for more details."
+}

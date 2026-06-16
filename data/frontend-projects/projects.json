@@ -8,5 +8,71 @@
     "devCommand": "pnpm --filter @u-build/web dev",
     "previewUrl": null,
     "createdAt": "2026-05-26T00:00:00.000Z"
+  },
+  {
+    "id": "1b6105ab-c505-486a-acc1-532069e7f184",
+    "name": "nexus-ops-command-center-e2e",
+    "slug": "nexus-ops-command-center-e2e",
+    "rootPath": "project-workspaces/nexus-ops-command-center-e2e-29a21c6d",
+    "defaultRoute": "/",
+    "devCommand": "npm run dev",
+    "previewCommandId": "run-root-dev",
+    "commandCatalog": [
+      {
+        "id": "run-root-dev",
+        "label": "dev root",
+        "executable": "npm",
+        "args": ["run", "dev"],
+        "cwd": ".",
+        "env": {},
+        "timeoutMs": 120000
+      }
+    ],
+    "previewUrl": null,
+    "createdAt": "2026-05-29T20:57:42.387Z",
+    "projectKind": "generated",
+    "lifecycleStatus": "published",
+    "visibility": "visible",
+    "healthStatus": "unknown",
+    "healthReasons": [],
+    "canonicalProjectId": null,
+    "projectWorkspaceId": "1b6105ab-c505-486a-acc1-532069e7f184",
+    "appFingerprint": null,
+    "lastHealthCheckedAt": null,
+    "archivedAt": null,
+    "archivedReason": null
+  },
+  {
+    "id": "3719b801-e9d1-4644-94d1-1d61579e38a6",
+    "name": "project-manager-ui-generation",
+    "slug": "project-manager-ui-generation",
+    "rootPath": "project-workspaces/project-manager-ui-generation-7654c267",
+    "defaultRoute": "/",
+    "devCommand": "npm run dev",
+    "previewCommandId": "run-root-dev",
+    "commandCatalog": [
+      {
+        "id": "run-root-dev",
+        "label": "dev root",
+        "executable": "npm",
+        "args": ["run", "dev"],
+        "cwd": ".",
+        "env": {},
+        "timeoutMs": 120000
+      }
+    ],
+    "previewUrl": null,
+    "createdAt": "2026-05-27T18:24:21.933Z",
+    "projectKind": "generated",
+    "lifecycleStatus": "published",
+    "visibility": "visible",
+    "healthStatus": "unknown",
+    "healthReasons": [],
+    "canonicalProjectId": null,
+    "projectWorkspaceId": "3719b801-e9d1-4644-94d1-1d61579e38a6",
+    "appFingerprint": null,
+    "lastHealthCheckedAt": null,
+    "archivedAt": null,
+    "archivedReason": null
   }
 ]

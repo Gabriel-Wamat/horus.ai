@@ -1,0 +1,86 @@
+[
+  {
+    "id": "fc3071e3-7f3c-4e3b-b324-b47976447176",
+    "sessionId": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "role": "user",
+    "body": "olá",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:12:46.794Z"
+  },
+  {
+    "id": "7bfd4818-6c5a-47f9-918e-44d1f358fc36",
+    "sessionId": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "role": "agent",
+    "body": "Olá! Eu sou o Horus, o orquestrador conversacional do projeto. Estou aqui para ajudar a explicar contextos, analisar código e orientar nas próximas ações. Como posso ajudar você hoje?",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:12:48.692Z"
+  },
+  {
+    "id": "d6198963-743d-42fc-b57c-fb12fa1f1461",
+    "sessionId": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "role": "user",
+    "body": "Que tipo de coisa você sabe ou tem acesso?",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:28:50.669Z"
+  },
+  {
+    "id": "c415e4b0-9f5b-4df8-a9c5-ce675c48af21",
+    "sessionId": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "role": "agent",
+    "body": "Eu sou o Horus, o orquestrador conversacional do projeto. Tenho acesso para explicar contextos, analisar código em leitura e orientar nas próximas ações. Se precisar de algo específico, estou à disposição para ajudar!",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:28:53.485Z"
+  },
+  {
+    "id": "fa66a301-38d4-4d72-b0a3-66f1fdb0d33e",
+    "sessionId": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "role": "user",
+    "body": "Você é conectado com o orquestrador?",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:29:12.327Z"
+  },
+  {
+    "id": "67cacfbc-4563-4ae1-86db-dc3700669209",
+    "sessionId": "2aed04a3-f512-4829-9218-24010995fd8a",
+    "role": "agent",
+    "body": "Sim, eu sou o Horus, o orquestrador conversacional do projeto. Estou aqui para ajudar a explicar contextos, analisar código e orientar nas próximas ações. Se precisar de algo específico, estou à disposição!",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:29:15.029Z"
+  }
+]

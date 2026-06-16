@@ -1,0 +1,69 @@
+{
+  "threadId": "822a4543-d904-4f5d-96ad-9f71019fcceb",
+  "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "workflowMode": "standard",
+  "userStories": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "title": "Processar empresa pelo ticker",
+      "description": "Como analista de investimentos, quero digitar o ticker de uma empresa para que o sistema descubra automaticamente o site de RI, baixe documentos e indexe tudo para consulta.",
+      "acceptanceCriteria": [
+        "Informar o ticker e iniciar o processamento com um clique",
+        "O sistema encontra o site de RI da empresa sem configuração manual",
+        "Os PDFs são baixados automaticamente",
+        "Ao final, uma mensagem confirma quantos documentos foram indexados"
+      ],
+      "priority": "high",
+      "labels": [],
+      "createdAt": "2026-05-26T10:00:00.000Z"
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "title": "Fazer perguntas sobre documentos",
+      "description": "Como analista, quero perguntar sobre documentos baixados para receber respostas baseadas no conteúdo indexado.",
+      "acceptanceCriteria": [
+        "A pergunta usa apenas documentos indexados",
+        "A resposta cita o documento de origem",
+        "Quando não houver evidência, o sistema informa que não encontrou base suficiente"
+      ],
+      "priority": "medium",
+      "labels": [],
+      "createdAt": "2026-05-26T10:05:00.000Z"
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "title": "Gerar insights automáticos",
+      "description": "Como analista, quero receber insights automáticos sobre riscos, oportunidades e eventos relevantes encontrados nos documentos.",
+      "acceptanceCriteria": [
+        "O sistema gera uma lista de insights por empresa",
+        "Cada insight mostra fonte e justificativa",
+        "Insights são classificados por tipo e relevância"
+      ],
+      "priority": "medium",
+      "labels": [],
+      "createdAt": "2026-05-26T10:10:00.000Z"
+    }
+  ],
+  "currentUSIndex": 0,
+  "specs": {},
+  "workspaceArtifactContext": {
+    "11111111-1111-4111-8111-111111111111": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1"
+    },
+    "22222222-2222-4222-8222-222222222222": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1"
+    },
+    "33333333-3333-4333-8333-333333333333": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1"
+    }
+  },
+  "humanFeedback": {},
+  "agentResults": {},
+  "status": "error",
+  "startedAt": "2026-05-26T15:29:43.720Z",
+  "completedAt": "2026-05-26T15:29:43.725Z",
+  "errorMessage": "Zod field at `#/definitions/extract/properties/components/items/properties/props` uses `.optional()` without `.nullable()` which is not supported by the API. See: https://platform.openai.com/docs/guides/structured-outputs?api-mode=responses#all-fields-must-be-required"
+}

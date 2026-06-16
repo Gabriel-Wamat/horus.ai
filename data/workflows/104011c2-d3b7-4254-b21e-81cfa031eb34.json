@@ -1,0 +1,266 @@
+{
+  "threadId": "104011c2-d3b7-4254-b21e-81cfa031eb34",
+  "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "workflowMode": "spec_generation",
+  "userStories": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "title": "Processar empresa pelo ticker",
+      "description": "Como analista de investimentos, quero digitar o ticker de uma empresa para que o sistema descubra automaticamente o site de RI, baixe documentos e indexe tudo para consulta.",
+      "acceptanceCriteria": [
+        "Informar o ticker e iniciar o processamento com um clique",
+        "O sistema encontra o site de RI da empresa sem configuração manual",
+        "Os PDFs são baixados automaticamente",
+        "Ao final, uma mensagem confirma quantos documentos foram indexados"
+      ],
+      "priority": "high",
+      "labels": [],
+      "createdAt": "2026-05-26T10:00:00.000Z"
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "title": "Fazer perguntas sobre documentos",
+      "description": "Como analista, quero perguntar sobre documentos baixados para receber respostas baseadas no conteúdo indexado.",
+      "acceptanceCriteria": [
+        "A pergunta usa apenas documentos indexados",
+        "A resposta cita o documento de origem",
+        "Quando não houver evidência, o sistema informa que não encontrou base suficiente"
+      ],
+      "priority": "medium",
+      "labels": [],
+      "createdAt": "2026-05-26T10:05:00.000Z"
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "title": "Gerar insights automáticos",
+      "description": "Como analista, quero receber insights automáticos sobre riscos, oportunidades e eventos relevantes encontrados nos documentos.",
+      "acceptanceCriteria": [
+        "O sistema gera uma lista de insights por empresa",
+        "Cada insight mostra fonte e justificativa",
+        "Insights são classificados por tipo e relevância"
+      ],
+      "priority": "medium",
+      "labels": [],
+      "createdAt": "2026-05-26T10:10:00.000Z"
+    }
+  ],
+  "currentUSIndex": 3,
+  "specs": {
+    "11111111-1111-4111-8111-111111111111": {
+      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "version": 1,
+      "summary": "Spec inexistente",
+      "technicalApproach": "Nao deve criar spec via PATCH.",
+      "components": [
+        {
+          "name": "MissingSpecProbe",
+          "type": "ui",
+          "description": "Probe valida contrato de PATCH.",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [],
+      "dataModels": [],
+      "acceptanceCriteria": [
+        "Rejeita upsert"
+      ],
+      "generatedAt": "2026-05-26T10:01:00.000Z"
+    },
+    "22222222-2222-4222-8222-222222222222": {
+      "id": "2784c04e-201d-41fc-97e1-5d9e64402b14",
+      "userStoryId": "22222222-2222-4222-8222-222222222222",
+      "version": 1,
+      "summary": "Interface frontend para enviar perguntas sobre conteúdo de documentos indexados e exibir respostas citando a fonte ou informar falta de evidência.",
+      "technicalApproach": "HTML with semantic form: question input, submit button, results area with cited source link, and status area. CSS responsive layout (mobile-first) with fluid widths, high-contrast colors and focus states. Vanilla JS modules: UI controller managing DOM, Data Adapter mocking API contracts, Service calling adapter, Model for data shapes, Utility for formatting/truncation and accessibility helpers (aria-live updates). Components isolated by responsibility. All remote interactions use mock data behind a Data Adapter compatible with defined API endpoints. States covered: loading, empty (no indexed docs), error, success; responses include source citation text. Ensure keyboard access, labels, role attributes and text truncation with reveal toggles for long excerpts.",
+      "components": [
+        {
+          "name": "QuestionForm",
+          "type": "ui",
+          "description": "Campo de entrada para a pergunta e botão de envio; validação simples (não vazio); mostra estado de carregamento e erros de cliente.",
+          "dependencies": [
+            "QuestionService",
+            "A11yUtils"
+          ]
+        },
+        {
+          "name": "AnswerPane",
+          "type": "ui",
+          "description": "Mostra resultado da resposta: resumo da resposta, citação do documento de origem (título e trecho) e botão para ver mais; gerencia estados empty, loading, error, success.",
+          "dependencies": [
+            "QuestionModel",
+            "TruncateUtils"
+          ]
+        },
+        {
+          "name": "QuestionService",
+          "type": "service",
+          "description": "Orquestra chamada ao Data Adapter para buscar resposta baseada em documentos indexados; aplica regras para marcar 'sem evidência' quando confiança < limiar.",
+          "dependencies": [
+            "DataAdapter",
+            "QuestionModel"
+          ]
+        },
+        {
+          "name": "DataAdapter",
+          "type": "api",
+          "description": "Camada de adaptação que em produção chamaria /questions/search; atualmente retorna mock data conforme contrato e simula latência e erros.",
+          "dependencies": []
+        },
+        {
+          "name": "QuestionModel",
+          "type": "model",
+          "description": "Define formatos de requisição e resposta para perguntas e metadados da fonte (id, título, excerpt, confidence).",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/questions/answer",
+          "description": "Envia texto da pergunta; retorna resposta gerada com lista de evidências (documentos indexados) incluindo id, title, excerpt, confidence."
+        },
+        {
+          "method": "GET",
+          "path": "/documents/indexed",
+          "description": "Retorna lista de documentos indexados (id, title, snippet) para checagem de existência/empty state."
+        }
+      ],
+      "dataModels": [
+        "QuestionRequest { question: string }",
+        "AnswerResponse { answerText: string, evidences: Evidence[], confidence: number }",
+        "Evidence { id: string, title: string, excerpt: string, sourceUrl?: string, confidence: number }",
+        "DocumentsList { documents: { id: string, title: string, snippet: string }[] }"
+      ],
+      "acceptanceCriteria": [
+        "Dado que existe pelo menos um documento indexado (GET /documents/indexed mock retorna não vazio), quando o analista submete uma pergunta válida, o sistema mostra um estado de loading e depois exibe uma resposta (AnswerPane) contendo answerText e pelo menos uma Evidence com title e excerpt visíveis.",
+        "A resposta exibida apresenta, visivelmente e textualmente, a referência ao documento de origem (evidence.title) ao lado do trecho citado (evidence.excerpt); o texto deve ser legível e não cortado sem opção de 'ver mais'.",
+        "Se o DataAdapter retornar evidences vazia ou todas com confidence < 0.4, o QuestionService exibe mensagem explícita no AnswerPane: 'Sem evidência suficiente para responder.' (estado empty-evidence) em vez de gerar resposta.",
+        "Se não houver documentos indexados (GET /documents/indexed mock retorna empty), o UI mostra mensagem clara 'Nenhum documento indexado disponível' e desabilita envio de perguntas.",
+        "Em caso de erro de rede simulada pelo DataAdapter, o UI exibe estado de erro com mensagem recuperável e permite re-tentar envio.",
+        "Todas interações são acessíveis: o formulário tem label associado, botão com foco visível, área de resultados atualiza aria-live=\"polite\", e todos os controles são navegáveis por teclado.",
+        "Responsividade: em viewports <= 480px o layout empilha verticalmente; textos têm tamanho e quebra para evitar overflow; longos trechos são truncados com opção para expandir."
+      ],
+      "generatedAt": "2026-05-26T16:47:38.305Z"
+    },
+    "33333333-3333-4333-8333-333333333333": {
+      "id": "e70dce00-4cdd-486e-992f-df89c4ed9166",
+      "userStoryId": "33333333-3333-4333-8333-333333333333",
+      "version": 1,
+      "summary": "Painel de insights automáticos que exibe por empresa uma lista classificável de riscos, oportunidades e eventos com fonte e justificativa.",
+      "technicalApproach": "HTML semântica para lista de empresas e painel de insights; CSS responsivo com layout em duas colunas (lista de empresas / painel de insights) e regras de truncamento, contraste e foco para acessibilidade; JavaScript vanilla modular: UI components manipulam DOM, Service layer chama Data Adapter que fornece mock data conforme contratos de API; Data Adapter simula latência e estados (loading, empty, error, success); separação clara entre renderização e lógica de estado; componentes expõem estados observáveis para testes; acessibilidade: roles, aria-live para atualizações de insights, keyboard navigation e tamanhos reflow responsivos. Quando houver backend futuro, o frontend deve continuar usando o Data Adapter compatível com os endpoints descritos.",
+      "components": [
+        {
+          "name": "EmpresaList",
+          "type": "ui",
+          "description": "Lista vertical de empresas; responsabilidade por seleção de empresa visível, estado (selected, loading-empty), keyboard navigation e foco.",
+          "dependencies": []
+        },
+        {
+          "name": "InsightsPanel",
+          "type": "ui",
+          "description": "Painel que exibe lista de insights para a empresa selecionada; cada insight mostra tipo, relevância, fonte e justificativa; gerencia estados loading, empty, error e success; aplica ordenação/filtragem por tipo e relevância.",
+          "dependencies": [
+            "InsightItem",
+            "InsightsService"
+          ]
+        },
+        {
+          "name": "InsightItem",
+          "type": "ui",
+          "description": "Representação de um insight único: título curto, tipo (risco/oportunidade/evento), score de relevância, fonte (documento) e justificativa truncada com botão 'ver mais' que expande inline; expõe data-testid para QA.",
+          "dependencies": []
+        },
+        {
+          "name": "InsightsService",
+          "type": "service",
+          "description": "Camada que solicita dados ao Data Adapter, transforma para dataModels esperados, ordena por relevância e fornece métodos: fetchInsightsByCompany(companyId), filterByType(type), sortByRelevance().",
+          "dependencies": [
+            "DataAdapter"
+          ]
+        },
+        {
+          "name": "DataAdapter",
+          "type": "api",
+          "description": "Adaptador local que implementa contratos de API com mock data e simula latência/erros; substituível por cliente HTTP real no futuro mantendo a mesma interface.",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/companies/{companyId}/insights",
+          "description": "Retorna lista de insights gerados para a empresa (suportar query params: type, sort=relevance)."
+        }
+      ],
+      "dataModels": [
+        "Company: { id: string, name: string }",
+        "Insight: { id: string, companyId: string, type: 'risk'|'opportunity'|'event', relevance: number (0-100), source: { docId: string, title: string }, justification: string, createdAt: ISO8601 }",
+        "InsightsResponse: { companyId: string, insights: Insight[] }"
+      ],
+      "acceptanceCriteria": [
+        "Ao selecionar uma empresa na EmpresaList, o InsightsPanel solicita fetchInsightsByCompany(companyId) e exibe uma lista visível de insights correspondentes dentro de 2s (mock simula latência); se não houver insights, mostra mensagem de empty visível.",
+        "Cada item InsightItem exibe tipo, relevância (numérica ou barra), campo source.title visível e justificativa resumida; ao clicar 'ver mais' a justificativa completa é exibida inline.",
+        "Insights são classificáveis por tipo (filtro) e por relevância (ordenação); aplicar filtro ou ordenação atualiza a lista e mantém foco acessível e aria-live com anúncio de resultado.",
+        "Itens devem suportar estados: loading (skeleton/indicator), empty (mensagem), error (mensagem com botão retry que re-chama DataAdapter) e success (lista renderizada).",
+        "Layout responsivo: em telas <600px o painel empilha abaixo da lista; textos truncam com ellipsis e o 'ver mais' evita overflow; elementos são navegáveis por teclado e passam no check de contraste mínimo."
+      ],
+      "generatedAt": "2026-05-26T16:47:51.977Z"
+    }
+  },
+  "workspaceArtifactContext": {
+    "11111111-1111-4111-8111-111111111111": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "22222222-2222-4222-8222-222222222222": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:2784c04e-201d-41fc-97e1-5d9e64402b14:5bfda5121778"
+    },
+    "33333333-3333-4333-8333-333333333333": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:e70dce00-4cdd-486e-992f-df89c4ed9166:4328c60e8b86"
+    }
+  },
+  "humanFeedback": {},
+  "agentResults": {
+    "22222222-2222-4222-8222-222222222222": [
+      {
+        "status": "success",
+        "agentName": "spec",
+        "userStoryId": "22222222-2222-4222-8222-222222222222",
+        "output": {
+          "specId": "2784c04e-201d-41fc-97e1-5d9e64402b14",
+          "specVersion": 1
+        },
+        "executionTimeMs": 21903,
+        "completedAt": "2026-05-26T16:47:38.305Z",
+        "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+        "userStoryRevisionId": "user-story:1",
+        "specRevisionId": "spec:2784c04e-201d-41fc-97e1-5d9e64402b14:5bfda5121778"
+      }
+    ],
+    "33333333-3333-4333-8333-333333333333": [
+      {
+        "status": "success",
+        "agentName": "spec",
+        "userStoryId": "33333333-3333-4333-8333-333333333333",
+        "output": {
+          "specId": "e70dce00-4cdd-486e-992f-df89c4ed9166",
+          "specVersion": 1
+        },
+        "executionTimeMs": 13670,
+        "completedAt": "2026-05-26T16:47:51.977Z",
+        "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+        "userStoryRevisionId": "user-story:1",
+        "specRevisionId": "spec:e70dce00-4cdd-486e-992f-df89c4ed9166:4328c60e8b86"
+      }
+    ]
+  },
+  "status": "completed",
+  "startedAt": "2026-05-26T16:47:16.388Z",
+  "completedAt": "2026-05-26T16:47:51.983Z"
+}

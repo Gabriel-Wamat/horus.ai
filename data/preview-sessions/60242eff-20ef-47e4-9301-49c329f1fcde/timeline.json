@@ -1,0 +1,62 @@
+[
+  {
+    "id": "ec71ee65-1015-4cdb-aad9-0ed5407cbccc",
+    "type": "preview_created",
+    "sessionId": "60242eff-20ef-47e4-9301-49c329f1fcde",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:03:32.114Z",
+    "status": "waiting",
+    "message": "Preview session created",
+    "data": {
+      "route": "/",
+      "device": "pc"
+    }
+  },
+  {
+    "id": "712ba09c-5976-43c3-965d-c6a659cb03cf",
+    "type": "preview_started",
+    "sessionId": "60242eff-20ef-47e4-9301-49c329f1fcde",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:03:40.310Z",
+    "status": "running",
+    "message": "Preview session started",
+    "data": {
+      "previewUrl": null
+    }
+  },
+  {
+    "id": "a4ed722f-d64e-430d-a02d-feea5bbe4056",
+    "type": "device_changed",
+    "sessionId": "60242eff-20ef-47e4-9301-49c329f1fcde",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:03:40.316Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "phone"
+    }
+  },
+  {
+    "id": "f145d6b6-01e3-43f1-8473-48172047d3e9",
+    "type": "visual_instruction_drafted",
+    "sessionId": "60242eff-20ef-47e4-9301-49c329f1fcde",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:03:40.361Z",
+    "status": "running",
+    "message": "Visual instruction drafted",
+    "data": {
+      "draftId": "f9e9aeee-0c1d-4c06-8c06-f8e67ceaf8b0",
+      "mode": "visual_edits"
+    }
+  },
+  {
+    "id": "e60966cf-4e73-4322-9aa6-8b4bc5db6641",
+    "type": "preview_stopped",
+    "sessionId": "60242eff-20ef-47e4-9301-49c329f1fcde",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:03:49.697Z",
+    "status": "stopped",
+    "message": "Preview session stopped",
+    "data": {}
+  }
+]

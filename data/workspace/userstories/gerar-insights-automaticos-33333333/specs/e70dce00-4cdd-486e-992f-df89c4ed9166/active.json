@@ -1,0 +1,71 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "storyId": "33333333-3333-4333-8333-333333333333",
+  "specId": "e70dce00-4cdd-486e-992f-df89c4ed9166",
+  "activeRevision": 1,
+  "updatedAt": "2026-05-26T16:47:51.980Z",
+  "spec": {
+    "id": "e70dce00-4cdd-486e-992f-df89c4ed9166",
+    "userStoryId": "33333333-3333-4333-8333-333333333333",
+    "version": 1,
+    "summary": "Painel de insights automáticos que exibe por empresa uma lista classificável de riscos, oportunidades e eventos com fonte e justificativa.",
+    "technicalApproach": "HTML semântica para lista de empresas e painel de insights; CSS responsivo com layout em duas colunas (lista de empresas / painel de insights) e regras de truncamento, contraste e foco para acessibilidade; JavaScript vanilla modular: UI components manipulam DOM, Service layer chama Data Adapter que fornece mock data conforme contratos de API; Data Adapter simula latência e estados (loading, empty, error, success); separação clara entre renderização e lógica de estado; componentes expõem estados observáveis para testes; acessibilidade: roles, aria-live para atualizações de insights, keyboard navigation e tamanhos reflow responsivos. Quando houver backend futuro, o frontend deve continuar usando o Data Adapter compatível com os endpoints descritos.",
+    "components": [
+      {
+        "name": "EmpresaList",
+        "type": "ui",
+        "description": "Lista vertical de empresas; responsabilidade por seleção de empresa visível, estado (selected, loading-empty), keyboard navigation e foco.",
+        "dependencies": []
+      },
+      {
+        "name": "InsightsPanel",
+        "type": "ui",
+        "description": "Painel que exibe lista de insights para a empresa selecionada; cada insight mostra tipo, relevância, fonte e justificativa; gerencia estados loading, empty, error e success; aplica ordenação/filtragem por tipo e relevância.",
+        "dependencies": [
+          "InsightItem",
+          "InsightsService"
+        ]
+      },
+      {
+        "name": "InsightItem",
+        "type": "ui",
+        "description": "Representação de um insight único: título curto, tipo (risco/oportunidade/evento), score de relevância, fonte (documento) e justificativa truncada com botão 'ver mais' que expande inline; expõe data-testid para QA.",
+        "dependencies": []
+      },
+      {
+        "name": "InsightsService",
+        "type": "service",
+        "description": "Camada que solicita dados ao Data Adapter, transforma para dataModels esperados, ordena por relevância e fornece métodos: fetchInsightsByCompany(companyId), filterByType(type), sortByRelevance().",
+        "dependencies": [
+          "DataAdapter"
+        ]
+      },
+      {
+        "name": "DataAdapter",
+        "type": "api",
+        "description": "Adaptador local que implementa contratos de API com mock data e simula latência/erros; substituível por cliente HTTP real no futuro mantendo a mesma interface.",
+        "dependencies": []
+      }
+    ],
+    "apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/companies/{companyId}/insights",
+        "description": "Retorna lista de insights gerados para a empresa (suportar query params: type, sort=relevance)."
+      }
+    ],
+    "dataModels": [
+      "Company: { id: string, name: string }",
+      "Insight: { id: string, companyId: string, type: 'risk'|'opportunity'|'event', relevance: number (0-100), source: { docId: string, title: string }, justification: string, createdAt: ISO8601 }",
+      "InsightsResponse: { companyId: string, insights: Insight[] }"
+    ],
+    "acceptanceCriteria": [
+      "Ao selecionar uma empresa na EmpresaList, o InsightsPanel solicita fetchInsightsByCompany(companyId) e exibe uma lista visível de insights correspondentes dentro de 2s (mock simula latência); se não houver insights, mostra mensagem de empty visível.",
+      "Cada item InsightItem exibe tipo, relevância (numérica ou barra), campo source.title visível e justificativa resumida; ao clicar 'ver mais' a justificativa completa é exibida inline.",
+      "Insights são classificáveis por tipo (filtro) e por relevância (ordenação); aplicar filtro ou ordenação atualiza a lista e mantém foco acessível e aria-live com anúncio de resultado.",
+      "Itens devem suportar estados: loading (skeleton/indicator), empty (mensagem), error (mensagem com botão retry que re-chama DataAdapter) e success (lista renderizada).",
+      "Layout responsivo: em telas <600px o painel empilha abaixo da lista; textos truncam com ellipsis e o 'ver mais' evita overflow; elementos são navegáveis por teclado e passam no check de contraste mínimo."
+    ],
+    "generatedAt": "2026-05-26T16:47:51.977Z"
+  }
+}

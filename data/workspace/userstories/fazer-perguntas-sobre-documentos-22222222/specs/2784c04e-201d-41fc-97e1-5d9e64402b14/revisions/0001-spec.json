@@ -1,0 +1,83 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "storyId": "22222222-2222-4222-8222-222222222222",
+  "specId": "2784c04e-201d-41fc-97e1-5d9e64402b14",
+  "revision": 1,
+  "savedAt": "2026-05-26T16:47:38.311Z",
+  "spec": {
+    "id": "2784c04e-201d-41fc-97e1-5d9e64402b14",
+    "userStoryId": "22222222-2222-4222-8222-222222222222",
+    "version": 1,
+    "summary": "Interface frontend para enviar perguntas sobre conteúdo de documentos indexados e exibir respostas citando a fonte ou informar falta de evidência.",
+    "technicalApproach": "HTML with semantic form: question input, submit button, results area with cited source link, and status area. CSS responsive layout (mobile-first) with fluid widths, high-contrast colors and focus states. Vanilla JS modules: UI controller managing DOM, Data Adapter mocking API contracts, Service calling adapter, Model for data shapes, Utility for formatting/truncation and accessibility helpers (aria-live updates). Components isolated by responsibility. All remote interactions use mock data behind a Data Adapter compatible with defined API endpoints. States covered: loading, empty (no indexed docs), error, success; responses include source citation text. Ensure keyboard access, labels, role attributes and text truncation with reveal toggles for long excerpts.",
+    "components": [
+      {
+        "name": "QuestionForm",
+        "type": "ui",
+        "description": "Campo de entrada para a pergunta e botão de envio; validação simples (não vazio); mostra estado de carregamento e erros de cliente.",
+        "dependencies": [
+          "QuestionService",
+          "A11yUtils"
+        ]
+      },
+      {
+        "name": "AnswerPane",
+        "type": "ui",
+        "description": "Mostra resultado da resposta: resumo da resposta, citação do documento de origem (título e trecho) e botão para ver mais; gerencia estados empty, loading, error, success.",
+        "dependencies": [
+          "QuestionModel",
+          "TruncateUtils"
+        ]
+      },
+      {
+        "name": "QuestionService",
+        "type": "service",
+        "description": "Orquestra chamada ao Data Adapter para buscar resposta baseada em documentos indexados; aplica regras para marcar 'sem evidência' quando confiança < limiar.",
+        "dependencies": [
+          "DataAdapter",
+          "QuestionModel"
+        ]
+      },
+      {
+        "name": "DataAdapter",
+        "type": "api",
+        "description": "Camada de adaptação que em produção chamaria /questions/search; atualmente retorna mock data conforme contrato e simula latência e erros.",
+        "dependencies": []
+      },
+      {
+        "name": "QuestionModel",
+        "type": "model",
+        "description": "Define formatos de requisição e resposta para perguntas e metadados da fonte (id, título, excerpt, confidence).",
+        "dependencies": []
+      }
+    ],
+    "apiEndpoints": [
+      {
+        "method": "POST",
+        "path": "/questions/answer",
+        "description": "Envia texto da pergunta; retorna resposta gerada com lista de evidências (documentos indexados) incluindo id, title, excerpt, confidence."
+      },
+      {
+        "method": "GET",
+        "path": "/documents/indexed",
+        "description": "Retorna lista de documentos indexados (id, title, snippet) para checagem de existência/empty state."
+      }
+    ],
+    "dataModels": [
+      "QuestionRequest { question: string }",
+      "AnswerResponse { answerText: string, evidences: Evidence[], confidence: number }",
+      "Evidence { id: string, title: string, excerpt: string, sourceUrl?: string, confidence: number }",
+      "DocumentsList { documents: { id: string, title: string, snippet: string }[] }"
+    ],
+    "acceptanceCriteria": [
+      "Dado que existe pelo menos um documento indexado (GET /documents/indexed mock retorna não vazio), quando o analista submete uma pergunta válida, o sistema mostra um estado de loading e depois exibe uma resposta (AnswerPane) contendo answerText e pelo menos uma Evidence com title e excerpt visíveis.",
+      "A resposta exibida apresenta, visivelmente e textualmente, a referência ao documento de origem (evidence.title) ao lado do trecho citado (evidence.excerpt); o texto deve ser legível e não cortado sem opção de 'ver mais'.",
+      "Se o DataAdapter retornar evidences vazia ou todas com confidence < 0.4, o QuestionService exibe mensagem explícita no AnswerPane: 'Sem evidência suficiente para responder.' (estado empty-evidence) em vez de gerar resposta.",
+      "Se não houver documentos indexados (GET /documents/indexed mock retorna empty), o UI mostra mensagem clara 'Nenhum documento indexado disponível' e desabilita envio de perguntas.",
+      "Em caso de erro de rede simulada pelo DataAdapter, o UI exibe estado de erro com mensagem recuperável e permite re-tentar envio.",
+      "Todas interações são acessíveis: o formulário tem label associado, botão com foco visível, área de resultados atualiza aria-live=\"polite\", e todos os controles são navegáveis por teclado.",
+      "Responsividade: em viewports <= 480px o layout empilha verticalmente; textos têm tamanho e quebra para evitar overflow; longos trechos são truncados com opção para expandir."
+    ],
+    "generatedAt": "2026-05-26T16:47:38.305Z"
+  }
+}
