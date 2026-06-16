@@ -1,13 +1,21 @@
-import type {
-  AgentProfile,
-  AgentSkillDetail,
-  AgentSkillListQuery,
-  AgentSkillSummary,
-  AgentSkillValidationReport,
-  CreateAgentSkillInput,
-  PublishAgentSkillInput,
-  UpdateAgentSkillBindingsInput,
-  ValidateAgentSkillInput,
+import { z } from "zod";
+import {
+  AgentProfileSchema,
+  AgentSkillBindingSchema,
+  AgentSkillDetailSchema,
+  AgentSkillFileSchema,
+  AgentSkillRevisionSchema,
+  AgentSkillSummarySchema,
+  AgentSkillValidationReportSchema,
+  type AgentProfile,
+  type AgentSkillDetail,
+  type AgentSkillListQuery,
+  type AgentSkillSummary,
+  type AgentSkillValidationReport,
+  type CreateAgentSkillInput,
+  type PublishAgentSkillInput,
+  type UpdateAgentSkillBindingsInput,
+  type ValidateAgentSkillInput,
 } from "@u-build/shared";
 
 const BASE = "/api/agent-skills";
@@ -42,6 +50,41 @@ export interface PublishAgentSkillResponse {
   bindings: AgentSkillDetail["bindings"];
 }
 
+const AgentSkillsListResponseSchema = z.object({
+  skills: z.array(AgentSkillSummarySchema),
+});
+
+const AgentProfilesResponseSchema = z.object({
+  profiles: z.array(AgentProfileSchema),
+});
+
+const ValidateAgentSkillResponseSchema = z.object({
+  validationReport: AgentSkillValidationReportSchema,
+  contentHash: z.string().trim().min(32),
+});
+
+const CreateAgentSkillResponseSchema = z.object({
+  skill: AgentSkillSummarySchema,
+  draftRevision: AgentSkillRevisionSchema,
+  files: z.array(AgentSkillFileSchema),
+  validationReport: AgentSkillValidationReportSchema,
+  bindings: z.array(AgentSkillBindingSchema),
+});
+
+const PublishAgentSkillResponseSchema = z.object({
+  skill: AgentSkillSummarySchema,
+  activeRevision: AgentSkillRevisionSchema,
+  bindings: z.array(AgentSkillBindingSchema),
+});
+
+const AgentSkillBindingsResponseSchema = z.object({
+  bindings: z.array(AgentSkillBindingSchema),
+});
+
+const AgentSkillSummaryResponseSchema = z.object({
+  skill: AgentSkillSummarySchema,
+});
+
 async function requireOk(response: Response, action: string): Promise<void> {
   if (response.ok) return;
   const contentType = response.headers.get("content-type") ?? "";
@@ -62,6 +105,48 @@ async function requireOk(response: Response, action: string): Promise<void> {
     response.status,
     body
   );
+}
+
+interface AgentSkillsApiContract<T> {
+  parse(input: unknown): T;
+}
+
+async function readAgentSkillsJson<T>(
+  response: Response,
+  action: string,
+  contract: AgentSkillsApiContract<T>
+): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new AgentSkillsApiError(
+      `${action} falhou: contrato inválido da API, esperado application/json e recebido ${
+        contentType || "content-type ausente"
+      }.`,
+      response.status,
+      null
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (err) {
+    throw new AgentSkillsApiError(
+      `${action} falhou: JSON inválido retornado pela API (${errorMessage(err)}).`,
+      response.status,
+      null
+    );
+  }
+
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new AgentSkillsApiError(
+      `${action} falhou: payload fora do contrato esperado (${errorMessage(err)}).`,
+      response.status,
+      payload
+    );
+  }
 }
 
 function appendOptionalParam(
@@ -87,21 +172,29 @@ export const agentSkillsApi = {
       cache: "no-store",
     });
     await requireOk(response, "Listar skills");
-    const body = (await response.json()) as { skills: AgentSkillSummary[] };
+    const body = await readAgentSkillsJson(
+      response,
+      "Listar skills",
+      AgentSkillsListResponseSchema
+    );
     return body.skills;
   },
 
   listAgentProfiles: async (): Promise<AgentProfile[]> => {
     const response = await fetch(`${BASE}/agent-profiles`, { cache: "no-store" });
     await requireOk(response, "Listar agentes");
-    const body = (await response.json()) as { profiles: AgentProfile[] };
+    const body = await readAgentSkillsJson(
+      response,
+      "Listar agentes",
+      AgentProfilesResponseSchema
+    );
     return body.profiles;
   },
 
   getSkill: async (skillId: string): Promise<AgentSkillDetail> => {
     const response = await fetch(`${BASE}/${skillId}`, { cache: "no-store" });
     await requireOk(response, "Carregar skill");
-    return response.json() as Promise<AgentSkillDetail>;
+    return readAgentSkillsJson(response, "Carregar skill", AgentSkillDetailSchema);
   },
 
   validateDraft: async (
@@ -113,7 +206,11 @@ export const agentSkillsApi = {
       body: JSON.stringify(input),
     });
     await requireOk(response, "Validar skill");
-    return response.json() as Promise<ValidateAgentSkillResponse>;
+    return readAgentSkillsJson(
+      response,
+      "Validar skill",
+      ValidateAgentSkillResponseSchema
+    );
   },
 
   createSkill: async (
@@ -125,7 +222,7 @@ export const agentSkillsApi = {
       body: JSON.stringify(input),
     });
     await requireOk(response, "Criar skill");
-    return response.json() as Promise<CreateAgentSkillResponse>;
+    return readAgentSkillsJson(response, "Criar skill", CreateAgentSkillResponseSchema);
   },
 
   publishRevision: async (
@@ -142,7 +239,11 @@ export const agentSkillsApi = {
       }
     );
     await requireOk(response, "Publicar skill");
-    return response.json() as Promise<PublishAgentSkillResponse>;
+    return readAgentSkillsJson(
+      response,
+      "Publicar skill",
+      PublishAgentSkillResponseSchema
+    );
   },
 
   updateBindings: async (
@@ -155,7 +256,11 @@ export const agentSkillsApi = {
       body: JSON.stringify(input),
     });
     await requireOk(response, "Atualizar agentes");
-    return response.json() as Promise<{ bindings: AgentSkillDetail["bindings"] }>;
+    return readAgentSkillsJson(
+      response,
+      "Atualizar agentes",
+      AgentSkillBindingsResponseSchema
+    );
   },
 
   archiveSkill: async (skillId: string): Promise<{ skill: AgentSkillSummary }> => {
@@ -163,6 +268,14 @@ export const agentSkillsApi = {
       method: "POST",
     });
     await requireOk(response, "Arquivar skill");
-    return response.json() as Promise<{ skill: AgentSkillSummary }>;
+    return readAgentSkillsJson(
+      response,
+      "Arquivar skill",
+      AgentSkillSummaryResponseSchema
+    );
   },
 } as const;
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
