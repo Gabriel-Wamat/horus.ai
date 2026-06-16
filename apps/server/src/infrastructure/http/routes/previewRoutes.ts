@@ -1,10 +1,12 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 import {
   CreatePreviewSessionInputSchema,
   CreateVisualInstructionDraftInputSchema,
   SetPreviewDeviceInputSchema,
+  type PreviewSession,
   type IPreviewEventStream,
 } from "@u-build/shared";
 import type { ListFrontendProjectsUseCase } from "../../../application/usecases/ListFrontendProjectsUseCase.js";
@@ -122,8 +124,9 @@ export function createPreviewRouter(deps: PreviewRouteDeps): Router {
 
   router.get("/events/:sessionId", async (req: Request, res: Response) => {
     const sessionId = req.params["sessionId"] ?? "";
+    let session: PreviewSession;
     try {
-      await deps.getSessionUseCase.execute(sessionId);
+      session = await deps.getSessionUseCase.execute(sessionId);
     } catch (err) {
       handlePreviewRouteError(err, res);
       return;
@@ -134,12 +137,19 @@ export function createPreviewRouter(deps: PreviewRouteDeps): Router {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
 
-    const unsubscribe = deps.eventStream.subscribe(sessionId, (event) => {
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    });
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = deps.eventStream.subscribe(sessionId, (event) => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      });
+    } catch (err) {
+      writePreviewStreamError(res, session, err);
+      res.end();
+      return;
+    }
 
     req.on("close", () => {
-      unsubscribe();
+      unsubscribe?.();
       res.end();
     });
   });
@@ -175,4 +185,25 @@ function handlePreviewRouteError(err: unknown, res: Response): void {
     return;
   }
   res.status(500).json({ error: "Internal server error" });
+}
+
+function writePreviewStreamError(
+  res: Response,
+  session: PreviewSession,
+  err: unknown
+): void {
+  res.write(
+    `data: ${JSON.stringify({
+      id: randomUUID(),
+      type: "preview_error",
+      sessionId: session.id,
+      projectId: session.projectId,
+      timestamp: new Date().toISOString(),
+      status: "error",
+      message: err instanceof Error ? err.message : String(err),
+      data: {
+        errorCode: "preview_event_stream_subscribe_failed",
+      },
+    })}\n\n`
+  );
 }

@@ -14,6 +14,7 @@ import { createLlmSettingsRouter } from "../dist/infrastructure/http/routes/llmS
 import { createProjectConstructionRouter } from "../dist/infrastructure/http/routes/projectConstructionRoutes.js";
 import { createAgentRunFlowRouter } from "../dist/infrastructure/http/routes/agentRunFlowRoutes.js";
 import { createEventRouter } from "../dist/infrastructure/http/routes/eventRoutes.js";
+import { createPreviewRouter } from "../dist/infrastructure/http/routes/previewRoutes.js";
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
@@ -270,6 +271,189 @@ test("workflow event stream rejects missing threads before opening SSE", async (
   }
 });
 
+test("workflow event stream emits structured error when subscription fails after opening", async () => {
+  const threadId = "11111111-1111-4111-8111-111111111111";
+  const app = express();
+  const storage = {
+    async load() {
+      return { threadId };
+    },
+  };
+  const events = {
+    subscribe() {
+      throw new Error("workflow event bus unavailable");
+    },
+  };
+  app.use("/api/events", createEventRouter(events, { storage }));
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const response = await fetch(`${baseUrl}/api/events/${threadId}`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    const event = readFirstSseData(await response.text());
+
+    assert.equal(response.status, 200);
+    assert.equal(
+      (response.headers.get("content-type") ?? "").includes("text/event-stream"),
+      true
+    );
+    assert.deepEqual(
+      {
+        type: event.type,
+        threadId: event.threadId,
+        message: event.message,
+      },
+      {
+        type: "error",
+        threadId,
+        message: "workflow event bus unavailable",
+      }
+    );
+  } finally {
+    await close(server);
+  }
+});
+
+test("agent run streams emit structured failures when live subscription fails", async () => {
+  const threadId = "11111111-1111-4111-8111-111111111111";
+  const snapshotBuilder = {
+    async hasRun() {
+      return true;
+    },
+    async getRun() {
+      return { threadId };
+    },
+    async listEvents() {
+      return [];
+    },
+    async listEventsAfter() {
+      return [];
+    },
+    async listFileOperations() {
+      return [];
+    },
+    async listFileOperationsAfter() {
+      return [];
+    },
+  };
+  const eventStream = {
+    subscribe() {
+      throw new Error("agent run event bus unavailable");
+    },
+  };
+  const app = express();
+  app.use(
+    "/api/agent-runs",
+    createAgentRunFlowRouter({ snapshotBuilder, eventStream })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const eventResponse = await fetch(
+      `${baseUrl}/api/agent-runs/${threadId}/events/stream?since_sequence=0`,
+      { headers: { Accept: "text/event-stream" } }
+    );
+    const event = readFirstSseData(await eventResponse.text());
+
+    assert.equal(eventResponse.status, 200);
+    assert.equal(event.type, "error");
+    assert.equal(event.threadId, threadId);
+    assert.equal(event.sequence, 1);
+    assert.equal(event.errorMessage, "agent run event bus unavailable");
+
+    const fileOperationResponse = await fetch(
+      `${baseUrl}/api/agent-runs/${threadId}/file-operations/stream?since_sequence=0`,
+      { headers: { Accept: "text/event-stream" } }
+    );
+    const operation = readFirstSseData(await fileOperationResponse.text());
+
+    assert.equal(fileOperationResponse.status, 200);
+    assert.equal(operation.threadId, threadId);
+    assert.equal(operation.sequence, 1);
+    assert.equal(operation.path, "<agent-run-file-operation-stream>");
+    assert.equal(operation.operationType, "unknown");
+    assert.equal(operation.status, "failed");
+    assert.equal(operation.errorMessage, "agent run event bus unavailable");
+  } finally {
+    await close(server);
+  }
+});
+
+test("preview event stream emits structured failure when subscription dependency fails", async () => {
+  const session = {
+    id: "11111111-1111-4111-8111-111111111111",
+    projectId: "22222222-2222-4222-8222-222222222222",
+    status: "running",
+    route: "/",
+    device: { name: "pc", width: 1440, height: 900 },
+    previewUrl: `http://${loopbackHost}:5173`,
+    processId: null,
+    startedAt: null,
+    stoppedAt: null,
+    updatedAt: "2026-06-09T12:00:00.000Z",
+    errorMessage: null,
+  };
+  const app = express();
+  app.use(
+    "/api/preview",
+    createPreviewRouter({
+      listProjectsUseCase: {},
+      createSessionUseCase: {},
+      startSessionUseCase: {},
+      stopSessionUseCase: {},
+      reloadSessionUseCase: {},
+      getSessionUseCase: {
+        async execute() {
+          return session;
+        },
+      },
+      setDeviceUseCase: {},
+      listTimelineUseCase: {},
+      createInstructionDraftUseCase: {},
+      eventStream: {
+        subscribe() {
+          throw new Error("preview event bus unavailable");
+        },
+      },
+    })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const response = await fetch(`${baseUrl}/api/preview/events/${session.id}`, {
+      headers: { Accept: "text/event-stream" },
+    });
+    const event = readFirstSseData(await response.text());
+
+    assert.equal(response.status, 200);
+    assert.equal(
+      (response.headers.get("content-type") ?? "").includes("text/event-stream"),
+      true
+    );
+    assert.equal(event.type, "preview_error");
+    assert.equal(event.sessionId, session.id);
+    assert.equal(event.projectId, session.projectId);
+    assert.equal(event.status, "error");
+    assert.equal(event.message, "preview event bus unavailable");
+    assert.equal(
+      event.data.errorCode,
+      "preview_event_stream_subscribe_failed"
+    );
+  } finally {
+    await close(server);
+  }
+});
+
 test("HTTP route handlers keep caught errors visible to route contracts", async () => {
   const violations = [];
   for (const file of httpRouteFiles) {
@@ -282,6 +466,14 @@ test("HTTP route handlers keep caught errors visible to route contracts", async 
 
 function hasJsonContentType(response) {
   return (response.headers.get("content-type") ?? "").includes("application/json");
+}
+
+function readFirstSseData(text) {
+  const dataLine = text
+    .split("\n")
+    .find((line) => line.startsWith("data: "));
+  assert.ok(dataLine, `Expected SSE data line in ${JSON.stringify(text)}`);
+  return JSON.parse(dataLine.slice("data: ".length));
 }
 
 function listen(app) {
