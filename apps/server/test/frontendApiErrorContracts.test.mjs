@@ -10,6 +10,7 @@ const clientFiles = [
   "apps/web/src/api/horusChatApi.ts",
   "apps/web/src/api/projectFilesApi.ts",
   "apps/web/src/api/agentSkillsApi.ts",
+  "apps/web/src/hooks/useSseStream.ts",
   "apps/web/src/features/agent-flow-map/utils/agentFlowApi.ts",
   "apps/web/src/features/agent-flow-map/hooks/useRunFlowEvents.ts",
   "apps/web/src/features/agent-flow-map/hooks/useRunFileOperations.ts",
@@ -39,6 +40,7 @@ const forbiddenFragments = [
   "Ignoring invalid file operation payload",
   "if (parsed) onEvent(parsed);",
   "if (parsed) onOperation(parsed);",
+  "Failed to parse event:",
 ];
 
 test("frontend API clients do not silently coerce HTTP failures to empty values", async () => {

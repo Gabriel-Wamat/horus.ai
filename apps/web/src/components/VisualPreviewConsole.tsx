@@ -51,9 +51,12 @@ export function VisualPreviewConsole({
     [projects, selectedProjectId]
   );
 
-  const { events: previewEvents, latestEvent, isConnected } = usePreviewEvents(
-    session?.id ?? null
-  );
+  const {
+    events: previewEvents,
+    latestEvent,
+    isConnected,
+    error: previewStreamError,
+  } = usePreviewEvents(session?.id ?? null);
 
   const handlePreviewSessionResolved = useCallback(
     (nextSession: PreviewSession, events: PreviewEvent[]): void => {
@@ -193,8 +196,14 @@ export function VisualPreviewConsole({
 
   useEffect(() => {
     if (previewEvents.length === 0) return;
+    setError(null);
     setTimeline((current) => mergeEvents(current, previewEvents));
   }, [previewEvents]);
+
+  useEffect(() => {
+    if (!previewStreamError) return;
+    setError(previewStreamError);
+  }, [previewStreamError]);
 
   useEffect(() => {
     if (!latestEvent || !session) return;

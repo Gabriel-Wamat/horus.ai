@@ -215,6 +215,7 @@ export function App(): JSX.Element {
           threadId={workflow.threadId}
           events={workflow.events}
           isConnected={workflow.isConnected}
+          streamError={workflow.streamError}
         />
       )}
       {workflow.pendingRetry && workflow.threadId && (

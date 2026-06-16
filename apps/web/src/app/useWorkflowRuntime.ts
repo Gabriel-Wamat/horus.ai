@@ -65,6 +65,7 @@ export function useWorkflowRuntime({
   isStartingWorkflow: boolean;
   events: ReturnType<typeof useEventStream>["events"];
   isConnected: boolean;
+  streamError: string | null;
   handleStart: (
     stories: UserStory[],
     workspaceFolderId: string,
@@ -86,7 +87,7 @@ export function useWorkflowRuntime({
   const [pendingRetry, setPendingRetry] = useState<RetryApprovalPayload | null>(null);
   const [isRetrySubmitting, setIsRetrySubmitting] = useState(false);
   const [isStartingWorkflow, setIsStartingWorkflow] = useState(false);
-  const { events, isConnected } = useEventStream(threadId);
+  const { events, isConnected, error: streamError } = useEventStream(threadId);
   const autoApproveBuildRef = useRef(false);
   const autoApprovedSpecIdsRef = useRef(new Set<string>());
   const processedCountRef = useRef(0);
@@ -314,6 +315,7 @@ export function useWorkflowRuntime({
     isStartingWorkflow,
     events,
     isConnected,
+    streamError,
     handleStart,
     handleSpecApproval,
     handleRetryDecision,
