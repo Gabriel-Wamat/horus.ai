@@ -1,8 +1,10 @@
 import { z } from "zod";
 import {
   FrontendProjectSchema,
-  LlmProviderCapabilitySchema,
-  LlmSettingsProfileSchema,
+  LlmProvidersResponseSchema,
+  LlmSettingsNullableProfileResponseSchema,
+  LlmSettingsProfileResponseSchema,
+  LlmSettingsTestResponseSchema,
   PreviewSessionSchema,
   ProjectConstructionRunSchema,
   ProjectWorkspaceSchema,
@@ -97,24 +99,6 @@ const StartProjectConstructionResponseSchema = z.object({
   frontendProject: FrontendProjectSchema.nullable(),
   previewSession: PreviewSessionSchema.nullable(),
   reusedProjectWorkspace: z.boolean().optional(),
-});
-
-const LlmProvidersResponseSchema = z.object({
-  providers: z.array(LlmProviderCapabilitySchema),
-});
-
-const LlmSettingsNullableProfileResponseSchema = z.object({
-  profile: LlmSettingsProfileSchema.nullable(),
-});
-
-const LlmSettingsProfileResponseSchema = z.object({
-  profile: LlmSettingsProfileSchema,
-});
-
-const LlmSettingsTestResponseSchema = z.object({
-  ok: z.boolean(),
-  message: z.string().trim().min(1),
-  testedAt: z.string().datetime(),
 });
 
 async function requireOk(res: Response, action: string): Promise<void> {

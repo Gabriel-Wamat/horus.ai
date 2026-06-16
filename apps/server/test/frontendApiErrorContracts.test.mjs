@@ -479,22 +479,64 @@ test("workflow API validates LLM settings response contracts before exposing sta
     join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
     "utf8"
   );
+  const sharedSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/entities/LlmSettings.ts"),
+    "utf8"
+  );
+  const routeSource = await readFile(
+    join(
+      repositoryRoot,
+      "apps/server/src/infrastructure/http/routes/llmSettingsRoutes.ts"
+    ),
+    "utf8"
+  );
 
   const forbiddenLlmSettingsCasts = [
     "return res.json() as Promise<{ providers: LlmProviderCapability[] }>",
     "const body = (await res.json()) as { profile: LlmSettingsProfile | null }",
     "const body = (await res.json()) as { profile: LlmSettingsProfile }",
     "return res.json() as Promise<{ ok: boolean; message: string; testedAt: string }>",
+    "const LlmProvidersResponseSchema = z.object",
+    "const LlmSettingsNullableProfileResponseSchema = z.object",
+    "const LlmSettingsProfileResponseSchema = z.object",
+    "const LlmSettingsTestResponseSchema = z.object",
+    "LlmProviderCapabilitySchema,",
+    "LlmSettingsProfileSchema,",
   ];
 
   for (const fragment of forbiddenLlmSettingsCasts) {
     assert.equal(source.includes(fragment), false, fragment);
   }
 
-  assert.match(source, /LlmProviderCapabilitySchema/);
-  assert.match(source, /LlmSettingsProfileSchema/);
   assert.match(source, /LlmProvidersResponseSchema/);
   assert.match(source, /LlmSettingsNullableProfileResponseSchema/);
   assert.match(source, /LlmSettingsProfileResponseSchema/);
   assert.match(source, /LlmSettingsTestResponseSchema/);
+  assert.match(sharedSource, /LlmProvidersResponseSchema/);
+  assert.match(sharedSource, /LlmSettingsNullableProfileResponseSchema/);
+  assert.match(sharedSource, /LlmSettingsProfileResponseSchema/);
+  assert.match(sharedSource, /LlmSettingsTestResponseSchema/);
+  assert.match(sharedSource, /LlmSettingsResolveResponseSchema/);
+  assert.match(
+    routeSource,
+    /parseLlmSettingsRouteResponse\("GET \/llm\/providers", LlmProvidersResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseLlmSettingsRouteResponse\(\s*"GET \/llm\/settings",\s*LlmSettingsNullableProfileResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseLlmSettingsRouteResponse\(\s*"PUT \/llm\/settings",\s*LlmSettingsProfileResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseLlmSettingsRouteResponse\(\s*"POST \/llm\/settings\/test",\s*LlmSettingsTestResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseLlmSettingsRouteResponse\(\s*"POST \/llm\/settings\/resolve",\s*LlmSettingsResolveResponseSchema/
+  );
+  assert.match(routeSource, /contract\.parse\(payload\)/);
+  assert.match(routeSource, /LlmSettingsRouteResponseContractError/);
 });
