@@ -29,10 +29,12 @@ export function VisualPreviewConsole({
   workspaceFolderId,
   userStoryId,
   workflowState,
+  previewSessionId,
 }: {
   readonly workspaceFolderId: string | undefined;
   readonly userStoryId: string | null;
   readonly workflowState?: WorkflowState;
+  readonly previewSessionId?: string | null;
 }): JSX.Element {
   const [projects, setProjects] = useState<FrontendProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -124,14 +126,23 @@ export function VisualPreviewConsole({
   }, [previewEvents]);
 
   useEffect(() => {
+    if (!previewSessionId || session) return;
+    void previewApi
+      .getSession(previewSessionId)
+      .then((loaded) => {
+        setSession(loaded);
+        setSelectedProjectId((current) => current || loaded.projectId);
+      })
+      .catch(() => undefined);
+  }, [previewSessionId]);
+
+  useEffect(() => {
     if (!latestEvent || !session) return;
     void previewApi
       .getSession(session.id)
       .then(setSession)
       .catch(() => undefined);
   }, [latestEvent, session?.id]);
-
-  const [selectedWorkflowStoryId, setSelectedWorkflowStoryId] = useState("");
 
   const workflowHtmlArtifacts = useMemo(() => {
     if (!workflowState) return [];
@@ -178,81 +189,10 @@ export function VisualPreviewConsole({
     );
   }
 
-  if (workflowHtmlArtifacts.length > 0 && !session) {
-    const activeId =
-      selectedWorkflowStoryId || (workflowHtmlArtifacts[0]?.storyId ?? "");
-    const activeArtifact =
-      workflowHtmlArtifacts.find((a) => a.storyId === activeId) ??
-      workflowHtmlArtifacts[0];
-
-    return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "calc(100vh - 82px)",
-          overflow: "hidden",
-          background: "var(--bg, #0b0e0c)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "8px 16px",
-            borderBottom: "1px solid var(--bd, #262c30)",
-            background: "var(--s1, #14181a)",
-            minHeight: 44,
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "var(--t3, #6f7a80)",
-              flexShrink: 0,
-            }}
-          >
-            Preview HTML
-          </span>
-          {workflowHtmlArtifacts.length > 1 ? (
-            <div style={{ display: "flex", gap: 6, overflow: "hidden" }}>
-              {workflowHtmlArtifacts.map((a) => (
-                <button
-                  key={a.storyId}
-                  type="button"
-                  onClick={() => setSelectedWorkflowStoryId(a.storyId)}
-                  className={`inspector-tab${activeId === a.storyId ? " active" : ""}`}
-                >
-                  {a.storyTitle.length > 40
-                    ? `${a.storyTitle.slice(0, 40)}…`
-                    : a.storyTitle}
-                </button>
-              ))}
-            </div>
-          ) : (
-            activeArtifact && (
-              <span style={{ fontSize: 12, color: "var(--t2, #a4adb3)" }}>
-                {activeArtifact.storyTitle}
-              </span>
-            )
-          )}
-        </div>
-        {activeArtifact && (
-          <iframe
-            srcDoc={activeArtifact.html}
-            title={`Preview: ${activeArtifact.storyTitle}`}
-            sandbox="allow-scripts"
-            style={{ flex: 1, width: "100%", border: "none", background: "#fff" }}
-          />
-        )}
-      </div>
-    );
-  }
+  const activeWorkflowArtifact = workflowHtmlArtifacts[0];
+  const sessionIsRunning = session?.status === "running";
+  const htmlDocForCanvas =
+    !sessionIsRunning && activeWorkflowArtifact ? activeWorkflowArtifact.html : null;
 
   const appendEvent = (event: PreviewEvent): void => {
     setTimeline((current) => mergeEvents(current, [event]));
@@ -260,6 +200,7 @@ export function VisualPreviewConsole({
 
   const ensureSession = async (): Promise<PreviewSession> => {
     if (!selectedProject) {
+      if (session) return session;
       throw new Error("Selecione um projeto de frontend.");
     }
 
@@ -368,6 +309,7 @@ export function VisualPreviewConsole({
           route={session?.route ?? route}
           isActing={isActing}
           isConnected={isConnected}
+          canStart={!!(selectedProject || session)}
           onStart={handleStart}
           onStop={handleStop}
           onReload={handleReload}
@@ -376,6 +318,7 @@ export function VisualPreviewConsole({
         <PreviewCanvas
           session={session}
           refreshToken={chatRuntime.previewRefreshToken}
+          htmlDoc={htmlDocForCanvas}
         />
       </section>
 
