@@ -7,13 +7,18 @@ export function useWorkflowFileOperations(
   workflowThreadId: string | null
 ): {
   readonly fileOperations: AgentFileOperationTelemetry[];
+  readonly fileOperationsError: string | null;
 } {
   const [fileOperations, setFileOperations] = useState<
     AgentFileOperationTelemetry[]
   >([]);
+  const [fileOperationsError, setFileOperationsError] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     setFileOperations([]);
+    setFileOperationsError(null);
     if (!workflowThreadId) return undefined;
 
     let cancelled = false;
@@ -23,6 +28,7 @@ export function useWorkflowFileOperations(
       .listFileOperations(workflowThreadId)
       .then((result) => {
         if (cancelled) return;
+        setFileOperationsError(null);
         setFileOperations(result.operations);
         const sinceSequence = Math.max(
           0,
@@ -38,8 +44,15 @@ export function useWorkflowFileOperations(
           }
         );
       })
-      .catch(() => {
-        if (!cancelled) setFileOperations([]);
+      .catch((err) => {
+        if (!cancelled) {
+          setFileOperations([]);
+          setFileOperationsError(
+            err instanceof Error
+              ? err.message
+              : "Falha ao carregar operações de arquivo."
+          );
+        }
       });
 
     return () => {
@@ -48,7 +61,7 @@ export function useWorkflowFileOperations(
     };
   }, [workflowThreadId]);
 
-  return { fileOperations };
+  return { fileOperations, fileOperationsError };
 }
 
 function mergeOperations(

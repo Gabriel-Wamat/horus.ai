@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import http from "node:http";
@@ -13,6 +13,23 @@ import {
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
+const repositoryRoot = process.cwd();
+const httpRouteFiles = [
+  "apps/server/src/infrastructure/http/routes/agentDebugTraceRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/agentRunFlowRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/agentSkillRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/chatRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/codingRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/executionTaskRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/horusChatRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/llmSettingsRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/opsControlPlaneRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/previewRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/projectConstructionRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/projectFileRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/workflowRoutes.ts",
+  "apps/server/src/infrastructure/http/routes/workspaceRoutes.ts",
+];
 
 test("mounted app returns JSON for missing API routes instead of SPA HTML", async () => {
   const sandbox = await mkdtemp(join(tmpdir(), "horus-http-contract-"));
@@ -87,6 +104,16 @@ test("API error handler preserves JSON contract for forwarded route errors", asy
   } finally {
     await close(server);
   }
+});
+
+test("HTTP route handlers keep caught errors visible to route contracts", async () => {
+  const violations = [];
+  for (const file of httpRouteFiles) {
+    const source = await readFile(join(repositoryRoot, file), "utf8");
+    if (source.includes("catch {")) violations.push(file);
+  }
+
+  assert.deepEqual(violations, []);
 });
 
 function hasJsonContentType(response) {

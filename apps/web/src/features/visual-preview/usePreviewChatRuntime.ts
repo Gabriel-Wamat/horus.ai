@@ -32,6 +32,7 @@ export interface PreviewChatRuntimeState {
   readonly workflowActivity: PreviewWorkflowActivity | null;
   readonly workflowEvents: WorkflowProgressEvent[];
   readonly fileOperations: AgentFileOperationTelemetry[];
+  readonly fileOperationsError: string | null;
   readonly previewRefreshToken: string | null;
   readonly activeWorkflowThreadId: string | null;
   readonly instructionMode: VisualInstructionMode;
@@ -139,7 +140,8 @@ export function usePreviewChatRuntime({
     [...chatMessages].reverse().find((message) => message.workflowThreadId)
       ?.workflowThreadId ?? null;
   const activeWorkflowThreadId = workflowThreadId ?? latestChatWorkflowThreadId;
-  const { fileOperations } = useWorkflowFileOperations(activeWorkflowThreadId);
+  const { fileOperations, fileOperationsError } =
+    useWorkflowFileOperations(activeWorkflowThreadId);
   const chatTouchedFiles = useMemo(
     () => selectChatTouchedFiles(chatMessages),
     [chatMessages]
@@ -412,6 +414,7 @@ export function usePreviewChatRuntime({
     workflowActivity,
     workflowEvents,
     fileOperations,
+    fileOperationsError,
     previewRefreshToken,
     activeWorkflowThreadId,
     instructionMode,

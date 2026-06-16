@@ -129,8 +129,29 @@ export async function listWorkflowProgressEvents(
   const response = await fetch(`/api/agent-runs/${threadId}/events`, {
     cache: "no-store",
   });
-  if (!response.ok) return [];
+  await requireWorkflowProgressOk(response, "Carregar histórico de progresso");
   return response.json() as Promise<WorkflowProgressEvent[]>;
+}
+
+async function requireWorkflowProgressOk(
+  response: Response,
+  action: string
+): Promise<void> {
+  if (response.ok) return;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await response.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? response.statusText;
+    throw new Error(`${action} falhou (${response.status}): ${detail}`);
+  }
+  const body = await response.text().catch(() => "");
+  throw new Error(
+    `${action} falhou (${response.status}): ${
+      body.trim() || response.statusText || "sem detalhe retornado"
+    }`
+  );
 }
 
 export function isTerminalWorkflowEvent(event: WorkflowProgressEvent): boolean {

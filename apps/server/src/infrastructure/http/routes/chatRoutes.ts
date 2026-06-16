@@ -32,8 +32,8 @@ export function createChatRouter(deps: ChatRouteDeps): Router {
           : {}),
       });
       res.json({ sessions });
-    } catch {
-      res.status(500).json({ error: "Internal server error" });
+    } catch (err) {
+      handleChatRouteError(err, res);
     }
   });
 

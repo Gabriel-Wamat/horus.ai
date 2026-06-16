@@ -109,8 +109,10 @@ export function ExecutionTimelineSection({
 
 export function ExecutionFilesSection({
   files,
+  error,
 }: {
   readonly files: readonly ConsoleFileRow[];
+  readonly error: string | null;
 }): JSX.Element {
   return (
     <section className="execution-console-section">
@@ -119,6 +121,7 @@ export function ExecutionFilesSection({
         <span>{files.length} ops</span>
       </div>
       <div className="execution-console-file-list">
+        {error ? <p className="execution-console-empty">{error}</p> : null}
         {files.length ? (
           files.map((operation) => (
             <article key={operation.id} className="execution-console-file-row">
@@ -133,9 +136,9 @@ export function ExecutionFilesSection({
               </em>
             </article>
           ))
-        ) : (
+        ) : !error ? (
           <p className="execution-console-empty">Sem arquivos tocados.</p>
-        )}
+        ) : null}
       </div>
     </section>
   );
@@ -209,6 +212,7 @@ export function ExecutionTerminalSection({
   rows,
   commandCount,
   followedTasks,
+  actionError,
   selectedProjectId,
   killingTaskIds,
   retryingTaskIds,
@@ -220,6 +224,7 @@ export function ExecutionTerminalSection({
   readonly rows: readonly TerminalRow[];
   readonly commandCount: number;
   readonly followedTasks: ReadonlyMap<string, FollowedTaskOutput>;
+  readonly actionError: string | null;
   readonly selectedProjectId: string | null;
   readonly killingTaskIds: ReadonlySet<string>;
   readonly retryingTaskIds: ReadonlySet<string>;
@@ -235,6 +240,9 @@ export function ExecutionTerminalSection({
         <span>{commandCount}</span>
       </div>
       <div className="execution-console-terminal">
+        {actionError ? (
+          <p className="execution-console-empty">{actionError}</p>
+        ) : null}
         {rows.length ? (
           rows.slice(0, 8).map((row) => {
             const followed = followedTasks.get(row.id);
@@ -319,9 +327,9 @@ export function ExecutionTerminalSection({
               </article>
             );
           })
-        ) : (
+        ) : !actionError ? (
           <p className="execution-console-empty">Sem comando registrado.</p>
-        )}
+        ) : null}
       </div>
     </section>
   );

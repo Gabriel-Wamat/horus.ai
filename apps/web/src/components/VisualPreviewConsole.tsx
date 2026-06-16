@@ -360,6 +360,7 @@ export function VisualPreviewConsole({
         workflowThreadId={chatRuntime.activeWorkflowThreadId}
         workflowEvents={chatRuntime.workflowEvents}
         fileOperations={chatRuntime.fileOperations}
+        fileOperationsError={chatRuntime.fileOperationsError}
         chatMessages={chatRuntime.chatMessages}
         onToggleCollapsed={() =>
           setIsExecutionConsoleCollapsed((current) => !current)

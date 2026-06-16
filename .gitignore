@@ -51,6 +51,7 @@ apps/server/test/*
 !apps/server/test/contextRetrievalEvaluation.test.mjs
 !apps/server/test/agentRewriteFileProfile.test.mjs
 !apps/server/test/frontAgentDesignIntelligence.test.mjs
+!apps/server/test/frontendApiErrorContracts.test.mjs
 !apps/server/test/horusChatPreviewReload.test.mjs
 !apps/server/test/horusOdinIntentRouter.test.mjs
 !apps/server/test/opsControlPlane.test.mjs

@@ -20,8 +20,8 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
     try {
       const folders = await deps.workspaceStore.listFolders();
       res.json({ folders });
-    } catch {
-      res.status(500).json({ error: "Internal server error" });
+    } catch (err) {
+      handleWorkspaceRouteError(err, res);
     }
   });
 
@@ -31,11 +31,7 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       const folder = await deps.workspaceStore.createFolder(input.name);
       res.status(201).json({ folder });
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkspaceRouteError(err, res);
     }
   });
 
@@ -47,11 +43,7 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       const userStories = artifacts.map((artifact) => artifact.story);
       res.json({ userStories, artifacts });
     } catch (err) {
-      if (err instanceof WorkspaceFolderNotFoundError) {
-        res.status(404).json({ error: "Workspace folder not found", message: err.message });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkspaceRouteError(err, res);
     }
   });
 
@@ -62,11 +54,7 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       );
       res.json({ artifacts });
     } catch (err) {
-      if (err instanceof WorkspaceFolderNotFoundError) {
-        res.status(404).json({ error: "Workspace folder not found", message: err.message });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkspaceRouteError(err, res);
     }
   });
 
@@ -80,19 +68,7 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       );
       res.json({ userStory: updated });
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      if (err instanceof WorkspaceFolderNotFoundError) {
-        res.status(404).json({ error: "Workspace folder not found", message: err.message });
-        return;
-      }
-      if (err instanceof WorkspaceUserStoryNotFoundError) {
-        res.status(404).json({ error: "Workspace user story not found", message: err.message });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkspaceRouteError(err, res);
     }
   });
 
@@ -107,23 +83,7 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       );
       res.json({ spec: updated });
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: "Validation failed", issues: err.issues });
-        return;
-      }
-      if (err instanceof WorkspaceFolderNotFoundError) {
-        res.status(404).json({ error: "Workspace folder not found", message: err.message });
-        return;
-      }
-      if (err instanceof WorkspaceUserStoryNotFoundError) {
-        res.status(404).json({ error: "Workspace user story not found", message: err.message });
-        return;
-      }
-      if (err instanceof WorkspaceSpecNotFoundError) {
-        res.status(404).json({ error: "Workspace spec not found", message: err.message });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkspaceRouteError(err, res);
     }
   });
 
@@ -135,17 +95,29 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       );
       res.status(204).send();
     } catch (err) {
-      if (err instanceof WorkspaceFolderNotFoundError) {
-        res.status(404).json({ error: "Workspace folder not found", message: err.message });
-        return;
-      }
-      if (err instanceof WorkspaceUserStoryNotFoundError) {
-        res.status(404).json({ error: "Workspace user story not found", message: err.message });
-        return;
-      }
-      res.status(500).json({ error: "Internal server error" });
+      handleWorkspaceRouteError(err, res);
     }
   });
 
   return router;
+}
+
+function handleWorkspaceRouteError(err: unknown, res: Response): void {
+  if (err instanceof ZodError) {
+    res.status(400).json({ error: "Validation failed", issues: err.issues });
+    return;
+  }
+  if (err instanceof WorkspaceFolderNotFoundError) {
+    res.status(404).json({ error: "Workspace folder not found", message: err.message });
+    return;
+  }
+  if (err instanceof WorkspaceUserStoryNotFoundError) {
+    res.status(404).json({ error: "Workspace user story not found", message: err.message });
+    return;
+  }
+  if (err instanceof WorkspaceSpecNotFoundError) {
+    res.status(404).json({ error: "Workspace spec not found", message: err.message });
+    return;
+  }
+  res.status(500).json({ error: "Internal server error" });
 }

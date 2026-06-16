@@ -187,7 +187,17 @@ export function useWorkflowProgressRuntime({
           });
           workflowProgressSourcesRef.current.set(threadId, source);
         })
-        .catch(() => {
+        .catch((err) => {
+          setWorkflowActivityState({
+            phase: "failed",
+            label: "Histórico indisponível",
+            detail:
+              err instanceof Error
+                ? err.message
+                : "Não foi possível carregar o histórico persistido do workflow.",
+            active: false,
+            updatedAt: new Date().toISOString(),
+          });
           workflowProgressThreadsRef.current.delete(threadId);
         });
     },
