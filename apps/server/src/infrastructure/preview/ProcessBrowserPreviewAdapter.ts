@@ -298,7 +298,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
         method: "GET",
         signal: controller.signal,
       });
-      return response.status >= 200 && response.status < 500;
+      return response.ok;
     } catch {
       return false;
     } finally {
