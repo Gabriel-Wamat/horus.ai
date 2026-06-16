@@ -13,6 +13,7 @@ import {
 import { createLlmSettingsRouter } from "../dist/infrastructure/http/routes/llmSettingsRoutes.js";
 import { createProjectConstructionRouter } from "../dist/infrastructure/http/routes/projectConstructionRoutes.js";
 import { createAgentRunFlowRouter } from "../dist/infrastructure/http/routes/agentRunFlowRoutes.js";
+import { createEventRouter } from "../dist/infrastructure/http/routes/eventRoutes.js";
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
@@ -232,6 +233,38 @@ test("agent run scoped routes reject missing runs before returning empty payload
       assert.equal(hasJsonContentType(response), true, route);
       assert.deepEqual(body, { error: "Run not found" }, route);
     }
+  } finally {
+    await close(server);
+  }
+});
+
+test("workflow event stream rejects missing threads before opening SSE", async () => {
+  const app = express();
+  const storage = {
+    async load() {
+      return null;
+    },
+  };
+  const events = {
+    subscribe() {
+      throw new Error("event stream should not subscribe for a missing thread");
+    },
+  };
+  app.use("/api/events", createEventRouter(events, { storage }));
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const response = await fetch(`${baseUrl}/api/events/missing-thread`, {
+      headers: { Accept: "application/json" },
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 404);
+    assert.equal(hasJsonContentType(response), true);
+    assert.deepEqual(body, { error: "Workflow thread not found" });
   } finally {
     await close(server);
   }

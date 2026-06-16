@@ -1,15 +1,40 @@
 import { Router } from "express";
-import type { Request, Response } from "express";
-import type { IEventStream, WorkflowEvent } from "@u-build/shared";
+import type { NextFunction, Request, Response } from "express";
+import type {
+  IEventStream,
+  IStorageProvider,
+  WorkflowEvent,
+} from "@u-build/shared";
 
-export function createEventRouter(events: IEventStream): Router {
+interface EventRouterOptions {
+  storage?: Pick<IStorageProvider, "load">;
+}
+
+export function createEventRouter(
+  events: IEventStream,
+  options: EventRouterOptions = {}
+): Router {
   const router = Router();
 
-  router.get("/:threadId", (req: Request, res: Response) => {
+  router.get("/:threadId", async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { threadId } = req.params;
 
     if (!threadId) {
       res.status(400).json({ error: "Missing threadId" });
+      return;
+    }
+
+    try {
+      if (options.storage && !(await options.storage.load(threadId))) {
+        res.status(404).json({ error: "Workflow thread not found" });
+        return;
+      }
+    } catch (err) {
+      next(err);
       return;
     }
 

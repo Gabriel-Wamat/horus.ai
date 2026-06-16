@@ -473,7 +473,10 @@ export async function createApp(
       recoverPendingExecutions: () => orchestrator.recoverPendingExecutions(),
     })
   );
-  app.use("/api/events", createEventRouter(eventStream));
+  app.use(
+    "/api/events",
+    createEventRouter(eventStream, { storage: repositories.storage })
+  );
   // Read-only window into per-turn agent decision traces — powers the
   // "why did the agent choose this?" debug panel (item 10 of the
   // architectural agenda).
