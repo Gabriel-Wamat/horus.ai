@@ -1,20 +1,134 @@
-import type {
-  ChatMessage,
-  ChatSession,
-  CreateChatSessionInput,
-  HorusChatStreamEvent,
-  HorusChatTurnInput,
-  HorusChatTurnResponse,
+import { z } from "zod";
+import {
+  ChatMessageSchema,
+  ChatSessionSchema,
+  HorusChatStreamEventSchema,
+  HorusChatTurnResponseSchema,
+  type ChatMessage,
+  type ChatSession,
+  type CreateChatSessionInput,
+  type HorusChatStreamEvent,
+  type HorusChatTurnInput,
+  type HorusChatTurnResponse,
 } from "@u-build/shared";
 
 const BASE = "/api";
 
+export class HorusChatApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly details: unknown
+  ) {
+    super(message);
+    this.name = "HorusChatApiError";
+  }
+}
+
+const ChatSessionsResponseSchema = z.object({
+  sessions: z.array(ChatSessionSchema),
+});
+
+const ChatSessionResponseSchema = z.object({
+  session: ChatSessionSchema,
+});
+
+const ChatMessagesResponseSchema = z.object({
+  messages: z.array(ChatMessageSchema),
+});
+
 async function requireOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;
 
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await res.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
+    const detail = body?.message ?? body?.error ?? res.statusText;
+    throw new HorusChatApiError(
+      `${action} falhou (${res.status}): ${detail}`,
+      res.status,
+      body
+    );
+  }
+
   const body = await res.text().catch(() => "");
   const detail = body.trim() || res.statusText || "sem detalhe retornado";
-  throw new Error(`${action} falhou (${res.status}): ${detail}`);
+  throw new HorusChatApiError(
+    `${action} falhou (${res.status}): ${detail}`,
+    res.status,
+    body
+  );
+}
+
+interface HorusChatApiContract<T> {
+  parse(input: unknown): T;
+}
+
+async function readHorusChatJson<T>(
+  res: Response,
+  action: string,
+  contract: HorusChatApiContract<T>
+): Promise<T> {
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new HorusChatApiError(
+      `${action} falhou: contrato inválido da API, esperado application/json e recebido ${
+        contentType || "content-type ausente"
+      }.`,
+      res.status,
+      null
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await res.json();
+  } catch (err) {
+    throw new HorusChatApiError(
+      `${action} falhou: JSON inválido retornado pela API (${errorMessage(err)}).`,
+      res.status,
+      null
+    );
+  }
+
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new HorusChatApiError(
+      `${action} falhou: payload fora do contrato esperado (${errorMessage(err)}).`,
+      res.status,
+      payload
+    );
+  }
+}
+
+function parseHorusChatStreamEvent(data: string): HorusChatStreamEvent {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(data);
+  } catch (err) {
+    throw new HorusChatApiError(
+      `Enviar mensagem para Horus falhou: evento SSE com JSON inválido (${errorMessage(
+        err
+      )}).`,
+      200,
+      data
+    );
+  }
+
+  try {
+    return HorusChatStreamEventSchema.parse(payload);
+  } catch (err) {
+    throw new HorusChatApiError(
+      `Enviar mensagem para Horus falhou: evento SSE fora do contrato esperado (${errorMessage(
+        err
+      )}).`,
+      200,
+      payload
+    );
+  }
 }
 
 export const horusChatApi = {
@@ -30,7 +144,11 @@ export const horusChatApi = {
       cache: "no-store",
     });
     await requireOk(res, "Listar sessões de chat");
-    const body = (await res.json()) as { sessions: ChatSession[] };
+    const body = await readHorusChatJson(
+      res,
+      "Listar sessões de chat",
+      ChatSessionsResponseSchema
+    );
     return body.sessions;
   },
 
@@ -41,7 +159,11 @@ export const horusChatApi = {
       body: JSON.stringify(input),
     });
     await requireOk(res, "Criar sessão de chat");
-    const body = (await res.json()) as { session: ChatSession };
+    const body = await readHorusChatJson(
+      res,
+      "Criar sessão de chat",
+      ChatSessionResponseSchema
+    );
     return body.session;
   },
 
@@ -58,7 +180,11 @@ export const horusChatApi = {
       cache: "no-store",
     });
     await requireOk(res, "Listar mensagens do chat");
-    const body = (await res.json()) as { messages: ChatMessage[] };
+    const body = await readHorusChatJson(
+      res,
+      "Listar mensagens do chat",
+      ChatMessagesResponseSchema
+    );
     return body.messages;
   },
 
@@ -71,7 +197,11 @@ export const horusChatApi = {
       body: JSON.stringify(input),
     });
     await requireOk(res, "Enviar mensagem para Horus");
-    return res.json() as Promise<HorusChatTurnResponse>;
+    return readHorusChatJson(
+      res,
+      "Enviar mensagem para Horus",
+      HorusChatTurnResponseSchema
+    );
   },
 
   submitTurnStream: async (
@@ -104,7 +234,7 @@ export const horusChatApi = {
         .map((line) => line.slice("data: ".length))
         .join("\n");
       if (!data) return;
-      onEvent(JSON.parse(data) as HorusChatStreamEvent);
+      onEvent(parseHorusChatStreamEvent(data));
     };
 
     const flush = (chunk: string): void => {
@@ -128,3 +258,7 @@ export const horusChatApi = {
     }
   },
 } as const;
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
