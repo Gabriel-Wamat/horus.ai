@@ -133,3 +133,28 @@ test("workflow API validates workspace response contracts before exposing state"
   assert.match(source, /SpecSchema/);
   assert.match(source, /WorkspaceUserStoriesResponseSchema/);
 });
+
+test("workflow API validates execution response contracts before exposing state", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
+    "utf8"
+  );
+
+  const forbiddenWorkflowExecutionCasts = [
+    "return res.json() as Promise<StartWorkflowResponse>",
+    "return res.json() as Promise<WorkflowState>",
+    "return res.json() as Promise<StartProjectConstructionResponse>",
+  ];
+
+  for (const fragment of forbiddenWorkflowExecutionCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /StartWorkflowResponseSchema/);
+  assert.match(source, /WorkflowStateSchema/);
+  assert.match(source, /StartProjectConstructionResponseSchema/);
+  assert.match(source, /ProjectWorkspaceSchema/);
+  assert.match(source, /ProjectConstructionRunSchema/);
+  assert.match(source, /FrontendProjectSchema/);
+  assert.match(source, /PreviewSessionSchema/);
+});

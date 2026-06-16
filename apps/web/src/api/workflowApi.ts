@@ -1,8 +1,13 @@
 import { z } from "zod";
 import {
+  FrontendProjectSchema,
+  PreviewSessionSchema,
+  ProjectConstructionRunSchema,
+  ProjectWorkspaceSchema,
   SpecSchema,
   UserStorySchema,
   WorkspaceFolderSchema,
+  WorkflowStateSchema,
   type UserStory,
   type Spec,
   type HumanFeedback,
@@ -78,6 +83,18 @@ const WorkspaceUserStoryResponseSchema = z.object({
 
 const WorkspaceSpecResponseSchema = z.object({
   spec: SpecSchema,
+});
+
+const StartWorkflowResponseSchema = z.object({
+  threadId: z.string().uuid(),
+});
+
+const StartProjectConstructionResponseSchema = z.object({
+  projectWorkspace: ProjectWorkspaceSchema,
+  constructionRun: ProjectConstructionRunSchema,
+  frontendProject: FrontendProjectSchema.nullable(),
+  previewSession: PreviewSessionSchema.nullable(),
+  reusedProjectWorkspace: z.boolean().optional(),
 });
 
 async function requireOk(res: Response, action: string): Promise<void> {
@@ -179,7 +196,7 @@ export const workflowApi = {
       }),
     });
     await requireOk(res, "Iniciar workflow");
-    return res.json() as Promise<StartWorkflowResponse>;
+    return readWorkflowJson(res, "Iniciar workflow", StartWorkflowResponseSchema);
   },
 
   resume: async (
@@ -212,7 +229,7 @@ export const workflowApi = {
     const res = await fetch(`${BASE}/workflow/status/${threadId}`);
     if (res.status === 404) return null;
     await requireOk(res, "Consultar status");
-    return res.json() as Promise<WorkflowState>;
+    return readWorkflowJson(res, "Consultar status", WorkflowStateSchema);
   },
 
   listWorkspaceFolders: async (): Promise<WorkspaceFolder[]> => {
@@ -342,7 +359,21 @@ export const workflowApi = {
       body: JSON.stringify(input),
     });
     await requireOk(res, "Iniciar construção do projeto");
-    return res.json() as Promise<StartProjectConstructionResponse>;
+    const body = await readWorkflowJson(
+      res,
+      "Iniciar construção do projeto",
+      StartProjectConstructionResponseSchema
+    );
+    const response: StartProjectConstructionResponse = {
+      projectWorkspace: body.projectWorkspace,
+      constructionRun: body.constructionRun,
+      frontendProject: body.frontendProject,
+      previewSession: body.previewSession,
+    };
+    if (body.reusedProjectWorkspace !== undefined) {
+      response.reusedProjectWorkspace = body.reusedProjectWorkspace;
+    }
+    return response;
   },
 
   listLlmProviders: async (): Promise<{ providers: LlmProviderCapability[] }> => {
