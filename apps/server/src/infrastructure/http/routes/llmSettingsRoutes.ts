@@ -34,8 +34,12 @@ export function createLlmSettingsRouter(deps: LlmSettingsRouteDeps): Router {
   });
 
   router.get("/settings", async (_req: Request, res: Response) => {
-    const profile = await deps.credentials.getDefaultProfile();
-    res.json({ profile });
+    try {
+      const profile = await deps.credentials.getDefaultProfile();
+      res.json({ profile });
+    } catch (err) {
+      handleLlmSettingsError(res, err);
+    }
   });
 
   router.put("/settings", async (req: Request, res: Response) => {

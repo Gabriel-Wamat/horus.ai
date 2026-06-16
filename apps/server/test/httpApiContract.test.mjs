@@ -10,6 +10,8 @@ import {
   createApiNotFoundHandler,
   createApp,
 } from "../dist/infrastructure/http/server.js";
+import { createLlmSettingsRouter } from "../dist/infrastructure/http/routes/llmSettingsRoutes.js";
+import { createProjectConstructionRouter } from "../dist/infrastructure/http/routes/projectConstructionRoutes.js";
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
@@ -100,6 +102,75 @@ test("API error handler preserves JSON contract for forwarded route errors", asy
       error: "api_request_failed",
       message: "contract failed",
       path: "/api/boom",
+    });
+  } finally {
+    await close(server);
+  }
+});
+
+test("LLM settings routes return JSON when persistence dependency fails", async () => {
+  const app = express();
+  app.use(
+    "/api/llm",
+    createLlmSettingsRouter({
+      credentials: {
+        listProviders() {
+          return [];
+        },
+        async getDefaultProfile() {
+          throw new Error("credential store unavailable");
+        },
+      },
+      resolver: {},
+    })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const response = await fetch(`${baseUrl}/api/llm/settings`);
+    const body = await response.json();
+
+    assert.equal(response.status, 500);
+    assert.equal(hasJsonContentType(response), true);
+    assert.deepEqual(body, {
+      error: "Internal server error",
+      message: "credential store unavailable",
+    });
+  } finally {
+    await close(server);
+  }
+});
+
+test("project construction routes return JSON when repository dependency fails", async () => {
+  const app = express();
+  app.use(
+    "/api/project-construction",
+    createProjectConstructionRouter({
+      startUseCase: {},
+      projectConstruction: {
+        async listProjectWorkspaces() {
+          throw new Error("workspace repository unavailable");
+        },
+      },
+    })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const response = await fetch(`${baseUrl}/api/project-construction/workspaces`);
+    const body = await response.json();
+
+    assert.equal(response.status, 500);
+    assert.equal(hasJsonContentType(response), true);
+    assert.deepEqual(body, {
+      error: "Internal server error",
+      message: "workspace repository unavailable",
     });
   } finally {
     await close(server);
