@@ -202,7 +202,7 @@ test("project construction curator fails closed when professional evidence is in
           diagnostics: {},
         },
       ],
-      previewUrl: "http://127.0.0.1:5184",
+      previewUrl: "http://preview.fixture.example:5184",
       captureUnavailableReason: null,
       designSystemSourceFiles: [],
       startedAt: "2026-06-08T10:03:00.000Z",
