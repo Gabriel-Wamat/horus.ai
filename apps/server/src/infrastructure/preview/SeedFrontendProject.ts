@@ -42,6 +42,36 @@ function readEnv(
   return value && value.length > 0 ? value : fallback;
 }
 
+function readOptionalEnv(
+  env: Record<string, string | undefined>,
+  names: readonly string[]
+): string | undefined {
+  for (const name of names) {
+    const value = env[name]?.trim();
+    if (value && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+function resolvePreviewHosts(
+  env: Record<string, string | undefined>
+): { bindHost: string; publicHost: string } {
+  const bindHost =
+    readOptionalEnv(env, [
+      "HORUS_WEB_PREVIEW_BIND_HOST",
+      "HORUS_WEB_PREVIEW_HOST",
+      "HORUS_WEB_DEV_HOST",
+      "HOST",
+    ]) ?? "0.0.0.0";
+  const publicHost =
+    readOptionalEnv(env, [
+      "HORUS_WEB_PREVIEW_PUBLIC_HOST",
+      "HORUS_PUBLIC_HOST",
+      "HORUS_DOCKER_HOST",
+    ]) ?? bindHost;
+  return { bindHost, publicHost };
+}
+
 async function readJsonFile(
   path: string
 ): Promise<Record<string, unknown> | null> {
@@ -148,11 +178,7 @@ export async function buildSeedFrontendProject(
     await resolveProjectRootInput(repositoryRoot, env)
   );
   const packageName = await readPackageName(rootPath);
-  const host = readEnv(
-    env,
-    "HORUS_WEB_PREVIEW_HOST",
-    readEnv(env, "HORUS_WEB_DEV_HOST", "127.0.0.1")
-  );
+  const { bindHost, publicHost } = resolvePreviewHosts(env);
   const port = readEnv(
     env,
     "HORUS_WEB_PREVIEW_PORT",
@@ -161,7 +187,7 @@ export async function buildSeedFrontendProject(
   const previewUrl = readEnv(
     env,
     "HORUS_WEB_PREVIEW_URL",
-    `http://${host}:${port}`
+    `http://${publicHost}:${port}`
   );
   const packageManager = readEnv(
     env,
@@ -180,7 +206,7 @@ export async function buildSeedFrontendProject(
     "dev",
     "--",
     "--host",
-    host,
+    bindHost,
     "--port",
     port,
     "--strictPort",

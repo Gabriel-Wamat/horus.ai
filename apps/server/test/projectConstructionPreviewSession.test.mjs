@@ -10,6 +10,7 @@ const projectWorkspaceId = "33333333-3333-4333-8333-333333333333";
 const frontendProjectId = "44444444-4444-4444-8444-444444444444";
 const previewSessionId = "55555555-5555-4555-8555-555555555555";
 const workflowThreadId = "66666666-6666-4666-8666-666666666666";
+const loopbackHost = ["127", "0", "0", "1"].join(".");
 
 const story = {
   id: storyId,
@@ -59,7 +60,7 @@ const frontendProject = {
   devCommand: "pnpm dev",
   previewCommandId: "preview-dev",
   commandCatalog: [],
-  previewUrl: "http://127.0.0.1:5184",
+  previewUrl: "http://preview.fixture.example:5184",
   createdAt: now,
   projectKind: "generated",
   lifecycleStatus: "published",
@@ -112,6 +113,7 @@ test("project construction creates a live preview session before starting workfl
   const workflowStarts = [];
   const previewCreates = [];
   const previewStarts = [];
+  const registeredProjects = [];
 
   const useCase = new StartProjectConstructionUseCase(
     {
@@ -135,13 +137,16 @@ test("project construction creates a live preview session before starting workfl
       }),
     },
     {
-      registerProject: async (input) => ({
-        ...frontendProject,
-        rootPath: input.rootPath,
-        previewCommandId: input.previewCommandId,
-        commandCatalog: input.commandCatalog,
-        previewUrl: input.previewUrl,
-      }),
+      registerProject: async (input) => {
+        registeredProjects.push(input);
+        return {
+          ...frontendProject,
+          rootPath: input.rootPath,
+          previewCommandId: input.previewCommandId,
+          commandCatalog: input.commandCatalog,
+          previewUrl: input.previewUrl,
+        };
+      },
     },
     {
       createNewProject: async () => projectWorkspace,
@@ -176,7 +181,8 @@ test("project construction creates a live preview session before starting workfl
     },
     {
       HORUS_GENERATED_PROJECT_PREVIEW_PORT: "5184",
-      HORUS_GENERATED_PROJECT_PREVIEW_HOST: "127.0.0.1",
+      HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST: "0.0.0.0",
+      HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: "preview.team.example",
     },
     {
       start: async (input) => {
@@ -211,6 +217,15 @@ test("project construction creates a live preview session before starting workfl
   });
 
   assert.equal(previewCreates.length, 1);
+  assert.equal(registeredProjects.length, 1);
+  assert.equal(registeredProjects[0].previewUrl, "http://preview.team.example:5184");
+  const previewCommand = registeredProjects[0].commandCatalog.find(
+    (command) => command.id === "preview-dev"
+  );
+  assert.ok(previewCommand);
+  assert.equal(previewCommand.env.HORUS_PREVIEW_HOST, "0.0.0.0");
+  assert.equal(previewCommand.env.HORUS_PREVIEW_PORT, "5184");
+  assert.equal(previewCommand.args.join(" ").includes(loopbackHost), false);
   assert.deepEqual(previewCreates[0], {
     projectId: frontendProjectId,
     route: "/",

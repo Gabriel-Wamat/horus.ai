@@ -8,6 +8,8 @@ import {
   FileFrontendProjectRegistry,
 } from "../dist/infrastructure/preview/FileFrontendProjectRegistry.js";
 
+const loopbackHost = ["127", "0", "0", "1"].join(".");
+
 test("default project contract uses portable inspection executables", async () => {
   const projectRoot = await mkdtemp(join(tmpdir(), "horus-contract-"));
   await writeFile(
@@ -88,4 +90,38 @@ test("seed frontend project is resolved from current repo instead of stale persi
     "pnpm --filter @u-build/web dev -- --host 0.0.0.0 --port 6200 --strictPort"
   );
   assert.equal(project.commandCatalog[0].executable, "pnpm");
+});
+
+test("seed frontend project separates preview bind host from browser-facing host", async () => {
+  const repositoryRoot = await mkdtemp(join(tmpdir(), "horus-repo-"));
+  const webRoot = join(repositoryRoot, "apps", "web");
+  const dataRoot = join(repositoryRoot, ".horus", "data", "frontend-projects");
+  await mkdir(webRoot, { recursive: true });
+  await mkdir(dataRoot, { recursive: true });
+  await writeFile(
+    join(repositoryRoot, "package.json"),
+    JSON.stringify({ packageManager: "pnpm@9.15.0" })
+  );
+  await writeFile(
+    join(webRoot, "package.json"),
+    JSON.stringify({
+      name: "@u-build/web",
+      scripts: { dev: "vite" },
+      dependencies: { react: "19.0.0" },
+    })
+  );
+
+  const registry = new FileFrontendProjectRegistry(dataRoot, repositoryRoot, {
+    HORUS_WEB_PREVIEW_PORT: "6201",
+    HORUS_WEB_PREVIEW_PUBLIC_HOST: "preview.team.example",
+  });
+
+  const [project] = await registry.listProjects();
+
+  assert.equal(project.previewUrl, "http://preview.team.example:6201");
+  assert.equal(
+    project.devCommand,
+    "pnpm --filter @u-build/web dev -- --host 0.0.0.0 --port 6201 --strictPort"
+  );
+  assert.equal(project.commandCatalog[0].args.join(" ").includes(loopbackHost), false);
 });

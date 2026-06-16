@@ -463,7 +463,7 @@ import { extname, join, normalize } from "node:path";
 const args = process.argv.slice(2);
 const hostIndex = args.indexOf("--host");
 const portIndex = args.indexOf("--port");
-const host = hostIndex >= 0 ? args[hostIndex + 1] || "127.0.0.1" : "127.0.0.1";
+const host = hostIndex >= 0 ? args[hostIndex + 1] || "0.0.0.0" : "0.0.0.0";
 const port = Number(portIndex >= 0 ? args[portIndex + 1] || "5174" : process.env.PORT || "5174");
 const root = join(process.cwd(), "src");
 const contentTypes = new Map([
