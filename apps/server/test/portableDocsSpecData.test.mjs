@@ -33,6 +33,21 @@ test("versioned repository files use portable paths and hosts", async () => {
   assert.ok(checkedFiles.length >= 1);
 });
 
+test("docker compose keeps local and container data directories separate", async () => {
+  const compose = await readFile("docker-compose.yml", "utf8");
+
+  assert.equal(
+    compose.includes("HORUS_DATA_DIR: ${HORUS_DOCKER_DATA_DIR:-/app/.horus/data}"),
+    true
+  );
+  assert.equal(
+    compose.includes("horus-data:${HORUS_DOCKER_DATA_DIR:-/app/.horus/data}"),
+    true
+  );
+  assert.equal(compose.includes("HORUS_DATA_DIR: ${HORUS_DATA_DIR"), false);
+  assert.equal(compose.includes("horus-data:${HORUS_DATA_DIR"), false);
+});
+
 async function listVersionedFiles(roots) {
   const { stdout } = await execFileAsync("git", ["ls-files", ...roots], {
     encoding: "utf8",

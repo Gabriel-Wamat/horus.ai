@@ -184,7 +184,7 @@ By default, Horus uses file persistence under `.horus/data` and does not require
 
 ## Docker Run
 
-Docker is the clean-machine path for people who want to run the shipped app without managing local Node processes. It builds the source from scratch, starts the API with file persistence, serves the built web app through nginx, and persists Horus state in the `horus-data` Docker volume.
+Docker is the clean-machine path for people who want to run the shipped app without managing local Node processes. It builds the source from scratch, starts the API with file persistence, serves the built web app through nginx, and persists Horus state in the `horus-data` Docker volume. Local `HORUS_DATA_DIR` values are not reused as container mount targets; set `HORUS_DOCKER_DATA_DIR` only if you need to change the internal container path.
 
 Create the local env file and add your API key:
 
@@ -268,7 +268,7 @@ Expected result:
 - Missing provider key: configure `.env` or a provider profile in the UI.
 - Port conflict: set `PORT`, `HOST`, or Compose port mappings.
 - CORS issue: set `CORS_ORIGIN` only when using split frontend/API origins.
-- Lost local state: verify `HORUS_DATA_DIR` or the `horus-data` Docker volume.
+- Lost local state: verify local `HORUS_DATA_DIR`, Docker `HORUS_DOCKER_DATA_DIR`, or the `horus-data` Docker volume.
 - Docker hangs or fails with `input/output error`: inspect Docker Desktop logs for `EXT4-fs` or `vda1` read-only errors. That is a local Docker VM disk problem. Restart Docker Desktop first; if it remains read-only, repair or reset Docker Desktop data before rerunning the stack.
 
 ## License
