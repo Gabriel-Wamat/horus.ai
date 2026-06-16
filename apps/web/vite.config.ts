@@ -5,7 +5,14 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const apiProxyTarget = process.env["HORUS_API_PROXY_TARGET"] ?? "http://localhost:3001";
+const webDevHost = readEnv("HORUS_WEB_DEV_HOST", "127.0.0.1");
+const webDevPort = readPort("HORUS_WEB_DEV_PORT", 5173);
+const apiProxyTarget =
+  process.env["HORUS_API_PROXY_TARGET"] ??
+  `http://${readEnv("HORUS_API_PROXY_HOST", "127.0.0.1")}:${readPort(
+    "HORUS_API_PROXY_PORT",
+    3001
+  )}`;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -30,7 +37,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    host: webDevHost,
+    port: webDevPort,
     proxy: {
       "/api": {
         target: apiProxyTarget,
@@ -39,3 +47,15 @@ export default defineConfig({
     },
   },
 });
+
+function readEnv(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  return value && value.length > 0 ? value : fallback;
+}
+
+function readPort(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}

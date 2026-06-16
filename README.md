@@ -117,14 +117,21 @@ pnpm dev
 Default local endpoints:
 
 ```text
-API: http://localhost:3001
-Web: http://localhost:5173
+API: http://<HORUS_API_PROXY_HOST>:<HORUS_API_PROXY_PORT>
+Web: http://<HORUS_WEB_DEV_HOST>:<HORUS_WEB_DEV_PORT>
+```
+
+With the default `.env.example` values, those resolve to:
+
+```text
+API: http://127.0.0.1:3001
+Web: http://127.0.0.1:5173
 ```
 
 Health check:
 
 ```bash
-curl http://localhost:3001/health
+curl "http://${HORUS_API_PROXY_HOST:-127.0.0.1}:${HORUS_API_PROXY_PORT:-3001}/health"
 ```
 
 ## Validation
@@ -145,7 +152,7 @@ pnpm build
 pnpm verify:llm-providers
 ```
 
-This public distribution does not include test folders. Internal test suites and specs stay local/private and must not be committed to this repository.
+This reproducibility branch includes the local specs, selected test suites, generated project workspaces, user stories, and Horus runtime data needed to inspect the project state. Secrets, `.env` files, credential stores, dependencies, build outputs, caches, and nested Git metadata stay out of Git.
 
 ## Production Build Run
 
@@ -190,11 +197,21 @@ docker compose up --build
 Default Docker endpoints:
 
 ```text
-Web UI: http://localhost:8080
-API through web proxy: http://localhost:8080/api
-Health: http://localhost:8080/health
-Ready: http://localhost:8080/ready
-Direct API: http://localhost:3001
+Web UI: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>
+API through web proxy: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>/api
+Health: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>/health
+Ready: http://<HORUS_DOCKER_HOST>:<HORUS_WEB_HOST_PORT>/ready
+Direct API: http://<HORUS_DOCKER_HOST>:<HORUS_API_HOST_PORT>
+```
+
+With defaults, `HORUS_DOCKER_HOST=127.0.0.1`,
+`HORUS_WEB_HOST_PORT=8080`, and `HORUS_API_HOST_PORT=3001`.
+
+Override host/container ports without editing Compose:
+
+```bash
+HORUS_WEB_HOST_PORT=18080 HORUS_API_HOST_PORT=13001 docker compose up --build
+HORUS_WEB_HOST_PORT=18080 pnpm verify:docker
 ```
 
 Smoke check:
@@ -238,7 +255,7 @@ Expected result:
 - secret scan passes
 - production build passes
 - Docker stack becomes healthy
-- `pnpm verify:docker` succeeds against `http://localhost:8080`
+- `pnpm verify:docker` succeeds against `http://${HORUS_DOCKER_HOST:-127.0.0.1}:${HORUS_WEB_HOST_PORT:-8080}`
 
 ## Troubleshooting
 

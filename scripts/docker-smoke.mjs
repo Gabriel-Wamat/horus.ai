@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-const baseUrl = new URL(process.env.HORUS_DOCKER_BASE_URL ?? "http://127.0.0.1:8080");
+const dockerHost = readEnv("HORUS_DOCKER_HOST", "127.0.0.1");
+const dockerPort = readEnv("HORUS_WEB_HOST_PORT", "8080");
+const baseUrl = new URL(
+  process.env.HORUS_DOCKER_BASE_URL ?? `http://${dockerHost}:${dockerPort}`
+);
 
 const checks = [
   { name: "web root", path: "/", expectedStatus: 200 },
@@ -24,3 +28,8 @@ for (const check of checks) {
 }
 
 console.log(`Docker smoke passed for ${baseUrl}`);
+
+function readEnv(name, fallback) {
+  const value = process.env[name]?.trim();
+  return value && value.length > 0 ? value : fallback;
+}

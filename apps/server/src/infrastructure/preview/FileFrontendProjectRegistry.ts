@@ -10,6 +10,7 @@ import {
   buildSeedFrontendProject,
   canonicalizeProjectRoot,
   FrontendProjectRootError,
+  WEB_PROJECT_ID,
 } from "./SeedFrontendProject.js";
 import {
   readJsonFile,
@@ -110,6 +111,22 @@ export class FileFrontendProjectRegistry {
   }
 
   private async toRuntimeProject(project: FrontendProject): Promise<FrontendProject> {
+    if (project.id === WEB_PROJECT_ID) {
+      const seedProject = await buildSeedFrontendProject({
+        repositoryRoot: this.repositoryRoot,
+        env: this.env,
+      });
+      return FrontendProjectSchema.parse({
+        ...project,
+        rootPath: seedProject.rootPath,
+        defaultRoute: seedProject.defaultRoute,
+        devCommand: seedProject.devCommand,
+        previewCommandId: seedProject.previewCommandId,
+        commandCatalog: seedProject.commandCatalog,
+        previewUrl: seedProject.previewUrl,
+      });
+    }
+
     return FrontendProjectSchema.parse({
       ...project,
       rootPath: await this.canonicalizeProjectRoot(project.rootPath),

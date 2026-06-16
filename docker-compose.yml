@@ -5,36 +5,37 @@ services:
       target: server-runtime
     environment:
       NODE_ENV: production
-      HORUS_ENV: local
-      HOST: 0.0.0.0
-      PORT: 3000
-      HORUS_REPOSITORY_ROOT: /app
+      HORUS_ENV: ${HORUS_ENV:-local}
+      HOST: ${HORUS_API_BIND_HOST:-0.0.0.0}
+      PORT: ${HORUS_API_CONTAINER_PORT:-3000}
+      HORUS_REPOSITORY_ROOT: ${HORUS_REPOSITORY_ROOT:-/app}
       PERSISTENCE_DRIVER: ${PERSISTENCE_DRIVER:-file}
       HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION: ${HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION:-true}
-      HORUS_DATA_DIR: /app/.horus/data
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      HORUS_DATA_DIR: ${HORUS_DATA_DIR:-/app/.horus/data}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-}
       FRONT_AGENT_TIMEOUT_MS: ${FRONT_AGENT_TIMEOUT_MS:-60000}
       QA_AGENT_LLM_TIMEOUT_MS: ${QA_AGENT_LLM_TIMEOUT_MS:-45000}
-      HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST: 0.0.0.0
-      HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST:-localhost}
+      HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST:-0.0.0.0}
+      HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST:-127.0.0.1}
+      HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT: ${HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT:-5184}
       DATABASE_URL: ${DATABASE_URL:-postgres://horus:horus@postgres:5432/horus}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
     volumes:
-      - horus-data:/app/.horus/data
+      - horus-data:${HORUS_DATA_DIR:-/app/.horus/data}
     ports:
-      - "3001:3000"
-      - "5184-6184:5184-6184"
+      - "${HORUS_API_HOST_PORT:-3001}:${HORUS_API_CONTAINER_PORT:-3000}"
+      - "${HORUS_GENERATED_PROJECT_PREVIEW_PORT_RANGE:-5184-6184}:${HORUS_GENERATED_PROJECT_PREVIEW_PORT_RANGE:-5184-6184}"
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "const host=process.env.HORUS_HEALTHCHECK_HOST||'127.0.0.1';const port=process.env.PORT||'3000';fetch('http://'+host+':'+port+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -74,13 +75,21 @@ services:
     build:
       context: .
       target: web-runtime
+    environment:
+      NGINX_PORT: ${HORUS_WEB_CONTAINER_PORT:-8080}
+      HORUS_API_UPSTREAM_HOST: ${HORUS_API_UPSTREAM_HOST:-api}
+      HORUS_API_UPSTREAM_PORT: ${HORUS_API_CONTAINER_PORT:-3000}
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "${HORUS_WEB_HOST_PORT:-8080}:${HORUS_WEB_CONTAINER_PORT:-8080}"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- \"http://$${HORUS_HEALTHCHECK_HOST:-127.0.0.1}:$${NGINX_PORT:-8080}/\" >/dev/null",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12

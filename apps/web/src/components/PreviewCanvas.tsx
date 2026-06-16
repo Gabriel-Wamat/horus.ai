@@ -87,11 +87,11 @@ export function PreviewCanvas({
           className="preview-frame-control-button"
           onClick={openLocalPreview}
           disabled={!hasLiveFrame}
-          aria-label="Abrir localhost do preview em nova aba"
+          aria-label="Abrir preview em nova aba"
           title={
             hasLiveFrame
-              ? "Abrir localhost do preview em nova aba"
-              : "Inicie o preview para abrir o localhost"
+              ? "Abrir preview em nova aba"
+              : "Inicie o preview para abrir em nova aba"
           }
         >
           <ExternalLink aria-hidden="true" />
@@ -141,8 +141,8 @@ export function PreviewCanvas({
                 type="button"
                 className="preview-frame-control-button"
                 onClick={openLocalPreview}
-                aria-label="Abrir localhost do preview em nova aba"
-                title="Abrir localhost do preview em nova aba"
+                aria-label="Abrir preview em nova aba"
+                title="Abrir preview em nova aba"
               >
                 <ExternalLink aria-hidden="true" />
               </button>

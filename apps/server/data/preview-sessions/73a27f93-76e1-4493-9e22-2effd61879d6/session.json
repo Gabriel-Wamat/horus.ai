@@ -8,7 +8,7 @@
     "width": 1440,
     "height": 900
   },
-  "previewUrl": "http://localhost:5174/",
+  "previewUrl": null,
   "processId": null,
   "startedAt": null,
   "stoppedAt": null,
