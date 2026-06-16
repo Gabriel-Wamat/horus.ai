@@ -57,5 +57,36 @@ export const ExecutionTaskRecordSchema = z.object({
   durationMs: z.number().int().nonnegative().default(0),
 });
 
+export const ExecutionTaskSnapshotSchema = ExecutionTaskRecordSchema;
+
+export const ExecutionTaskListResponseSchema = z.object({
+  tasks: z.array(ExecutionTaskSnapshotSchema),
+});
+
+export const ExecutionTaskOutputResponseSchema = z.object({
+  taskId: z.string().trim().min(1),
+  stream: z.enum(["stdout", "stderr"]),
+  offset: z.number().int().nonnegative(),
+  nextOffset: z.number().int().nonnegative(),
+  chunk: z.string(),
+});
+
+export const ExecutionTaskErrorResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    error: z.string().optional(),
+  })
+  .passthrough();
+
 export type ExecutionTaskStatus = z.output<typeof ExecutionTaskStatusSchema>;
 export type ExecutionTaskRecord = z.output<typeof ExecutionTaskRecordSchema>;
+export type ExecutionTaskSnapshot = z.output<typeof ExecutionTaskSnapshotSchema>;
+export type ExecutionTaskListResponse = z.output<
+  typeof ExecutionTaskListResponseSchema
+>;
+export type ExecutionTaskOutputResponse = z.output<
+  typeof ExecutionTaskOutputResponseSchema
+>;
+export type ExecutionTaskErrorResponse = z.output<
+  typeof ExecutionTaskErrorResponseSchema
+>;
