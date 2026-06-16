@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { join } from "node:path";
 import { z, ZodError } from "zod";
 import type { ProjectConstructionRepository } from "../../../application/ports/index.js";
 import { CliCommandPolicy } from "../../tools/CliCommandPolicy.js";
@@ -148,7 +149,7 @@ async function runtimeForProject(
     policy: new CliCommandPolicy({
       allowedRoot: project.rootPath,
     }),
-    outputBaseDir: `${project.rootPath}/.horus/execution-tasks`,
+    outputBaseDir: join(project.rootPath, ".horus", "execution-tasks"),
   });
   executionTaskRuntimeByWorkspaceRoot.set(project.rootPath, runtime);
   return runtime;

@@ -227,7 +227,8 @@ test("execution console validates execution task route contracts before exposing
     );
   }
 
-  assert.match(hookSource, /ShellCommandResultSchema/);
+  assert.equal(hookSource.includes("ShellCommandResultSchema"), false);
+  assert.match(hookSource, /ExecutionTaskRecordSchema/);
   assert.match(hookSource, /ExecutionTaskSnapshotSchema/);
   assert.match(hookSource, /ExecutionTaskListResponseSchema/);
   assert.match(hookSource, /ExecutionTaskOutputResponseSchema/);
