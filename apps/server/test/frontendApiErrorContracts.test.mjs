@@ -79,3 +79,32 @@ test("agent flow API validates JSON content type and shared response contracts",
   assert.match(source, /AgentFileOperationTelemetrySchema/);
   assert.match(source, /AgentDebugTraceEntrySchema/);
 });
+
+test("project files API validates JSON content type and shared response contracts", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/projectFilesApi.ts"),
+    "utf8"
+  );
+
+  assert.equal(
+    source.includes("response.json() as Promise<ProjectFileListProjectsResponse>"),
+    false
+  );
+  assert.equal(
+    source.includes("response.json() as Promise<ProjectFileTreeResponse>"),
+    false
+  );
+  assert.equal(
+    source.includes("response.json() as Promise<ProjectFileContentResponse>"),
+    false
+  );
+  assert.equal(
+    source.includes("response.json() as Promise<SaveProjectFileResponse>"),
+    false
+  );
+  assert.match(source, /readProjectFilesJson/);
+  assert.match(source, /ProjectFileListProjectsResponseSchema/);
+  assert.match(source, /ProjectFileTreeResponseSchema/);
+  assert.match(source, /ProjectFileContentResponseSchema/);
+  assert.match(source, /SaveProjectFileResponseSchema/);
+});

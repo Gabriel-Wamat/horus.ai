@@ -1,9 +1,13 @@
-import type {
-  ProjectFileContentResponse,
-  ProjectFileListProjectsResponse,
-  ProjectFileTreeResponse,
-  SaveProjectFileRequest,
-  SaveProjectFileResponse,
+import {
+  ProjectFileContentResponseSchema,
+  ProjectFileListProjectsResponseSchema,
+  ProjectFileTreeResponseSchema,
+  SaveProjectFileResponseSchema,
+  type ProjectFileContentResponse,
+  type ProjectFileListProjectsResponse,
+  type ProjectFileTreeResponse,
+  type SaveProjectFileRequest,
+  type SaveProjectFileResponse,
 } from "@u-build/shared";
 
 const BASE = "/api";
@@ -47,6 +51,51 @@ async function requireOk(response: Response, action: string): Promise<void> {
   );
 }
 
+interface ProjectFilesApiContract<T> {
+  parse(input: unknown): T;
+}
+
+async function readProjectFilesJson<T>(
+  response: Response,
+  action: string,
+  contract: ProjectFilesApiContract<T>
+): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new ProjectFilesApiError(
+      `${action} falhou: contrato inválido da API, esperado application/json e recebido ${
+        contentType || "content-type ausente"
+      }.`,
+      response.status,
+      null,
+      null
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (err) {
+    throw new ProjectFilesApiError(
+      `${action} falhou: JSON inválido retornado pela API (${errorMessage(err)}).`,
+      response.status,
+      null,
+      null
+    );
+  }
+
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new ProjectFilesApiError(
+      `${action} falhou: payload fora do contrato esperado (${errorMessage(err)}).`,
+      response.status,
+      null,
+      payload
+    );
+  }
+}
+
 function appendOptionalParam(
   params: URLSearchParams,
   name: string,
@@ -62,7 +111,11 @@ export const projectFilesApi = {
       cache: "no-store",
     });
     await requireOk(response, "Listar projetos");
-    return response.json() as Promise<ProjectFileListProjectsResponse>;
+    return readProjectFilesJson(
+      response,
+      "Listar projetos",
+      ProjectFileListProjectsResponseSchema
+    );
   },
 
   getTree: async (
@@ -79,7 +132,11 @@ export const projectFilesApi = {
       { cache: "no-store" }
     );
     await requireOk(response, "Carregar árvore de arquivos");
-    return response.json() as Promise<ProjectFileTreeResponse>;
+    return readProjectFilesJson(
+      response,
+      "Carregar árvore de arquivos",
+      ProjectFileTreeResponseSchema
+    );
   },
 
   getFile: async (
@@ -95,7 +152,11 @@ export const projectFilesApi = {
       { cache: "no-store" }
     );
     await requireOk(response, "Ler arquivo");
-    return response.json() as Promise<ProjectFileContentResponse>;
+    return readProjectFilesJson(
+      response,
+      "Ler arquivo",
+      ProjectFileContentResponseSchema
+    );
   },
 
   saveFile: async (
@@ -111,7 +172,11 @@ export const projectFilesApi = {
       }
     );
     await requireOk(response, "Salvar arquivo");
-    return response.json() as Promise<SaveProjectFileResponse>;
+    return readProjectFilesJson(
+      response,
+      "Salvar arquivo",
+      SaveProjectFileResponseSchema
+    );
   },
 
   getDownloadUrl: (
@@ -124,3 +189,7 @@ export const projectFilesApi = {
     return `${BASE}/project-files/projects/${projectId}/download${query ? `?${query}` : ""}`;
   },
 } as const;
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
