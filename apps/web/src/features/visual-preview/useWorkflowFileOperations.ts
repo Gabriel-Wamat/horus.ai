@@ -38,10 +38,12 @@ export function useWorkflowFileOperations(
           workflowThreadId,
           sinceSequence,
           (operation) => {
+            setFileOperationsError(null);
             setFileOperations((current) =>
               mergeOperations(current, [operation])
             );
-          }
+          },
+          { onError: setFileOperationsError }
         );
       })
       .catch((err) => {

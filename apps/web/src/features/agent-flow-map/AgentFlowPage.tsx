@@ -40,10 +40,11 @@ function AgentFlowPageContent({ workflowState, events }: AgentFlowPageProps): JS
   const [focusRequest, setFocusRequest] = useState(0);
   const runData = useRunFlowData({ workflowState, events });
   const streamedEvents = useRunFlowEvents(runData.run);
+  const runLoadError = errorMessage(runData.error);
   const run = useMemo(() => {
     if (!runData.run) return null;
-    return applyLiveEvents(runData.run, streamedEvents);
-  }, [runData.run, streamedEvents]);
+    return applyLiveEvents(runData.run, streamedEvents.events);
+  }, [runData.run, streamedEvents.events]);
   const graph = useFlowGraph({
     run,
     detailLevel,
@@ -73,6 +74,7 @@ function AgentFlowPageContent({ workflowState, events }: AgentFlowPageProps): JS
             onToggleAgentExecutions={() => setShowAgentExecutions((current) => !current)}
             onFocusActive={() => setFocusRequest((current) => current + 1)}
           />
+          <AgentFlowAlert message={runLoadError} />
           <section className="agent-flow-empty">
             <h2>Nenhuma execução ativa</h2>
             <p>O mapa aparece quando uma run real existir no runtime do Horus.</p>
@@ -109,6 +111,7 @@ function AgentFlowPageContent({ workflowState, events }: AgentFlowPageProps): JS
           onToggleAgentExecutions={() => setShowAgentExecutions((current) => !current)}
           onFocusActive={() => setFocusRequest((current) => current + 1)}
         />
+        <AgentFlowAlert message={runLoadError ?? streamedEvents.error} />
         <section className={`agent-flow-workbench ${selection.selectedNode ? "is-inspector-open" : ""}`}>
           <div className="agent-flow-main-stack">
             <div className="agent-flow-canvas-shell">
@@ -133,6 +136,21 @@ function AgentFlowPageContent({ workflowState, events }: AgentFlowPageProps): JS
       </div>
     </div>
   );
+}
+
+function AgentFlowAlert({ message }: { message: string | null }): JSX.Element | null {
+  if (!message) return null;
+  return (
+    <p className="agent-flow-alert" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function errorMessage(error: unknown): string | null {
+  if (!error) return null;
+  if (error instanceof Error) return error.message;
+  return String(error);
 }
 
 function applyLiveEvents(

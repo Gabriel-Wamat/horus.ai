@@ -11,6 +11,8 @@ const clientFiles = [
   "apps/web/src/api/projectFilesApi.ts",
   "apps/web/src/api/agentSkillsApi.ts",
   "apps/web/src/features/agent-flow-map/utils/agentFlowApi.ts",
+  "apps/web/src/features/agent-flow-map/hooks/useRunFlowEvents.ts",
+  "apps/web/src/features/agent-flow-map/hooks/useRunFileOperations.ts",
   "apps/web/src/app/useWorkflowRuntime.ts",
   "apps/web/src/components/VisualPreviewConsole.tsx",
   "apps/web/src/features/visual-preview/usePreviewChatRuntime.ts",
@@ -33,6 +35,10 @@ const forbiddenFragments = [
   ".catch(() => undefined)",
   ".listWorkspaceStoryArtifacts(folderId)\n          .catch(() => null)",
   "syncChatMessagesFromServer();\n      } catch {",
+  "Ignoring invalid workflow event payload",
+  "Ignoring invalid file operation payload",
+  "if (parsed) onEvent(parsed);",
+  "if (parsed) onOperation(parsed);",
 ];
 
 test("frontend API clients do not silently coerce HTTP failures to empty values", async () => {

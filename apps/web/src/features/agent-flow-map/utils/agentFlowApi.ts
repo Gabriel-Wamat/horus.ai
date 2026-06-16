@@ -54,7 +54,8 @@ export const agentFlowApi = {
   streamRunEvents(
     threadId: string,
     sinceSequence: number,
-    onEvent: (event: HorusRunEventSnapshot) => void
+    onEvent: (event: HorusRunEventSnapshot) => void,
+    options: StreamOptions = {}
   ) {
     const params = new URLSearchParams();
     params.set("since_sequence", String(sinceSequence));
@@ -63,7 +64,12 @@ export const agentFlowApi = {
     );
     const parse = (event: MessageEvent<string>) => {
       const parsed = parseRunEventPayload(event.data);
-      if (parsed) onEvent(parsed);
+      if (parsed.kind === "event") {
+        options.onError?.(null);
+        onEvent(parsed.event);
+        return;
+      }
+      if (parsed.kind === "error") options.onError?.(parsed.message);
     };
     const eventTypes = [
       "node_started",
@@ -84,6 +90,9 @@ export const agentFlowApi = {
     for (const type of eventTypes) {
       source.addEventListener(type, parse as EventListener);
     }
+    source.onerror = () => {
+      options.onError?.("Agent run event stream disconnected.");
+    };
     return {
       close() {
         for (const type of eventTypes) {
@@ -96,7 +105,8 @@ export const agentFlowApi = {
   streamFileOperations(
     threadId: string,
     sinceSequence: number,
-    onOperation: (operation: AgentFileOperationTelemetry) => void
+    onOperation: (operation: AgentFileOperationTelemetry) => void,
+    options: StreamOptions = {}
   ) {
     const params = new URLSearchParams();
     params.set("since_sequence", String(sinceSequence));
@@ -105,9 +115,17 @@ export const agentFlowApi = {
     );
     const parse = (event: MessageEvent<string>) => {
       const parsed = parseFileOperationPayload(event.data);
-      if (parsed) onOperation(parsed);
+      if (parsed.kind === "event") {
+        options.onError?.(null);
+        onOperation(parsed.operation);
+        return;
+      }
+      if (parsed.kind === "error") options.onError?.(parsed.message);
     };
     source.addEventListener("file_operation", parse as EventListener);
+    source.onerror = () => {
+      options.onError?.("Agent file-operation stream disconnected.");
+    };
     return {
       close() {
         source.removeEventListener("file_operation", parse as EventListener);
@@ -135,6 +153,10 @@ export const agentFlowApi = {
     );
   },
 };
+
+interface StreamOptions {
+  onError?: (message: string | null) => void;
+}
 
 export interface AgentDebugTraceEntryView {
   id: string;
@@ -197,8 +219,18 @@ async function readApiErrorDetail(response: Response): Promise<string> {
   return `Request failed with status ${response.status}: ${detail}`;
 }
 
-function parseRunEventPayload(data: string): HorusRunEventSnapshot | null {
-  if (!data || data === "undefined") return null;
+type ParseRunEventResult =
+  | { kind: "event"; event: HorusRunEventSnapshot }
+  | { kind: "ignore" }
+  | { kind: "error"; message: string };
+
+type ParseFileOperationResult =
+  | { kind: "event"; operation: AgentFileOperationTelemetry }
+  | { kind: "ignore" }
+  | { kind: "error"; message: string };
+
+function parseRunEventPayload(data: string): ParseRunEventResult {
+  if (!data || data === "undefined") return { kind: "ignore" };
   try {
     const parsed = JSON.parse(data) as Partial<HorusRunEventSnapshot>;
     if (
@@ -209,20 +241,19 @@ function parseRunEventPayload(data: string): HorusRunEventSnapshot | null {
       typeof parsed.sequence !== "number" ||
       typeof parsed.type !== "string"
     ) {
-      return null;
+      return { kind: "error", message: "Invalid agent run event payload contract." };
     }
-    return parsed as HorusRunEventSnapshot;
+    return { kind: "event", event: parsed as HorusRunEventSnapshot };
   } catch (err) {
-    console.warn(
-      "[agentFlowApi] Ignoring invalid workflow event payload:",
-      err instanceof Error ? err.message : String(err)
-    );
-    return null;
+    return {
+      kind: "error",
+      message: `Invalid agent run event JSON: ${errorMessage(err)}`,
+    };
   }
 }
 
-function parseFileOperationPayload(data: string): AgentFileOperationTelemetry | null {
-  if (!data || data === "undefined") return null;
+function parseFileOperationPayload(data: string): ParseFileOperationResult {
+  if (!data || data === "undefined") return { kind: "ignore" };
   try {
     const parsed = JSON.parse(data) as Partial<AgentFileOperationTelemetry>;
     if (
@@ -235,14 +266,17 @@ function parseFileOperationPayload(data: string): AgentFileOperationTelemetry | 
       typeof parsed.operationType !== "string" ||
       typeof parsed.status !== "string"
     ) {
-      return null;
+      return { kind: "error", message: "Invalid agent file-operation payload contract." };
     }
-    return parsed as AgentFileOperationTelemetry;
+    return { kind: "event", operation: parsed as AgentFileOperationTelemetry };
   } catch (err) {
-    console.warn(
-      "[agentFlowApi] Ignoring invalid file operation payload:",
-      err instanceof Error ? err.message : String(err)
-    );
-    return null;
+    return {
+      kind: "error",
+      message: `Invalid agent file-operation JSON: ${errorMessage(err)}`,
+    };
   }
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

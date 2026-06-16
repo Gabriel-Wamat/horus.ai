@@ -17,10 +17,12 @@ export function useRunFileOperations(run: HorusRunSnapshot | null): {
   const [streamedOperations, setStreamedOperations] = useState<
     AgentFileOperationTelemetry[]
   >([]);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     setStreamedOperations([]);
+    setStreamError(null);
   }, [run?.threadId]);
 
   const operationsQuery = useQuery({
@@ -38,12 +40,14 @@ export function useRunFileOperations(run: HorusRunSnapshot | null): {
       run.threadId,
       sinceSequence,
       (operation) => {
+        setStreamError(null);
         setStreamedOperations((current) => mergeOperations(current, [operation]));
         void queryClient.invalidateQueries({
           queryKey: ["agent-flow-file-operations", run.threadId],
           exact: true,
         });
-      }
+      },
+      { onError: setStreamError }
     );
     return () => stream.close();
   }, [operationsQuery.data?.operations, queryClient, run]);
@@ -56,7 +60,7 @@ export function useRunFileOperations(run: HorusRunSnapshot | null): {
   return {
     operations,
     isLoading: operationsQuery.isLoading,
-    error: operationsQuery.error,
+    error: operationsQuery.error ?? (streamError ? new Error(streamError) : null),
   };
 }
 

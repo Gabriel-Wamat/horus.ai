@@ -25,6 +25,17 @@
   overflow: hidden;
 }
 
+.agent-flow-alert {
+  margin: 0;
+  border: 1px solid rgb(240 85 108 / 0.36);
+  border-radius: var(--radius-md, 8px);
+  background: rgb(240 85 108 / 0.1);
+  color: #ffb8c4;
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .agent-flow-toolbar {
   display: flex;
   align-items: center;
