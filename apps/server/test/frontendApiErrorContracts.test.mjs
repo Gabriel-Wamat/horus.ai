@@ -314,6 +314,17 @@ test("agent skills API validates catalog response contracts before exposing stat
     join(repositoryRoot, "apps/web/src/api/agentSkillsApi.ts"),
     "utf8"
   );
+  const sharedSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/entities/AgentSkill.ts"),
+    "utf8"
+  );
+  const routeSource = await readFile(
+    join(
+      repositoryRoot,
+      "apps/server/src/infrastructure/http/routes/agentSkillRoutes.ts"
+    ),
+    "utf8"
+  );
 
   const forbiddenAgentSkillsCasts = [
     "const body = (await response.json()) as { skills: AgentSkillSummary[] }",
@@ -324,6 +335,17 @@ test("agent skills API validates catalog response contracts before exposing stat
     "return response.json() as Promise<PublishAgentSkillResponse>",
     "return response.json() as Promise<{ bindings: AgentSkillDetail[\"bindings\"] }>",
     "return response.json() as Promise<{ skill: AgentSkillSummary }>",
+    "export interface CreateAgentSkillResponse",
+    "export interface ValidateAgentSkillResponse",
+    "export interface PublishAgentSkillResponse",
+    "const AgentSkillsListResponseSchema = z.object",
+    "const AgentProfilesResponseSchema = z.object",
+    "const ValidateAgentSkillResponseSchema = z.object",
+    "const CreateAgentSkillResponseSchema = z.object",
+    "const PublishAgentSkillResponseSchema = z.object",
+    "const AgentSkillBindingsResponseSchema = z.object",
+    "const AgentSkillSummaryResponseSchema = z.object",
+    "import { z } from \"zod\";",
   ];
 
   for (const fragment of forbiddenAgentSkillsCasts) {
@@ -331,15 +353,60 @@ test("agent skills API validates catalog response contracts before exposing stat
   }
 
   assert.match(source, /readAgentSkillsJson/);
-  assert.match(source, /AgentSkillSummarySchema/);
   assert.match(source, /AgentSkillDetailSchema/);
-  assert.match(source, /AgentSkillValidationReportSchema/);
-  assert.match(source, /AgentProfileSchema/);
   assert.match(source, /AgentSkillsListResponseSchema/);
+  assert.match(source, /AgentProfilesResponseSchema/);
   assert.match(source, /ValidateAgentSkillResponseSchema/);
   assert.match(source, /CreateAgentSkillResponseSchema/);
   assert.match(source, /PublishAgentSkillResponseSchema/);
   assert.match(source, /AgentSkillBindingsResponseSchema/);
+  assert.match(source, /AgentSkillSummaryResponseSchema/);
+  assert.match(sharedSource, /AgentSkillsListResponseSchema/);
+  assert.match(sharedSource, /AgentProfilesResponseSchema/);
+  assert.match(sharedSource, /RuntimeAgentSkillsResponseSchema/);
+  assert.match(sharedSource, /ValidateAgentSkillResponseSchema/);
+  assert.match(sharedSource, /CreateAgentSkillResponseSchema/);
+  assert.match(sharedSource, /PublishAgentSkillResponseSchema/);
+  assert.match(sharedSource, /AgentSkillBindingsResponseSchema/);
+  assert.match(sharedSource, /AgentSkillSummaryResponseSchema/);
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\("GET \/agent-skills", AgentSkillsListResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"GET \/agent-skills\/agent-profiles",\s*AgentProfilesResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"GET \/agent-skills\/runtime\/agents\/:agentName",\s*RuntimeAgentSkillsResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"POST \/agent-skills",\s*CreateAgentSkillResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"POST \/agent-skills\/validate",\s*ValidateAgentSkillResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"GET \/agent-skills\/:skillId",\s*AgentSkillDetailSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"POST \/agent-skills\/:skillId\/revisions\/:revisionId\/publish",\s*PublishAgentSkillResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"PUT \/agent-skills\/:skillId\/bindings",\s*AgentSkillBindingsResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseAgentSkillRouteResponse\(\s*"POST \/agent-skills\/:skillId\/archive",\s*AgentSkillSummaryResponseSchema/
+  );
+  assert.match(routeSource, /contract\.parse\(payload\)/);
+  assert.match(routeSource, /AgentSkillRouteResponseContractError/);
 });
 
 test("workflow progress validates run event contracts before exposing replay or stream state", async () => {

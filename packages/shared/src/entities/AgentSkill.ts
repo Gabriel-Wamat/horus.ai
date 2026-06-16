@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AgentProfileSchema } from "./AgentToolProfile.js";
 
 export const AgentSkillSourceTypeSchema = z.enum([
   "filesystem_seed",
@@ -189,6 +190,45 @@ export const RuntimeAgentSkillSchema = z.object({
   files: z.array(AgentSkillFileSchema).default([]),
 });
 
+export const AgentSkillsListResponseSchema = z.object({
+  skills: z.array(AgentSkillSummarySchema),
+});
+
+export const AgentProfilesResponseSchema = z.object({
+  profiles: z.array(AgentProfileSchema),
+});
+
+export const RuntimeAgentSkillsResponseSchema = z.object({
+  skills: z.array(RuntimeAgentSkillSchema),
+});
+
+export const ValidateAgentSkillResponseSchema = z.object({
+  validationReport: AgentSkillValidationReportSchema,
+  contentHash: z.string().trim().min(32),
+});
+
+export const CreateAgentSkillResponseSchema = z.object({
+  skill: AgentSkillSummarySchema,
+  draftRevision: AgentSkillRevisionSchema,
+  files: z.array(AgentSkillFileSchema),
+  validationReport: AgentSkillValidationReportSchema,
+  bindings: z.array(AgentSkillBindingSchema),
+});
+
+export const PublishAgentSkillResponseSchema = z.object({
+  skill: AgentSkillSummarySchema,
+  activeRevision: AgentSkillRevisionSchema,
+  bindings: z.array(AgentSkillBindingSchema),
+});
+
+export const AgentSkillBindingsResponseSchema = z.object({
+  bindings: z.array(AgentSkillBindingSchema),
+});
+
+export const AgentSkillSummaryResponseSchema = z.object({
+  skill: AgentSkillSummarySchema,
+});
+
 export type AgentSkillSourceType = z.infer<typeof AgentSkillSourceTypeSchema>;
 export type AgentSkillScope = z.infer<typeof AgentSkillScopeSchema>;
 export type AgentSkillStatus = z.infer<typeof AgentSkillStatusSchema>;
@@ -233,3 +273,25 @@ export type AgentSkillListQuery = z.infer<typeof AgentSkillListQuerySchema>;
 export type AgentSkillSummary = z.infer<typeof AgentSkillSummarySchema>;
 export type AgentSkillDetail = z.infer<typeof AgentSkillDetailSchema>;
 export type RuntimeAgentSkill = z.infer<typeof RuntimeAgentSkillSchema>;
+export type AgentSkillsListResponse = z.infer<
+  typeof AgentSkillsListResponseSchema
+>;
+export type AgentProfilesResponse = z.infer<typeof AgentProfilesResponseSchema>;
+export type RuntimeAgentSkillsResponse = z.infer<
+  typeof RuntimeAgentSkillsResponseSchema
+>;
+export type ValidateAgentSkillResponse = z.infer<
+  typeof ValidateAgentSkillResponseSchema
+>;
+export type CreateAgentSkillResponse = z.infer<
+  typeof CreateAgentSkillResponseSchema
+>;
+export type PublishAgentSkillResponse = z.infer<
+  typeof PublishAgentSkillResponseSchema
+>;
+export type AgentSkillBindingsResponse = z.infer<
+  typeof AgentSkillBindingsResponseSchema
+>;
+export type AgentSkillSummaryResponse = z.infer<
+  typeof AgentSkillSummaryResponseSchema
+>;
