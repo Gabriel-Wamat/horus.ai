@@ -302,7 +302,7 @@ integration_context:
       expected_consumer_behavior: "Skills rely on runtime cwd/repo root, not a hardcoded local path."
       migration_or_notification_required: false
       verification:
-        - "rg '/<USER_HOME>/wamat|repository_root: \"/Users' skills apps packages returns no project-local hits."
+        - "rg '/<USER_HOME>/wamat|repository_root: \"<USER_HOME>' skills apps packages returns no project-local hits."
 
   bidirectional_integrations:
     - name: "Preview session runtime"
@@ -639,7 +639,7 @@ validation_protocol:
       cwd: "<REPOSITORY_ROOT>"
       purpose: "Run shared and backend regression tests."
       success_condition: "Exit code 0 or documented unrelated pre-existing failures."
-    - command: "rg -n '/<USER_HOME>/wamat|repository_root: \"/Users' skills apps packages"
+    - command: "rg -n '/<USER_HOME>/wamat|repository_root: \"<USER_HOME>' skills apps packages"
       cwd: "<REPOSITORY_ROOT>"
       purpose: "Prove machine-specific paths were removed from project-controlled files."
       success_condition: "No project-local matches except docs describing the removed issue, if intentionally kept."

@@ -4,19 +4,19 @@ import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import test from "node:test";
 
-const checkedRoots = ["docs", "spec"];
+const checkedRoots = ["."];
 const windowsSeparator = "\\";
 const execFileAsync = promisify(execFile);
 
 const forbiddenFragments = [
   "local" + "host",
   ["127", "0", "0", "1"].join("."),
-  "/" + "Users" + "/",
+  "/" + "Users",
   "C:" + windowsSeparator + "Users",
   "C:" + windowsSeparator + windowsSeparator + "Users",
 ];
 
-test("versioned docs and specs use portable paths and hosts", async () => {
+test("versioned repository files use portable paths and hosts", async () => {
   const checkedFiles = await listVersionedFiles(checkedRoots);
   for (const file of checkedFiles) {
     const content = await readFile(file, "utf8");
