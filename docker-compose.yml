@@ -18,8 +18,9 @@ services:
       FRONT_AGENT_TIMEOUT_MS: ${FRONT_AGENT_TIMEOUT_MS:-60000}
       QA_AGENT_LLM_TIMEOUT_MS: ${QA_AGENT_LLM_TIMEOUT_MS:-45000}
       HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST:-0.0.0.0}
-      HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST:-127.0.0.1}
+      HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST: ${HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST:-${HORUS_PUBLIC_HOST:-host.docker.internal}}
       HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT: ${HORUS_GENERATED_PROJECT_PREVIEW_BASE_PORT:-5184}
+      HORUS_HEALTHCHECK_HOST: ${HORUS_API_HEALTHCHECK_HOST:-api}
       DATABASE_URL: ${DATABASE_URL:-postgres://horus:horus@postgres:5432/horus}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
@@ -35,7 +36,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "const host=process.env.HORUS_HEALTHCHECK_HOST||'127.0.0.1';const port=process.env.PORT||'3000';fetch('http://'+host+':'+port+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "const host=process.env.HORUS_HEALTHCHECK_HOST||require('node:os').hostname();const port=process.env.PORT||'3000';fetch('http://'+host+':'+port+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -77,6 +78,7 @@ services:
       target: web-runtime
     environment:
       NGINX_PORT: ${HORUS_WEB_CONTAINER_PORT:-8080}
+      HORUS_HEALTHCHECK_HOST: ${HORUS_WEB_HEALTHCHECK_HOST:-web}
       HORUS_API_UPSTREAM_HOST: ${HORUS_API_UPSTREAM_HOST:-api}
       HORUS_API_UPSTREAM_PORT: ${HORUS_API_CONTAINER_PORT:-3000}
     depends_on:
@@ -88,7 +90,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -qO- \"http://$${HORUS_HEALTHCHECK_HOST:-127.0.0.1}:$${NGINX_PORT:-8080}/\" >/dev/null",
+          "host=\"$${HORUS_HEALTHCHECK_HOST:-$$(hostname)}\"; wget -qO- \"http://$${host}:$${NGINX_PORT:-8080}/\" >/dev/null",
         ]
       interval: 10s
       timeout: 5s
