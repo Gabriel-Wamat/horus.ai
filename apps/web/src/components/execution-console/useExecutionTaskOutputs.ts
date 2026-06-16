@@ -1,4 +1,51 @@
 import { useEffect, useState } from "react";
+import { z } from "zod";
+import { ShellCommandResultSchema } from "@u-build/shared";
+
+export const ExecutionTaskSnapshotSchema = ShellCommandResultSchema.extend({
+  commandId: z.string().trim().min(1),
+  taskId: z.string().trim().min(1),
+});
+
+const ExecutionTaskListResponseSchema = z.object({
+  tasks: z.array(ExecutionTaskSnapshotSchema),
+});
+
+const ExecutionTaskOutputResponseSchema = z.object({
+  taskId: z.string().trim().min(1),
+  stream: z.enum(["stdout", "stderr"]),
+  offset: z.number().int().nonnegative(),
+  nextOffset: z.number().int().nonnegative(),
+  chunk: z.string(),
+});
+
+const ExecutionTaskErrorResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    error: z.string().optional(),
+  })
+  .passthrough();
+
+export type ExecutionTaskSnapshot = z.output<typeof ExecutionTaskSnapshotSchema>;
+
+export class ExecutionTaskApiError extends Error {
+  readonly status: number;
+  readonly action: string;
+  readonly details: unknown;
+
+  constructor(input: {
+    readonly action: string;
+    readonly status: number;
+    readonly message: string;
+    readonly details?: unknown;
+  }) {
+    super(input.message);
+    this.name = "ExecutionTaskApiError";
+    this.action = input.action;
+    this.status = input.status;
+    this.details = input.details;
+  }
+}
 
 export interface TerminalRow {
   id: string;
@@ -31,26 +78,6 @@ export interface ExecutionTaskRowsState {
 export interface ExecutionTaskOutputsState {
   outputs: Map<string, FollowedTaskOutput>;
   error: string | null;
-}
-
-interface ExecutionTaskSnapshot {
-  taskId: string;
-  commandId: string;
-  status: string;
-  startedAt: string;
-  traceId?: string | null;
-  toolCallId?: string | null;
-  projectId?: string | null;
-  agentId?: string | null;
-  stdoutBytes: number;
-  stderrBytes: number;
-  stdoutTail?: string;
-  stderrTail?: string;
-  interactivePromptDetected?: boolean;
-  interactivePromptText?: string | null;
-  approvalRequired?: boolean;
-  risk?: "low" | "medium" | "high";
-  policyReason?: string | null;
 }
 
 export function useExecutionTaskRows(
@@ -268,8 +295,12 @@ async function fetchTaskList(
     { cache: "no-store", signal }
   );
   await requireExecutionTaskOk(response, "Listar execution tasks");
-  const body = (await response.json()) as { tasks?: ExecutionTaskSnapshot[] };
-  return body.tasks ?? [];
+  const body = await readExecutionTaskJson(
+    response,
+    "Listar execution tasks",
+    ExecutionTaskListResponseSchema
+  );
+  return body.tasks;
 }
 
 async function fetchTaskSnapshot(
@@ -285,7 +316,11 @@ async function fetchTaskSnapshot(
   );
   if (response.status === 404) return null;
   await requireExecutionTaskOk(response, "Consultar execution task");
-  return response.json() as Promise<ExecutionTaskSnapshot>;
+  return readExecutionTaskJson(
+    response,
+    "Consultar execution task",
+    ExecutionTaskSnapshotSchema
+  );
 }
 
 async function fetchTaskOutputTail(input: {
@@ -305,29 +340,72 @@ async function fetchTaskOutputTail(input: {
     { cache: "no-store", signal: input.signal }
   );
   await requireExecutionTaskOk(response, "Ler output da execution task");
-  const body = (await response.json()) as { chunk?: string };
-  return body.chunk ?? "";
+  const body = await readExecutionTaskJson(
+    response,
+    "Ler output da execution task",
+    ExecutionTaskOutputResponseSchema
+  );
+  return body.chunk;
 }
 
-async function requireExecutionTaskOk(
+export async function requireExecutionTaskOk(
   response: Response,
   action: string
 ): Promise<void> {
   if (response.ok) return;
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
-    const body = (await response.json().catch(() => null)) as
-      | { message?: string; error?: string }
-      | null;
-    const detail = body?.message ?? body?.error ?? response.statusText;
-    throw new Error(`${action} falhou (${response.status}): ${detail}`);
+    const rawBody = await response.json().catch(() => null);
+    const parsedBody = ExecutionTaskErrorResponseSchema.safeParse(rawBody);
+    const detail = parsedBody.success
+      ? parsedBody.data.message ?? parsedBody.data.error ?? response.statusText
+      : response.statusText;
+    throw new ExecutionTaskApiError({
+      action,
+      status: response.status,
+      message: `${action} falhou (${response.status}): ${detail}`,
+      details: rawBody,
+    });
   }
   const body = await response.text().catch(() => "");
-  throw new Error(
-    `${action} falhou (${response.status}): ${
+  throw new ExecutionTaskApiError({
+    action,
+    status: response.status,
+    message: `${action} falhou (${response.status}): ${
       body.trim() || response.statusText || "sem detalhe retornado"
-    }`
-  );
+    }`,
+    details: body,
+  });
+}
+
+export async function readExecutionTaskJson<TSchema extends z.ZodTypeAny>(
+  response: Response,
+  action: string,
+  schema: TSchema
+): Promise<z.output<TSchema>> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const body = await response.text().catch(() => "");
+    throw new ExecutionTaskApiError({
+      action,
+      status: response.status,
+      message: `${action} retornou content-type inesperado: ${
+        contentType || "ausente"
+      }`,
+      details: body,
+    });
+  }
+  const payload = await response.json();
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) {
+    throw new ExecutionTaskApiError({
+      action,
+      status: response.status,
+      message: `${action} retornou contrato inválido: ${parsed.error.message}`,
+      details: payload,
+    });
+  }
+  return parsed.data;
 }
 
 function isTaskActive(status: string): boolean {
