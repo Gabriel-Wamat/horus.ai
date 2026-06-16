@@ -60,3 +60,22 @@ test("frontend API clients do not silently coerce HTTP failures to empty values"
 
   assert.deepEqual(violations, []);
 });
+
+test("agent flow API validates JSON content type and shared response contracts", async () => {
+  const source = await readFile(
+    join(
+      repositoryRoot,
+      "apps/web/src/features/agent-flow-map/utils/agentFlowApi.ts"
+    ),
+    "utf8"
+  );
+
+  assert.equal(source.includes("return response.json() as Promise<T>"), false);
+  assert.match(source, /expected application\/json/);
+  assert.match(source, /parseApiContract/);
+  assert.match(source, /HorusRunLocatorSchema/);
+  assert.match(source, /HorusRunSnapshotSchema/);
+  assert.match(source, /HorusRunEventSnapshotSchema/);
+  assert.match(source, /AgentFileOperationTelemetrySchema/);
+  assert.match(source, /AgentDebugTraceEntrySchema/);
+});

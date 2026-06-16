@@ -1,3 +1,11 @@
+import { z } from "zod";
+import {
+  AgentDebugTraceEntrySchema,
+  AgentFileOperationTelemetrySchema,
+  HorusRunEventSnapshotSchema,
+  HorusRunLocatorSchema,
+  HorusRunSnapshotSchema,
+} from "@u-build/shared";
 import type {
   AgentFileOperationTelemetry,
   HorusRunEventSnapshot,
@@ -5,7 +13,27 @@ import type {
   HorusRunSnapshot,
 } from "../types/api.types.js";
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+const HorusRunLocatorListSchema = z.array(HorusRunLocatorSchema);
+const HorusRunEventSnapshotListSchema = z.array(HorusRunEventSnapshotSchema);
+const AgentFileOperationResponseSchema = z.object({
+  threadId: z.string().uuid(),
+  operations: z.array(AgentFileOperationTelemetrySchema),
+});
+const AgentDebugTraceResponseSchema = z.object({
+  entries: z.array(AgentDebugTraceEntrySchema),
+  filter: z.record(z.string(), z.unknown()),
+  generatedAt: z.string().datetime(),
+});
+
+interface ApiContract<T> {
+  parse(input: unknown): T;
+}
+
+async function apiRequest<T>(
+  path: string,
+  contract: ApiContract<T>,
+  init?: RequestInit
+): Promise<T> {
   const response = await fetch(path, {
     ...init,
     headers: {
@@ -16,7 +44,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     throw new Error(await readApiErrorDetail(response));
   }
-  return response.json() as Promise<T>;
+  return parseApiContract(path, contract, await readJsonResponse(response, path));
 }
 
 export const agentFlowApi = {
@@ -26,31 +54,37 @@ export const agentFlowApi = {
     offset?: number;
     query?: string;
   } = {}) =>
-    apiRequest<HorusRunLocator[]>(buildRunsPath(options)),
+    apiRequest(buildRunsPath(options), HorusRunLocatorListSchema),
   async listRunsWithProjectFallback(options: {
     projectId?: string | null;
     limit?: number;
     offset?: number;
     query?: string;
   } = {}) {
-    const scoped = await apiRequest<HorusRunLocator[]>(buildRunsPath(options));
+    const scoped = await apiRequest(
+      buildRunsPath(options),
+      HorusRunLocatorListSchema
+    );
     if (!options.projectId || scoped.length > 0) return scoped;
     const fallbackOptions = {
       ...(options.limit !== undefined ? { limit: options.limit } : {}),
       ...(options.offset !== undefined ? { offset: options.offset } : {}),
       ...(options.query ? { query: options.query } : {}),
     };
-    return apiRequest<HorusRunLocator[]>(buildRunsPath(fallbackOptions));
+    return apiRequest(buildRunsPath(fallbackOptions), HorusRunLocatorListSchema);
   },
   getRun: (threadId: string) =>
-    apiRequest<HorusRunSnapshot>(`/api/agent-runs/${threadId}`),
+    apiRequest(`/api/agent-runs/${threadId}`, HorusRunSnapshotSchema),
   listEvents: (threadId: string) =>
-    apiRequest<HorusRunEventSnapshot[]>(`/api/agent-runs/${threadId}/events`),
+    apiRequest(
+      `/api/agent-runs/${threadId}/events`,
+      HorusRunEventSnapshotListSchema
+    ),
   listFileOperations: (threadId: string) =>
-    apiRequest<{
-      threadId: string;
-      operations: AgentFileOperationTelemetry[];
-    }>(`/api/agent-runs/${threadId}/file-operations`),
+    apiRequest(
+      `/api/agent-runs/${threadId}/file-operations`,
+      AgentFileOperationResponseSchema
+    ),
   streamRunEvents(
     threadId: string,
     sinceSequence: number,
@@ -148,8 +182,9 @@ export const agentFlowApi = {
     if (filter.agentName) params.set("agent_name", filter.agentName);
     if (filter.limit !== undefined) params.set("limit", String(filter.limit));
     const qs = params.toString();
-    return apiRequest<AgentDebugTraceResponse>(
-      `/api/agent-debug-traces${qs ? `?${qs}` : ""}`
+    return apiRequest(
+      `/api/agent-debug-traces${qs ? `?${qs}` : ""}`,
+      AgentDebugTraceResponseSchema
     );
   },
 };
@@ -217,6 +252,38 @@ async function readApiErrorDetail(response: Response): Promise<string> {
   const body = await response.text().catch(() => "");
   const detail = body.trim() || response.statusText || "sem detalhe retornado";
   return `Request failed with status ${response.status}: ${detail}`;
+}
+
+async function readJsonResponse(response: Response, path: string): Promise<unknown> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      `Invalid API response contract for ${path}: expected application/json, got ${
+        contentType || "missing content-type"
+      }.`
+    );
+  }
+  try {
+    return await response.json();
+  } catch (err) {
+    throw new Error(
+      `Invalid API response JSON for ${path}: ${errorMessage(err)}`
+    );
+  }
+}
+
+function parseApiContract<T>(
+  path: string,
+  contract: ApiContract<T>,
+  payload: unknown
+): T {
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new Error(
+      `Invalid API response payload for ${path}: ${errorMessage(err)}`
+    );
+  }
 }
 
 type ParseRunEventResult =
