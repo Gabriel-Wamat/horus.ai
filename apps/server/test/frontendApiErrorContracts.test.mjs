@@ -162,6 +162,14 @@ test("preview API validates response contracts before exposing visual state", as
     join(repositoryRoot, "apps/web/src/api/previewApi.ts"),
     "utf8"
   );
+  const sharedSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/entities/Preview.ts"),
+    "utf8"
+  );
+  const routeSource = await readFile(
+    join(repositoryRoot, "apps/server/src/infrastructure/http/routes/previewRoutes.ts"),
+    "utf8"
+  );
 
   const forbiddenPreviewCasts = [
     "const body = (await res.json()) as { projects: FrontendProject[] }",
@@ -169,6 +177,12 @@ test("preview API validates response contracts before exposing visual state", as
     "const body = (await res.json()) as { session: PreviewSession }",
     "const body = (await res.json()) as { events: PreviewEvent[] }",
     "return res.json() as Promise<VisualInstructionDraftResponse>",
+    "const PreviewProjectsResponseSchema = z.object",
+    "const PreviewActionResponseSchema = z.object",
+    "const PreviewSessionResponseSchema = z.object",
+    "const PreviewTimelineResponseSchema = z.object",
+    "const VisualInstructionDraftResponseSchema = z.object",
+    "import { z } from \"zod\";",
   ];
 
   for (const fragment of forbiddenPreviewCasts) {
@@ -176,13 +190,54 @@ test("preview API validates response contracts before exposing visual state", as
   }
 
   assert.match(source, /readPreviewJson/);
-  assert.match(source, /FrontendProjectSchema/);
-  assert.match(source, /PreviewSessionSchema/);
-  assert.match(source, /PreviewEventSchema/);
-  assert.match(source, /VisualInstructionDraftSchema/);
   assert.match(source, /PreviewProjectsResponseSchema/);
   assert.match(source, /PreviewActionResponseSchema/);
+  assert.match(source, /PreviewSessionResponseSchema/);
   assert.match(source, /PreviewTimelineResponseSchema/);
+  assert.match(source, /VisualInstructionDraftResponseSchema/);
+  assert.match(sharedSource, /PreviewProjectsResponseSchema/);
+  assert.match(sharedSource, /PreviewActionResponseSchema/);
+  assert.match(sharedSource, /PreviewSessionResponseSchema/);
+  assert.match(sharedSource, /PreviewTimelineResponseSchema/);
+  assert.match(sharedSource, /VisualInstructionDraftResponseSchema/);
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\("GET \/preview\/projects", PreviewProjectsResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"POST \/preview\/sessions",\s*PreviewActionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"GET \/preview\/sessions\/:sessionId",\s*PreviewSessionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"POST \/preview\/sessions\/:sessionId\/start",\s*PreviewActionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"POST \/preview\/sessions\/:sessionId\/stop",\s*PreviewActionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"POST \/preview\/sessions\/:sessionId\/reload",\s*PreviewActionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"PATCH \/preview\/sessions\/:sessionId\/device",\s*PreviewActionResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"GET \/preview\/sessions\/:sessionId\/timeline",\s*PreviewTimelineResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parsePreviewRouteResponse\(\s*"POST \/preview\/instructions\/draft",\s*VisualInstructionDraftResponseSchema/
+  );
+  assert.match(routeSource, /contract\.parse\(payload\)/);
+  assert.match(routeSource, /PreviewRouteResponseContractError/);
 });
 
 test("Horus chat API validates response and stream contracts before exposing chat state", async () => {
