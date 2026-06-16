@@ -5,6 +5,7 @@ interface WorkflowProgressProps {
   threadId: string;
   events: WorkflowEvent[];
   isConnected: boolean;
+  streamError?: string | null;
 }
 
 // Phases: 0=spec  1=human-review  2=implementation  3=done
@@ -183,6 +184,7 @@ export function WorkflowProgress({
   threadId,
   events,
   isConnected,
+  streamError = null,
 }: WorkflowProgressProps): JSX.Element {
   const phase = derivePhase(events);
   const errorMsg = hasError(events);
@@ -210,9 +212,9 @@ export function WorkflowProgress({
         </div>
       </div>
 
-      {errorMsg && (
+      {(streamError || errorMsg) && (
         <div className="error-banner" style={{ margin: 12 }}>
-          {errorMsg}
+          {streamError ?? errorMsg}
         </div>
       )}
 

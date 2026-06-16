@@ -34,6 +34,7 @@ export function useSseStream<TEvent>({
 
     setLatestEvent(null);
     setEvents([]);
+    setError(null);
 
     const source = new EventSource(url);
 
@@ -45,10 +46,15 @@ export function useSseStream<TEvent>({
     const parse = (event: MessageEvent<string>): void => {
       try {
         const parsed = JSON.parse(event.data) as TEvent;
+        setError(null);
         setLatestEvent(parsed);
         setEvents((current) => [...current, parsed]);
-      } catch {
-        console.error(`[${logPrefix}] Failed to parse event:`, event.data);
+      } catch (err) {
+        setError(
+          `${logPrefix} received an invalid SSE payload: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
       }
     };
 
