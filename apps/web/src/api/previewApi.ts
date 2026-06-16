@@ -1,16 +1,17 @@
-import { z } from "zod";
 import {
-  FrontendProjectSchema,
-  PreviewEventSchema,
-  PreviewSessionSchema,
-  VisualInstructionDraftSchema,
+  PreviewActionResponseSchema,
+  PreviewProjectsResponseSchema,
+  PreviewSessionResponseSchema,
+  PreviewTimelineResponseSchema,
+  VisualInstructionDraftResponseSchema,
   type CreatePreviewSessionInput,
   type CreateVisualInstructionDraftInput,
   type FrontendProject,
   type PreviewDeviceName,
   type PreviewEvent,
   type PreviewSession,
-  type VisualInstructionDraft,
+  type PreviewActionResponse,
+  type VisualInstructionDraftResponse,
 } from "@u-build/shared";
 
 const BASE = "/api/preview";
@@ -25,28 +26,6 @@ export class PreviewApiError extends Error {
     this.name = "PreviewApiError";
   }
 }
-
-const PreviewProjectsResponseSchema = z.object({
-  projects: z.array(FrontendProjectSchema),
-});
-
-const PreviewActionResponseSchema = z.object({
-  session: PreviewSessionSchema,
-  event: PreviewEventSchema,
-});
-
-const PreviewSessionResponseSchema = z.object({
-  session: PreviewSessionSchema,
-});
-
-const PreviewTimelineResponseSchema = z.object({
-  events: z.array(PreviewEventSchema),
-});
-
-const VisualInstructionDraftResponseSchema = z.object({
-  draft: VisualInstructionDraftSchema,
-  event: PreviewEventSchema,
-});
 
 async function requireOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;
@@ -113,16 +92,6 @@ async function readPreviewJson<T>(
       payload
     );
   }
-}
-
-export interface PreviewActionResponse {
-  session: PreviewSession;
-  event: PreviewEvent;
-}
-
-export interface VisualInstructionDraftResponse {
-  draft: VisualInstructionDraft;
-  event: PreviewEvent;
 }
 
 export const previewApi = {

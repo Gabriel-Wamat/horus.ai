@@ -194,6 +194,28 @@ export const VisualInstructionDraftSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const PreviewProjectsResponseSchema = z.object({
+  projects: z.array(FrontendProjectSchema),
+});
+
+export const PreviewActionResponseSchema = z.object({
+  session: PreviewSessionSchema,
+  event: PreviewEventSchema,
+});
+
+export const PreviewSessionResponseSchema = z.object({
+  session: PreviewSessionSchema,
+});
+
+export const PreviewTimelineResponseSchema = z.object({
+  events: z.array(PreviewEventSchema),
+});
+
+export const VisualInstructionDraftResponseSchema = z.object({
+  draft: VisualInstructionDraftSchema,
+  event: PreviewEventSchema,
+});
+
 export type PreviewDeviceName = z.infer<typeof PreviewDeviceNameSchema>;
 export type PreviewDevice = z.infer<typeof PreviewDeviceSchema>;
 export type PreviewCommand = z.infer<typeof PreviewCommandSchema>;
@@ -224,3 +246,14 @@ export type CreateVisualInstructionDraftInput = z.infer<
   typeof CreateVisualInstructionDraftInputSchema
 >;
 export type VisualInstructionDraft = z.infer<typeof VisualInstructionDraftSchema>;
+export type PreviewProjectsResponse = z.infer<
+  typeof PreviewProjectsResponseSchema
+>;
+export type PreviewActionResponse = z.infer<typeof PreviewActionResponseSchema>;
+export type PreviewSessionResponse = z.infer<typeof PreviewSessionResponseSchema>;
+export type PreviewTimelineResponse = z.infer<
+  typeof PreviewTimelineResponseSchema
+>;
+export type VisualInstructionDraftResponse = z.infer<
+  typeof VisualInstructionDraftResponseSchema
+>;
