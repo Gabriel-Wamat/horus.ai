@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -66,6 +66,14 @@ export class FileFrontendProjectRegistry {
   }
 
   private async canonicalizeProjectRoot(rootPath: string): Promise<string> {
+    if (!isAbsolute(rootPath)) {
+      const dataRelativeRoot = resolve(dirname(this.baseDir), rootPath);
+      try {
+        return await fs.realpath(dataRelativeRoot);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      }
+    }
     return canonicalizeProjectRoot(this.repositoryRoot, rootPath);
   }
 
@@ -135,10 +143,16 @@ export class FileFrontendProjectRegistry {
 
   private async toPersistedProject(project: FrontendProject): Promise<FrontendProject> {
     const repoRoot = await fs.realpath(this.repositoryRoot);
+    const dataRoot = await fs.realpath(resolve(dirname(this.baseDir))).catch(() =>
+      resolve(dirname(this.baseDir))
+    );
     const rootPath = resolve(project.rootPath);
-    const persistedRootPath = isInsideRoot(repoRoot, rootPath)
+    const dataRelativePath = isInsideRoot(dataRoot, rootPath)
+      ? relative(dataRoot, rootPath).split(sep).join("/")
+      : null;
+    const persistedRootPath = dataRelativePath ?? (isInsideRoot(repoRoot, rootPath)
       ? relative(repoRoot, rootPath).split(sep).join("/")
-      : project.rootPath;
+      : project.rootPath);
     return FrontendProjectSchema.parse({
       ...project,
       rootPath: persistedRootPath || ".",

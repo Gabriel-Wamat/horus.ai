@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1b6105ab-c505-486a-acc1-532069e7f184",
+    "workspaceFolderId": null,
+    "name": "nexus-ops-command-center-e2e",
+    "slug": "nexus-ops-command-center-e2e",
+    "targetMode": "new_project",
+    "rootPath": "project-workspaces/nexus-ops-command-center-e2e-29a21c6d",
+    "configPath": "project-workspaces/nexus-ops-command-center-e2e-29a21c6d/.horus-project.yaml",
+    "gitRepositoryPath": "project-workspaces/nexus-ops-command-center-e2e-29a21c6d",
+    "currentBranch": "main",
+    "baseRef": "main",
+    "projectStack": "typescript-react",
+    "createdAt": "2026-05-29T20:57:42.387Z",
+    "updatedAt": "2026-05-29T20:57:42.387Z"
+  },
+  {
+    "id": "3719b801-e9d1-4644-94d1-1d61579e38a6",
+    "workspaceFolderId": null,
+    "name": "project-manager-ui-generation",
+    "slug": "project-manager-ui-generation",
+    "targetMode": "new_project",
+    "rootPath": "project-workspaces/project-manager-ui-generation-7654c267",
+    "configPath": "project-workspaces/project-manager-ui-generation-7654c267/.horus-project.yaml",
+    "gitRepositoryPath": "project-workspaces/project-manager-ui-generation-7654c267",
+    "currentBranch": "main",
+    "baseRef": "main",
+    "projectStack": "typescript-react",
+    "createdAt": "2026-05-27T18:24:21.933Z",
+    "updatedAt": "2026-05-27T18:24:21.933Z"
+  }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "55edf10e-6de1-4981-8c17-dc1f1b004917",
+    "type": "preview_created",
+    "sessionId": "8f06a9eb-0c2d-462a-8f13-02f2e6dccd27",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T14:55:57.040Z",
+    "status": "waiting",
+    "message": "Preview session created",
+    "data": {
+      "route": "/",
+      "device": "pc"
+    }
+  },
+  {
+    "id": "2b50bdcb-304d-4f83-aa56-a93435a4a487",
+    "type": "preview_started",
+    "sessionId": "8f06a9eb-0c2d-462a-8f13-02f2e6dccd27",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T14:56:03.344Z",
+    "status": "running",
+    "message": "Preview session started",
+    "data": {
+      "previewUrl": null
+    }
+  }
+]

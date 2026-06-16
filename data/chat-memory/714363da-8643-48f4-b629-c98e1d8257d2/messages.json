@@ -1,0 +1,137 @@
+[
+  {
+    "id": "2c8b1774-4528-4409-9da6-b714416d5768",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "user",
+    "body": "Rode o projeto.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:56:03.342Z"
+  },
+  {
+    "id": "fdd91493-8569-42df-baa2-fac1e9bbd76e",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "agent",
+    "body": "Horus iniciou o preview do projeto user_stories. Status atual: running.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:56:03.345Z"
+  },
+  {
+    "id": "f8d83fd2-0a77-4fcd-9384-d57dc334e1ca",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "user",
+    "body": "Execute pnpm install pelo terminal.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:56:10.566Z"
+  },
+  {
+    "id": "c63af5ff-3dfc-4d96-9da6-1994c15f1f6e",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "agent",
+    "body": "Horus não executa comandos arbitrários pelo chat. Use pedidos de ciclo do preview, como iniciar, parar ou recarregar o projeto selecionado.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:56:10.568Z"
+  },
+  {
+    "id": "8b72c380-e94e-4a16-9fb6-f950417be82e",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "user",
+    "body": "Rode o projeto.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:57:25.971Z"
+  },
+  {
+    "id": "6bef2c9c-8d61-4835-99b3-95fa92716c5f",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "agent",
+    "body": "Horus iniciou o preview do projeto user_stories. Status atual: running.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1"
+    },
+    "createdAt": "2026-05-26T14:57:25.977Z"
+  },
+  {
+    "id": "a3f0f7ed-0c13-497f-9501-0cdeb0ce780d",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "user",
+    "body": "Rode o projeto.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:00:36.841Z"
+  },
+  {
+    "id": "9658665e-8fd2-4a8a-93a3-e62a4c07aa33",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "agent",
+    "body": "Horus iniciou o preview do projeto user_stories. Status atual: running.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116",
+      "previewSessionId": "a6e47da6-0dd1-43de-adaa-88c942eb9ceb"
+    },
+    "createdAt": "2026-05-26T15:00:36.845Z"
+  },
+  {
+    "id": "2195647e-7da3-40e1-bbbd-999ce9a6064f",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "user",
+    "body": "olá",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:03:00.125Z"
+  },
+  {
+    "id": "8c3f8bc1-5053-4462-81f2-ec99cae4c3b8",
+    "sessionId": "714363da-8643-48f4-b629-c98e1d8257d2",
+    "role": "agent",
+    "body": "Olá. Sou o Horus. Posso responder perguntas sobre esta user story, consultar o contexto do projeto ou acionar o modo executor quando você pedir uma ação clara, como iniciar o preview ou alterar o código.",
+    "contextSnapshot": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryId": "11111111-1111-4111-8111-111111111111",
+      "userStoryRevisionId": "user-story:1",
+      "specRevisionId": "spec:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:1",
+      "projectId": "11111111-1111-4111-8111-111111111116"
+    },
+    "createdAt": "2026-05-26T15:03:00.129Z"
+  }
+]

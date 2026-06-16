@@ -1,0 +1,87 @@
+[
+  {
+    "id": "01b3291a-335f-4c78-9578-ea18b3fc0b5a",
+    "type": "preview_created",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:24:03.207Z",
+    "status": "waiting",
+    "message": "Preview session created",
+    "data": {
+      "route": "/",
+      "device": "pc"
+    }
+  },
+  {
+    "id": "1d8a02db-86ce-4084-8613-4d0e8a801033",
+    "type": "preview_started",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:24:03.226Z",
+    "status": "running",
+    "message": "Preview session started",
+    "data": {
+      "previewUrl": null
+    }
+  },
+  {
+    "id": "a5ea2ca3-d0c4-41a7-81b4-051ced61d6f8",
+    "type": "device_changed",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:24:48.318Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "phone"
+    }
+  },
+  {
+    "id": "26d1799a-5e65-4a1e-aefe-415188242fd6",
+    "type": "device_changed",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:25:01.044Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "pc"
+    }
+  },
+  {
+    "id": "c00aa002-c32f-4c52-afb6-98c33c1b45c5",
+    "type": "device_changed",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:25:01.900Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "phone"
+    }
+  },
+  {
+    "id": "909b0eb0-1fab-4ce5-beb6-5d1d81f2b9f8",
+    "type": "device_changed",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:25:02.422Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "tablet"
+    }
+  },
+  {
+    "id": "91955e27-0a2b-485a-8de7-4a7029485b34",
+    "type": "device_changed",
+    "sessionId": "55299d18-d18f-4939-a01d-c899a2a2770d",
+    "projectId": "11111111-1111-4111-8111-111111111116",
+    "timestamp": "2026-05-26T13:25:03.627Z",
+    "status": "running",
+    "message": "Preview device changed",
+    "data": {
+      "device": "pc"
+    }
+  }
+]

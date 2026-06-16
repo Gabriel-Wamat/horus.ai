@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   ProjectCommandRunSchema,
   ProjectConstructionRunSchema,
@@ -42,10 +42,11 @@ export class FileProjectConstructionRepository
 
   async saveProjectWorkspace(project: ProjectWorkspace): Promise<ProjectWorkspace> {
     const validated = ProjectWorkspaceSchema.parse(project);
+    const persisted = this.toPersistedProjectWorkspace(validated);
     const projects = await this.readArray(PROJECTS_FILE, ProjectWorkspaceSchema);
     await this.writeArray(PROJECTS_FILE, [
-      ...projects.filter((item) => item.id !== validated.id),
-      validated,
+      ...projects.filter((item) => item.id !== persisted.id),
+      persisted,
     ]);
     return validated;
   }
@@ -58,7 +59,9 @@ export class FileProjectConstructionRepository
   }
 
   async listProjectWorkspaces(): Promise<ProjectWorkspace[]> {
-    return this.readArray(PROJECTS_FILE, ProjectWorkspaceSchema);
+    return (await this.readArray(PROJECTS_FILE, ProjectWorkspaceSchema)).map((project) =>
+      this.toRuntimeProjectWorkspace(project)
+    );
   }
 
   async saveConstructionRun(
@@ -154,6 +157,46 @@ export class FileProjectConstructionRepository
   private async writeArray(filename: string, value: unknown[]): Promise<void> {
     await writeJsonFileAtomic(join(this.baseDir, filename), value, {
       trailingNewline: true,
+    });
+  }
+
+  private dataDir(): string {
+    return resolve(dirname(this.baseDir));
+  }
+
+  private resolveDataPath(path: string | null): string | null {
+    if (path === null) return null;
+    if (isAbsolute(path)) return path;
+    return resolve(this.dataDir(), path);
+  }
+
+  private toRuntimeProjectWorkspace(project: ProjectWorkspace): ProjectWorkspace {
+    return ProjectWorkspaceSchema.parse({
+      ...project,
+      rootPath: this.resolveDataPath(project.rootPath),
+      configPath: this.resolveDataPath(project.configPath),
+      gitRepositoryPath: this.resolveDataPath(project.gitRepositoryPath),
+    });
+  }
+
+  private toPersistedPath(path: string | null): string | null {
+    if (path === null) return null;
+    const dataDir = this.dataDir();
+    const absolutePath = resolve(path);
+    const relation = relative(dataDir, absolutePath);
+    if (relation === "") return ".";
+    if (!relation.startsWith("..") && !relation.includes(`..${sep}`)) {
+      return relation.split(sep).join("/");
+    }
+    return path;
+  }
+
+  private toPersistedProjectWorkspace(project: ProjectWorkspace): ProjectWorkspace {
+    return ProjectWorkspaceSchema.parse({
+      ...project,
+      rootPath: this.toPersistedPath(project.rootPath),
+      configPath: this.toPersistedPath(project.configPath),
+      gitRepositoryPath: this.toPersistedPath(project.gitRepositoryPath),
     });
   }
 }

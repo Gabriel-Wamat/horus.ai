@@ -1,0 +1,34 @@
+{
+  "threadId": "8fbe66b1-4364-4d05-b5bf-65f3c341df26",
+  "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "workflowMode": "spec_generation",
+  "userStories": [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "title": "Fazer perguntas sobre documentos",
+      "description": "Como analista, quero perguntar sobre documentos baixados para receber respostas baseadas no conteúdo indexado.",
+      "acceptanceCriteria": [
+        "A pergunta usa apenas documentos indexados",
+        "A resposta cita o documento de origem",
+        "Quando não houver evidência, o sistema informa que não encontrou base suficiente"
+      ],
+      "priority": "medium",
+      "labels": [],
+      "createdAt": "2026-05-26T10:05:00.000Z"
+    }
+  ],
+  "currentUSIndex": 0,
+  "specs": {},
+  "workspaceArtifactContext": {
+    "22222222-2222-4222-8222-222222222222": {
+      "workspaceFolderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+      "userStoryRevisionId": "user-story:1"
+    }
+  },
+  "humanFeedback": {},
+  "agentResults": {},
+  "status": "error",
+  "startedAt": "2026-05-26T15:47:18.224Z",
+  "completedAt": "2026-05-26T15:47:18.237Z",
+  "errorMessage": "Unsupported or missing LLM provider missing. Expected one of: openai, openrouter, groq."
+}

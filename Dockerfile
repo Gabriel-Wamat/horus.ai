@@ -25,11 +25,13 @@ ENV PORT=3000
 ENV HORUS_WEB_DIST_DIR=apps/web/dist
 COPY --from=build /prod/server /app
 COPY --from=build /app/apps/web/dist /app/apps/web/dist
+COPY --from=build /app/data /app/seed-data
+COPY docker/server-entrypoint.sh /app/docker/server-entrypoint.sh
 COPY skills/agents /app/skills/agents
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "const host=process.env.HORUS_HEALTHCHECK_HOST||require('node:os').hostname();const port=process.env.PORT||'3000';fetch('http://'+host+':'+port+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["sh", "-c", "node dist/infrastructure/database/migrateCli.js && node dist/main.js"]
+CMD ["sh", "/app/docker/server-entrypoint.sh"]
 
 FROM nginx:1.27-alpine AS web-runtime
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template

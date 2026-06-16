@@ -1,0 +1,14 @@
+{
+  "folderId": "ca5f79a9-1e87-400f-9354-e711d48c0842",
+  "storyId": "11111111-1111-4111-8111-111111111111",
+  "createdAt": "2026-05-26T12:00:02.519Z",
+  "updatedAt": "2026-05-26T12:00:02.519Z",
+  "activeRevision": 1,
+  "revisions": [
+    {
+      "revision": 1,
+      "file": "revisions/0001-user-story.json",
+      "createdAt": "2026-05-26T12:00:02.519Z"
+    }
+  ]
+}

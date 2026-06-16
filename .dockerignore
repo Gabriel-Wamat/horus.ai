@@ -9,10 +9,13 @@
 .vite
 coverage
 data
+!data/
+!data/**
 docs
 dist
 build
 node_modules
+.git.local
 openclaude
 output
 spec

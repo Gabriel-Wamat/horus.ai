@@ -184,7 +184,7 @@ By default, Horus uses file persistence under `.horus/data` and does not require
 
 ## Docker Run
 
-Docker is the clean-machine path for people who want to run the shipped app without managing local Node processes. It builds the source from scratch, starts the API with file persistence, serves the built web app through nginx, and persists Horus state in the `horus-data` Docker volume. Local `HORUS_DATA_DIR` values are not reused as container mount targets; set `HORUS_DOCKER_DATA_DIR` only if you need to change the internal container path.
+Docker is the clean-machine path for people who want to run the shipped app without managing local Node processes. It builds the source from scratch, starts the API with file persistence, serves the built web app through nginx, and persists Horus state in the `horus-data` Docker volume. On first boot with an empty file-mode volume, the API initializes `HORUS_DATA_DIR` from the bundled `data/` snapshot so generated projects, user stories, specs, chat memory, preview sessions, and agent skill data are already present. Existing volume data is never overwritten. Local `HORUS_DATA_DIR` values are not reused as container mount targets; set `HORUS_DOCKER_DATA_DIR` only if you need to change the internal container path.
 
 Create the local env file and add your API key:
 
