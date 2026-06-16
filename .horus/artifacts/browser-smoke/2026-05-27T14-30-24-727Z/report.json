@@ -1,14 +1,14 @@
 {
   "status": "passed",
-  "baseUrl": "http://localhost:5174",
-  "apiBaseUrl": "http://localhost:3000",
-  "artifactDir": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z",
+  "baseUrl": "http://browser.example.test:5174",
+  "apiBaseUrl": "http://api.example.test:3000",
+  "artifactDir": ".horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z",
   "startedAt": "2026-05-27T14:30:24.728Z",
   "screenshots": {
-    "defaultPreview": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/01-default-preview.png",
-    "runningPreview": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/02-running-preview.png",
-    "allProjects": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/03-all-projects.png",
-    "blockedProject": "/Users/wamat/Desktop/horus.ai/.horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/04-blocked-project.png"
+    "defaultPreview": ".horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/01-default-preview.png",
+    "runningPreview": ".horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/02-running-preview.png",
+    "allProjects": ".horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/03-all-projects.png",
+    "blockedProject": ".horus/artifacts/browser-smoke/2026-05-27T14-30-24-727Z/04-blocked-project.png"
   },
   "checks": {
     "health": {
@@ -64,7 +64,7 @@
         "width": 660,
         "height": 641
       },
-      "iframeSrc": "http://127.0.0.1:5184/"
+      "iframeSrc": "http://preview.example.test:5184/"
     },
     "blockedProject": {
       "projectId": "29544aba-0d43-4e21-a985-6c1dcfaa0bbd",

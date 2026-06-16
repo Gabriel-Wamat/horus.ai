@@ -64,7 +64,7 @@ test("seed frontend project is resolved from current repo instead of stale persi
         id: "11111111-1111-4111-8111-111111111116",
         name: "user_stories",
         slug: "user-stories",
-        rootPath: "/Users/someone/old/horus.ai/apps/web",
+        rootPath: "/stale-machine/old/horus.ai/apps/web",
         defaultRoute: "/",
         devCommand: "pnpm --filter @u-build/web dev -- --host old-preview.example --port 5174",
         previewCommandId: "dev",

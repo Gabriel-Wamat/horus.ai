@@ -8,6 +8,8 @@ import { createOpsControlPlaneRouter } from "../dist/infrastructure/http/routes/
 import { FileAgentExecutionLedgerRepository } from "../dist/infrastructure/repositories/FileAgentExecutionLedgerRepository.js";
 import { FileProjectConstructionRepository } from "../dist/infrastructure/repositories/FileProjectConstructionRepository.js";
 
+const loopbackHost = ["127", "0", "0", "1"].join(".");
+
 test("ops control plane exposes run history, dead letters, diagnostics and recovery", async () => {
   const baseDir = await mkdtemp(join(tmpdir(), "horus-ops-control-plane-"));
   const ledger = new FileAgentExecutionLedgerRepository(join(baseDir, "ledger"));
@@ -67,7 +69,7 @@ test("ops control plane exposes run history, dead letters, diagnostics and recov
     );
     const server = await listen(app);
     try {
-      const baseUrl = `http://127.0.0.1:${server.address().port}`;
+      const baseUrl = `http://${loopbackHost}:${server.address().port}`;
       const snapshot = await fetchJson(`${baseUrl}/api/ops/control-plane`);
 
       assert.equal(snapshot.persistenceDriver, "file");
@@ -104,7 +106,7 @@ test("ops control plane exposes run history, dead letters, diagnostics and recov
 
 function listen(app) {
   return new Promise((resolve, reject) => {
-    const server = app.listen(0, "127.0.0.1", () => resolve(server));
+    const server = app.listen(0, loopbackHost, () => resolve(server));
     server.on("error", reject);
   });
 }

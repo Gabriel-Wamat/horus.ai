@@ -7,6 +7,7 @@ const workspaceFolderId = "22222222-2222-4222-8222-222222222222";
 const userStoryId = "33333333-3333-4333-8333-333333333333";
 const projectId = "44444444-4444-4444-8444-444444444444";
 const previewSessionId = "55555555-5555-4555-8555-555555555555";
+const previewUrl = "http://preview.fixture.example:5184";
 
 test("chat code change reloads the active preview after applying a patch", async () => {
   const now = "2026-06-09T12:00:00.000Z";
@@ -22,7 +23,7 @@ test("chat code change reloads the active preview after applying a patch", async
     devCommand: "pnpm dev",
     previewCommandId: "dev",
     commandCatalog: [],
-    previewUrl: "http://127.0.0.1:5184",
+    previewUrl,
     createdAt: now,
     projectKind: "generated",
     lifecycleStatus: "published",
@@ -42,7 +43,7 @@ test("chat code change reloads the active preview after applying a patch", async
     status: "running",
     route: "/",
     device: { name: "pc", width: 1440, height: 900 },
-    previewUrl: "http://127.0.0.1:5184",
+    previewUrl,
     processId: 123,
     startedAt: now,
     stoppedAt: null,

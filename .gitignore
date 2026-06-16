@@ -62,6 +62,7 @@ apps/server/test/*
 !apps/server/test/portableRuntimeConfig.test.mjs
 !apps/server/test/workspaceFolderPortability.test.mjs
 !apps/server/test/scriptRuntimeUrlConfig.test.mjs
+!apps/server/test/portableSnapshotData.test.mjs
 packages/**/test/
 packages/**/tests/
 scripts/*.test.mjs
