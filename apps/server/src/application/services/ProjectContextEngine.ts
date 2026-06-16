@@ -150,7 +150,7 @@ export class ProjectContextEngine {
           runHistory: [...(input.runHistory ?? cached.runHistory)],
           notes: dedupe([...cached.notes, "engine_cache_hit:snapshot"]),
         };
-        await this.recordManifest({
+        const manifestFailureNote = await this.recordManifest({
           projectRootPath,
           cacheKey,
           cacheStatus: "hit",
@@ -164,7 +164,12 @@ export class ProjectContextEngine {
             checkedAt: this.now().toISOString(),
           }),
         });
-        return ProjectContextSnapshotSchema.parse(refreshed);
+        return ProjectContextSnapshotSchema.parse({
+          ...refreshed,
+          notes: manifestFailureNote
+            ? dedupe([...refreshed.notes, manifestFailureNote])
+            : refreshed.notes,
+        });
       }
     }
 
@@ -224,7 +229,7 @@ export class ProjectContextEngine {
         .setJson(cacheKey, parsed, { ttlMs: this.cacheTtlMs })
         .catch(() => undefined);
     }
-    await this.recordManifest({
+    const manifestFailureNote = await this.recordManifest({
       projectRootPath,
       cacheKey: cacheKey ?? "<no-cache>",
       cacheStatus: this.cache ? "miss" : "bypass",
@@ -238,7 +243,11 @@ export class ProjectContextEngine {
         checkedAt: parsed.generatedAt,
       }),
     });
-    return parsed;
+    if (!manifestFailureNote) return parsed;
+    return ProjectContextSnapshotSchema.parse({
+      ...parsed,
+      notes: dedupe([...parsed.notes, manifestFailureNote]),
+    });
   }
 
   private async recordManifest(input: {
@@ -249,11 +258,14 @@ export class ProjectContextEngine {
     fileCount: number | null;
     stack: string | null;
     repositoryIndex?: ProjectIndexSnapshotSummary | undefined;
-  }): Promise<void> {
-    if (!this.manifestStore) return;
-    await this.manifestStore
-      .recordSnapshotResult(input)
-      .catch(() => undefined);
+  }): Promise<string | null> {
+    if (!this.manifestStore) return null;
+    try {
+      await this.manifestStore.recordSnapshotResult(input);
+      return null;
+    } catch (err) {
+      return `index_manifest_persist_failed:${errorMessage(err)}`;
+    }
   }
 }
 
@@ -464,6 +476,16 @@ async function maxMtimeUnderPath(rootPath: string): Promise<number> {
 
 function shouldSkipMtimeEntry(name: string): boolean {
   return MTIME_SCAN_IGNORED_NAMES.has(name);
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return "unknown error";
+  }
 }
 
 function sha256(value: string | Buffer): string {

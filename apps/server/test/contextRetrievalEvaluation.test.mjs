@@ -224,6 +224,62 @@ test("ProjectContextEngine reuses cached snapshots and invalidates after deep so
   }
 });
 
+test("ProjectIndexManifestStore rejects corrupt manifests instead of resetting silently", async () => {
+  const root = await mkdtemp(join(tmpdir(), "horus-context-corrupt-manifest-"));
+  try {
+    await mkdir(join(root, ".horus"), { recursive: true });
+    await writeFile(join(root, ".horus", "index-manifest.json"), "{not json");
+
+    const store = new ProjectIndexManifestStore();
+
+    await assert.rejects(
+      () => store.read(root),
+      /Failed to read project index manifest/
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("ProjectContextEngine surfaces index manifest persistence failures in snapshot notes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "horus-context-manifest-failure-"));
+  try {
+    await createFixtureProject(root);
+    await writeFile(join(root, ".horus"), "not a directory");
+    const scanner = new RepositoryScanner();
+    const engine = new ProjectContextEngine({
+      inspector: new ProjectInspectionService(scanner),
+      codeContext: new ReadOnlyCodeContextService(
+        undefined,
+        undefined,
+        undefined,
+        scanner,
+        new TextRepositoryRetriever(),
+        new TreeSitterAstAnalyzer()
+      ),
+      validationStrategy: new ValidationStrategyRegistry(),
+      manifestStore: new ProjectIndexManifestStore(),
+      now: () => new Date("2026-06-09T12:00:00.000Z"),
+    });
+
+    const snapshot = await engine.buildSnapshot({
+      projectId: randomUUID(),
+      projectRootPath: root,
+      query: "qual arquivo editar para alterar SettingsPanel",
+      agentProfileId: "front_agent",
+    });
+
+    assert.equal(
+      snapshot.notes.some((note) =>
+        note.startsWith("index_manifest_persist_failed:")
+      ),
+      true
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("RepositoryIndexLifecycleService emits a deterministic Merkle root for indexed content", () => {
   const service = new RepositoryIndexLifecycleService(
     () => new Date("2026-06-09T12:00:00.000Z")
