@@ -109,6 +109,34 @@ test("project files API validates JSON content type and shared response contract
   assert.match(source, /SaveProjectFileResponseSchema/);
 });
 
+test("preview API validates response contracts before exposing visual state", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/previewApi.ts"),
+    "utf8"
+  );
+
+  const forbiddenPreviewCasts = [
+    "const body = (await res.json()) as { projects: FrontendProject[] }",
+    "return res.json() as Promise<PreviewActionResponse>",
+    "const body = (await res.json()) as { session: PreviewSession }",
+    "const body = (await res.json()) as { events: PreviewEvent[] }",
+    "return res.json() as Promise<VisualInstructionDraftResponse>",
+  ];
+
+  for (const fragment of forbiddenPreviewCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /readPreviewJson/);
+  assert.match(source, /FrontendProjectSchema/);
+  assert.match(source, /PreviewSessionSchema/);
+  assert.match(source, /PreviewEventSchema/);
+  assert.match(source, /VisualInstructionDraftSchema/);
+  assert.match(source, /PreviewProjectsResponseSchema/);
+  assert.match(source, /PreviewActionResponseSchema/);
+  assert.match(source, /PreviewTimelineResponseSchema/);
+});
+
 test("workflow API validates workspace response contracts before exposing state", async () => {
   const source = await readFile(
     join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
