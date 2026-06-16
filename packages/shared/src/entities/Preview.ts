@@ -90,6 +90,7 @@ export const FrontendProjectHealthStatusSchema = z.enum([
 export const FrontendProjectHealthReasonSchema = z.enum([
   "root_missing",
   "manifest_missing",
+  "manifest_invalid",
   "preview_command_missing",
   "preview_url_missing",
   "preview_url_collision",

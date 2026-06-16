@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import {
   FrontendProjectSchema,
+  HorusProjectManifestSchema,
   type FrontendProject,
   type FrontendProjectHealthReason,
 } from "@u-build/shared";
@@ -28,6 +29,11 @@ interface InspectedProject {
   familyKey: string;
   createdAtMs: number;
 }
+
+type ManifestIdentity =
+  | { status: "missing"; projectId: null }
+  | { status: "invalid"; projectId: null }
+  | { status: "valid"; projectId: string };
 
 const TERMINAL_HIDDEN_STATUSES = new Set<FrontendProject["lifecycleStatus"]>([
   "archived",
@@ -114,6 +120,7 @@ function hasBlockedReason(project: FrontendProject): boolean {
   return project.healthReasons.some((reason) =>
     [
       "root_missing",
+      "manifest_invalid",
       "preview_command_missing",
       "preview_url_missing",
     ].includes(reason)
@@ -257,11 +264,14 @@ export class PreviewProjectHealthService {
     }
     if (!rootExists) addReason(reasons, "root_missing");
 
-    const manifestProjectId = rootExists
-      ? await this.readManifestProjectId(project.rootPath)
-      : null;
-    if (rootExists && !manifestProjectId && projectKind === "generated") {
+    const manifest = rootExists
+      ? await this.readManifestIdentity(project.rootPath)
+      : { status: "missing", projectId: null };
+    if (rootExists && manifest.status === "missing" && projectKind === "generated") {
       addReason(reasons, "manifest_missing");
+    }
+    if (rootExists && manifest.status === "invalid") {
+      addReason(reasons, "manifest_invalid");
     }
     if (!project.previewUrl) addReason(reasons, "preview_url_missing");
     if (!hasPreviewCommand(project)) addReason(reasons, "preview_command_missing");
@@ -309,7 +319,7 @@ export class PreviewProjectHealthService {
       visibility,
       healthStatus,
       healthReasons: Array.from(reasons),
-      projectWorkspaceId: project.projectWorkspaceId ?? manifestProjectId,
+      projectWorkspaceId: project.projectWorkspaceId ?? manifest.projectId,
       appFingerprint,
       lastHealthCheckedAt: now,
       archivedAt:
@@ -370,16 +380,16 @@ export class PreviewProjectHealthService {
     return canonical;
   }
 
-  private async readManifestProjectId(rootPath: string): Promise<string | null> {
+  private async readManifestIdentity(rootPath: string): Promise<ManifestIdentity> {
     const raw = await readSmallText(join(rootPath, "horus.project.json"));
-    if (!raw) return null;
+    if (!raw) return { status: "missing", projectId: null };
     try {
-      const parsed = JSON.parse(raw) as { projectId?: unknown };
-      return typeof parsed.projectId === "string" && parsed.projectId.trim()
-        ? parsed.projectId
-        : null;
+      const parsed = HorusProjectManifestSchema.safeParse(JSON.parse(raw));
+      return parsed.success
+        ? { status: "valid", projectId: parsed.data.projectId }
+        : { status: "invalid", projectId: null };
     } catch {
-      return null;
+      return { status: "invalid", projectId: null };
     }
   }
 
@@ -418,6 +428,7 @@ function humanReason(reason: string): string {
   const labels: Record<string, string> = {
     root_missing: "a pasta do projeto não existe mais",
     manifest_missing: "o manifesto do projeto não foi encontrado",
+    manifest_invalid: "o manifesto do projeto está inválido",
     preview_command_missing: "o comando de preview não está configurado",
     preview_url_missing: "a URL de preview não está configurada",
     preview_url_collision: "a URL de preview está compartilhada com outro projeto",
