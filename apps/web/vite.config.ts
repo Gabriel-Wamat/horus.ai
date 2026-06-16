@@ -5,11 +5,11 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const webDevHost = readEnv("HORUS_WEB_DEV_HOST", "127.0.0.1");
+const webDevHost = readEnv("HORUS_WEB_DEV_HOST", "0.0.0.0");
 const webDevPort = readPort("HORUS_WEB_DEV_PORT", 5173);
 const apiProxyTarget =
   process.env["HORUS_API_PROXY_TARGET"] ??
-  `http://${readEnv("HORUS_API_PROXY_HOST", "127.0.0.1")}:${readPort(
+  `http://${readEnv("HORUS_API_PROXY_HOST", readEnv("HORUS_PUBLIC_HOST", "0.0.0.0"))}:${readPort(
     "HORUS_API_PROXY_PORT",
     3001
   )}`;

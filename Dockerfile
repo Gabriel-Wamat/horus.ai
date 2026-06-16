@@ -26,7 +26,7 @@ COPY --from=build /prod/server /app
 COPY skills/agents /app/skills/agents
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "const host=process.env.HORUS_HEALTHCHECK_HOST||'127.0.0.1';const port=process.env.PORT||'3000';fetch('http://'+host+':'+port+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "const host=process.env.HORUS_HEALTHCHECK_HOST||require('node:os').hostname();const port=process.env.PORT||'3000';fetch('http://'+host+':'+port+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["sh", "-c", "node dist/infrastructure/database/migrateCli.js && node dist/main.js"]
 
 FROM nginx:1.27-alpine AS web-runtime
@@ -34,4 +34,4 @@ COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- "http://${HORUS_HEALTHCHECK_HOST:-127.0.0.1}:${NGINX_PORT:-8080}/" >/dev/null || exit 1
+  CMD host="${HORUS_HEALTHCHECK_HOST:-$(hostname)}"; wget -qO- "http://${host}:${NGINX_PORT:-8080}/" >/dev/null || exit 1
