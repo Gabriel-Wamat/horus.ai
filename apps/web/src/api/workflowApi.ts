@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   FrontendProjectSchema,
+  LlmProviderCapabilitySchema,
+  LlmSettingsProfileSchema,
   PreviewSessionSchema,
   ProjectConstructionRunSchema,
   ProjectWorkspaceSchema,
@@ -95,6 +97,24 @@ const StartProjectConstructionResponseSchema = z.object({
   frontendProject: FrontendProjectSchema.nullable(),
   previewSession: PreviewSessionSchema.nullable(),
   reusedProjectWorkspace: z.boolean().optional(),
+});
+
+const LlmProvidersResponseSchema = z.object({
+  providers: z.array(LlmProviderCapabilitySchema),
+});
+
+const LlmSettingsNullableProfileResponseSchema = z.object({
+  profile: LlmSettingsProfileSchema.nullable(),
+});
+
+const LlmSettingsProfileResponseSchema = z.object({
+  profile: LlmSettingsProfileSchema,
+});
+
+const LlmSettingsTestResponseSchema = z.object({
+  ok: z.boolean(),
+  message: z.string().trim().min(1),
+  testedAt: z.string().datetime(),
 });
 
 async function requireOk(res: Response, action: string): Promise<void> {
@@ -379,13 +399,17 @@ export const workflowApi = {
   listLlmProviders: async (): Promise<{ providers: LlmProviderCapability[] }> => {
     const res = await fetch(`${BASE}/llm/providers`, { cache: "no-store" });
     await requireOk(res, "Listar providers LLM");
-    return res.json() as Promise<{ providers: LlmProviderCapability[] }>;
+    return readWorkflowJson(res, "Listar providers LLM", LlmProvidersResponseSchema);
   },
 
   getLlmSettings: async (): Promise<LlmSettingsProfile | null> => {
     const res = await fetch(`${BASE}/llm/settings`, { cache: "no-store" });
     await requireOk(res, "Consultar provider LLM");
-    const body = (await res.json()) as { profile: LlmSettingsProfile | null };
+    const body = await readWorkflowJson(
+      res,
+      "Consultar provider LLM",
+      LlmSettingsNullableProfileResponseSchema
+    );
     return body.profile;
   },
 
@@ -402,7 +426,11 @@ export const workflowApi = {
       body: JSON.stringify(settings),
     });
     await requireOk(res, "Salvar provider LLM");
-    const body = (await res.json()) as { profile: LlmSettingsProfile };
+    const body = await readWorkflowJson(
+      res,
+      "Salvar provider LLM",
+      LlmSettingsProfileResponseSchema
+    );
     return body.profile;
   },
 
@@ -415,7 +443,7 @@ export const workflowApi = {
       body: JSON.stringify(settings),
     });
     await requireOk(res, "Testar provider LLM");
-    return res.json() as Promise<{ ok: boolean; message: string; testedAt: string }>;
+    return readWorkflowJson(res, "Testar provider LLM", LlmSettingsTestResponseSchema);
   },
 
   deleteLlmSettings: async (profileId: string): Promise<void> => {
