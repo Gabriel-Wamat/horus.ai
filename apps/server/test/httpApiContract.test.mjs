@@ -12,6 +12,7 @@ import {
 } from "../dist/infrastructure/http/server.js";
 import { createLlmSettingsRouter } from "../dist/infrastructure/http/routes/llmSettingsRoutes.js";
 import { createProjectConstructionRouter } from "../dist/infrastructure/http/routes/projectConstructionRoutes.js";
+import { createAgentRunFlowRouter } from "../dist/infrastructure/http/routes/agentRunFlowRoutes.js";
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
@@ -172,6 +173,65 @@ test("project construction routes return JSON when repository dependency fails",
       error: "Internal server error",
       message: "workspace repository unavailable",
     });
+  } finally {
+    await close(server);
+  }
+});
+
+test("agent run scoped routes reject missing runs before returning empty payloads or streams", async () => {
+  const app = express();
+  const snapshotBuilder = {
+    async hasRun() {
+      return false;
+    },
+    async getRun() {
+      return null;
+    },
+    async listEvents() {
+      throw new Error("listEvents should not be called for a missing run");
+    },
+    async listEventsAfter() {
+      throw new Error("listEventsAfter should not be called for a missing run");
+    },
+    async listFileOperations() {
+      throw new Error("listFileOperations should not be called for a missing run");
+    },
+    async listFileOperationsAfter() {
+      throw new Error("listFileOperationsAfter should not be called for a missing run");
+    },
+  };
+  const eventStream = {
+    subscribe() {
+      throw new Error("event stream should not subscribe for a missing run");
+    },
+  };
+  app.use(
+    "/api/agent-runs",
+    createAgentRunFlowRouter({ snapshotBuilder, eventStream })
+  );
+  app.use("/api", createApiNotFoundHandler());
+  app.use(createApiErrorHandler());
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const routes = [
+      "/api/agent-runs/missing-run/events",
+      "/api/agent-runs/missing-run/events/stream?since_sequence=0",
+      "/api/agent-runs/missing-run/file-operations",
+      "/api/agent-runs/missing-run/file-operations/stream?since_sequence=0",
+    ];
+
+    for (const route of routes) {
+      const response = await fetch(`${baseUrl}${route}`, {
+        headers: { Accept: "application/json" },
+      });
+      const body = await response.json();
+
+      assert.equal(response.status, 404, route);
+      assert.equal(hasJsonContentType(response), true, route);
+      assert.deepEqual(body, { error: "Run not found" }, route);
+    }
   } finally {
     await close(server);
   }

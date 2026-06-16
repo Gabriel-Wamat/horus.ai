@@ -93,6 +93,10 @@ export class HorusRunFlowSnapshotBuilder {
     return this.buildSnapshot(state, events, runbookEntries, fileOperations);
   }
 
+  async hasRun(threadId: string): Promise<boolean> {
+    return Boolean(await this.storage.load(threadId));
+  }
+
   async listEvents(threadId: string): Promise<HorusRunEventSnapshot[]> {
     return this.events.list(threadId);
   }

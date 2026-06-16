@@ -50,6 +50,9 @@ export function createAgentRunFlowRouter({
 
   router.get("/:threadId/events", async (req, res, next) => {
     try {
+      if (!(await sendRunNotFoundIfMissing(snapshotBuilder, req.params.threadId, res))) {
+        return;
+      }
       res.json(await snapshotBuilder.listEvents(req.params.threadId));
     } catch (err) {
       next(err);
@@ -61,6 +64,9 @@ export function createAgentRunFlowRouter({
     const sinceSequence = Number(req.query.since_sequence ?? 0);
     const since = Number.isFinite(sinceSequence) ? Math.max(0, sinceSequence) : 0;
     try {
+      if (!(await sendRunNotFoundIfMissing(snapshotBuilder, threadId, res))) {
+        return;
+      }
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
@@ -91,6 +97,9 @@ export function createAgentRunFlowRouter({
 
   router.get("/:threadId/file-operations", async (req, res, next) => {
     try {
+      if (!(await sendRunNotFoundIfMissing(snapshotBuilder, req.params.threadId, res))) {
+        return;
+      }
       res.json({
         threadId: req.params.threadId,
         operations: await snapshotBuilder.listFileOperations(req.params.threadId),
@@ -105,6 +114,9 @@ export function createAgentRunFlowRouter({
     const sinceSequence = Number(req.query.since_sequence ?? 0);
     const since = Number.isFinite(sinceSequence) ? Math.max(0, sinceSequence) : 0;
     try {
+      if (!(await sendRunNotFoundIfMissing(snapshotBuilder, threadId, res))) {
+        return;
+      }
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
@@ -142,6 +154,16 @@ export function createAgentRunFlowRouter({
   });
 
   return router;
+}
+
+async function sendRunNotFoundIfMissing(
+  snapshotBuilder: HorusRunFlowSnapshotBuilder,
+  threadId: string,
+  res: express.Response
+): Promise<boolean> {
+  if (await snapshotBuilder.hasRun(threadId)) return true;
+  res.status(404).json({ error: "Run not found" });
+  return false;
 }
 
 function stringQuery(value: unknown): string | undefined {
