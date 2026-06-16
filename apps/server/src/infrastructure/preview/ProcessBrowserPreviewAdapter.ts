@@ -2,7 +2,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import type { FrontendProject, PreviewSession } from "@u-build/shared";
+import {
+  HorusProjectManifestSchema,
+  type FrontendProject,
+  type PreviewSession,
+} from "@u-build/shared";
 import type { NormalizedCliCommandSpec } from "../tools/CliCommandPolicy.js";
 import {
   PreviewCommandResolutionError,
@@ -363,10 +367,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   private async readProjectManifestId(rootPath: string): Promise<string | null> {
     try {
       const raw = await fs.readFile(join(rootPath, "horus.project.json"), "utf-8");
-      const parsed = JSON.parse(raw) as { projectId?: unknown };
-      return typeof parsed.projectId === "string" && parsed.projectId.trim()
-        ? parsed.projectId
-        : null;
+      return parseProjectManifestId(JSON.parse(raw));
     } catch {
       return null;
     }
@@ -384,10 +385,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
         headers: { Accept: "application/json" },
       });
       if (!response.ok) return null;
-      const parsed = (await response.json()) as { projectId?: unknown };
-      return typeof parsed.projectId === "string" && parsed.projectId.trim()
-        ? parsed.projectId
-        : null;
+      return parseProjectManifestId(await response.json());
     } catch {
       return null;
     } finally {
@@ -428,4 +426,9 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     }
     child.kill(signal);
   }
+}
+
+function parseProjectManifestId(payload: unknown): string | null {
+  const parsed = HorusProjectManifestSchema.safeParse(payload);
+  return parsed.success ? parsed.data.projectId : null;
 }
