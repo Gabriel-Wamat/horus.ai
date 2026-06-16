@@ -14,6 +14,7 @@ const clientFiles = [
   "apps/web/src/app/useWorkflowRuntime.ts",
   "apps/web/src/components/VisualPreviewConsole.tsx",
   "apps/web/src/features/visual-preview/usePreviewChatRuntime.ts",
+  "apps/web/src/features/visual-preview/useProjectChatScope.ts",
   "apps/web/src/features/visual-preview/workflowProgress.ts",
   "apps/web/src/features/visual-preview/useWorkflowFileOperations.ts",
   "apps/web/src/components/execution-console/useExecutionTaskOutputs.ts",
@@ -30,6 +31,8 @@ const forbiddenFragments = [
   ".catch(() => setLlmProviders([]))",
   ".catch(() => setLlmProfile(null))",
   ".catch(() => undefined)",
+  ".listWorkspaceStoryArtifacts(folderId)\n          .catch(() => null)",
+  "syncChatMessagesFromServer();\n      } catch {",
 ];
 
 test("frontend API clients do not silently coerce HTTP failures to empty values", async () => {
