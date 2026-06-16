@@ -70,11 +70,16 @@ export class FilePreviewSessionStore {
       const sessions = await Promise.all(
         entries
           .filter((entry) => entry.isDirectory())
-          .map((entry) => this.getSession(entry.name))
+          .map((entry) =>
+            this.getSession(entry.name).catch((err) => {
+              if (err instanceof PreviewSessionNotFoundError) return null;
+              throw err;
+            })
+          )
       );
-      return sessions.sort((left, right) =>
-        right.updatedAt.localeCompare(left.updatedAt)
-      );
+      return sessions
+        .filter((session): session is PreviewSession => session !== null)
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw err;
