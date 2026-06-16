@@ -38,8 +38,10 @@ const forbiddenFragments = [
   "syncChatMessagesFromServer();\n      } catch {",
   "Ignoring invalid workflow event payload",
   "Ignoring invalid file operation payload",
+  "Ignoring invalid workflow progress event",
   "if (parsed) onEvent(parsed);",
   "if (parsed) onOperation(parsed);",
+  "if (parsed) appendWorkflowProgressEvent(parsed);",
   "Failed to parse event:",
 ];
 
