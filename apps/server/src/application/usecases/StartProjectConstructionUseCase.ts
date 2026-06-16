@@ -96,6 +96,37 @@ function compareIsoDesc(left: string, right: string): number {
   return right.localeCompare(left);
 }
 
+function readEnvValue(
+  env: Record<string, string | undefined>,
+  names: readonly string[]
+): string | undefined {
+  for (const name of names) {
+    const value = env[name]?.trim();
+    if (value && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+function resolveGeneratedPreviewHosts(
+  env: Record<string, string | undefined>
+): { bindHost: string; publicHost: string } {
+  const bindHost =
+    readEnvValue(env, [
+      "HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST",
+      "HORUS_GENERATED_PROJECT_PREVIEW_HOST",
+      "HORUS_WEB_PREVIEW_HOST",
+      "HOST",
+    ]) ?? "0.0.0.0";
+  const publicHost =
+    readEnvValue(env, [
+      "HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST",
+      "HORUS_PUBLIC_HOST",
+      "HORUS_WEB_PREVIEW_PUBLIC_HOST",
+      "HORUS_DOCKER_HOST",
+    ]) ?? bindHost;
+  return { bindHost, publicHost };
+}
+
 function selectReusableProjectWorkspace(
   projects: ProjectWorkspace[],
   workspaceFolderId: string
@@ -325,15 +356,7 @@ export class StartProjectConstructionUseCase {
   ): Promise<FrontendProject | null> {
     if (!this.frontendProjects.registerProject) return null;
     const port = resolveGeneratedPreviewPort(this.env, project.id);
-    const bindHost =
-      this.env["HORUS_GENERATED_PROJECT_PREVIEW_BIND_HOST"]?.trim() ||
-      this.env["HORUS_GENERATED_PROJECT_PREVIEW_HOST"]?.trim() ||
-      this.env["HORUS_WEB_PREVIEW_HOST"]?.trim() ||
-      "127.0.0.1";
-    const publicHost =
-      this.env["HORUS_GENERATED_PROJECT_PREVIEW_PUBLIC_HOST"]?.trim() ||
-      this.env["HORUS_WEB_PREVIEW_PUBLIC_HOST"]?.trim() ||
-      (bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost);
+    const { bindHost, publicHost } = resolveGeneratedPreviewHosts(this.env);
     const previewCommand = buildPreviewCommand(config, bindHost, port);
     const commandCatalog = [
       ...config.commandCatalog,
@@ -441,7 +464,7 @@ function buildPreviewBootstrapScript(): string {
     "const { spawn, spawnSync } = require('node:child_process');",
     "const packageManager = process.env.HORUS_PREVIEW_PACKAGE_MANAGER || 'npm';",
     "const runArgs = JSON.parse(process.env.HORUS_PREVIEW_RUN_ARGS_JSON || '[]');",
-    "const host = process.env.HORUS_PREVIEW_HOST || process.env.HOST || '127.0.0.1';",
+    "const host = process.env.HORUS_PREVIEW_HOST || process.env.HOST || '0.0.0.0';",
     "const port = process.env.HORUS_PREVIEW_PORT || process.env.PORT || '5173';",
     "if (!existsSync('node_modules')) {",
     "  const install = spawnSync(packageManager, ['install'], { stdio: 'inherit', shell: false });",
