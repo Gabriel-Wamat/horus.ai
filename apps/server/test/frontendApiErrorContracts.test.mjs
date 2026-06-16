@@ -198,6 +198,31 @@ test("agent skills API validates catalog response contracts before exposing stat
   assert.match(source, /AgentSkillBindingsResponseSchema/);
 });
 
+test("workflow progress validates run event contracts before exposing replay or stream state", async () => {
+  const source = await readFile(
+    join(
+      repositoryRoot,
+      "apps/web/src/features/visual-preview/workflowProgress.ts"
+    ),
+    "utf8"
+  );
+
+  const forbiddenWorkflowProgressCasts = [
+    "return response.json() as Promise<WorkflowProgressEvent[]>",
+    "const parsed = JSON.parse(data) as Partial<WorkflowProgressEvent>",
+    "event: parsed as WorkflowProgressEvent",
+  ];
+
+  for (const fragment of forbiddenWorkflowProgressCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /HorusRunEventSnapshotSchema/);
+  assert.match(source, /WorkflowProgressEventSchema/);
+  assert.match(source, /WorkflowProgressEventListSchema/);
+  assert.match(source, /readWorkflowProgressJson/);
+});
+
 test("execution console validates execution task route contracts before exposing state", async () => {
   const hookSource = await readFile(
     join(

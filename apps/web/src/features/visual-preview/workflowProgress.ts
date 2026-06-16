@@ -1,4 +1,9 @@
-import type { AgentRunbookEntry } from "@u-build/shared";
+import { z } from "zod";
+import {
+  AgentRunbookEntrySchema,
+  HorusRunEventSnapshotSchema,
+  type AgentRunbookEntry,
+} from "@u-build/shared";
 import type { PreviewWorkflowActivity } from "../../components/PreviewConversationPanel.js";
 
 export const WORKFLOW_PROGRESS_EVENT_TYPES = [
@@ -22,106 +27,24 @@ export const WORKFLOW_PROGRESS_EVENT_TYPES = [
   "error",
 ] as const;
 
-export interface WorkflowProgressEvent {
-  id: string;
-  threadId: string;
-  sequence: number;
-  type: string;
-  eventType?: string;
-  phase?: string;
-  actorName?: string;
-  nodeId?: string;
-  agentName?: string;
-  toolName?: string;
-  status?: string;
-  attempt?: number;
-  title?: string;
-  summary?: string;
-  errorMessage?: string;
-  action?: string;
-  message?: string;
-  decision?: {
-    retryable?: boolean;
-    recoveryAction?: string;
-    operatorMessage?: string;
-  };
-  timestamp?: string;
-  filePaths?: string[];
-  commandIds?: string[];
-  commandId?: string;
-  taskId?: string;
-  traceId?: string;
-  spanId?: string;
-  parentSpanId?: string | null;
-  toolCallId?: string | null;
-  runId?: string | null;
-  projectId?: string | null;
-  agentId?: string | null;
-  filePath?: string | null;
-  diffId?: string | null;
-  stream?: "stdout" | "stderr";
-  chunk?: string;
-  chunkSequence?: number;
-  approvalReason?: string | null;
-  policyReason?: string | null;
-  risk?: "low" | "medium" | "high";
-  evidence?: {
-    status: string;
-    commands: Array<{
-      commandId: string;
-      taskId?: string | null;
-      approvalRequired?: boolean;
-      risk?: "low" | "medium" | "high";
-      policyReason?: string | null;
-      approved?: boolean;
-      approvedBy?: string | null;
-      approvalReason?: string | null;
-      exitCode: number | null;
-      stdoutPath?: string | null;
-      stderrPath?: string | null;
-      interactivePromptDetected?: boolean;
-      interactivePromptText?: string | null;
-    }>;
-    preview: {
-      status: string;
-      message?: string;
-      evidence?: {
-        title?: string | null;
-        bodySnippet?: string | null;
-        screenshotPath?: string | null;
-      };
-    };
-  };
-  receipt?: {
-    id: string;
-    snapshotId: string;
-    agentName: string;
-    agentProfileId: string;
-    selectedFiles: Array<{ path: string; startLine?: number; endLine?: number }>;
-    selectionReasons: Array<{
-      path?: string;
-      reason: string;
-      channel: string;
-      score?: number;
-    }>;
-    omittedFiles: Array<{ path: string; reason: string; count?: number }>;
-    budget: {
-      maxFiles: number;
-      maxBytesPerFile: number;
-      maxTotalBytes: number;
-      selectedFiles: number;
-      selectedBytes: number;
-      omittedFiles: number;
-    };
-    contextChannels: string[];
-    retrievalStatus?: "matched" | "partial" | "no_match" | "blocked";
-    retrievalChannels: string[];
-    runtimeHints: Array<{ kind: string; source: string; message: string; path?: string }>;
-    diffHints: Array<{ path: string; changeType?: string; summary?: string }>;
-    confidence: number;
-  };
-  runbookEntry?: AgentRunbookEntry;
+export const WorkflowProgressEventSchema = HorusRunEventSnapshotSchema.extend({
+  runbookEntry: AgentRunbookEntrySchema.optional(),
+});
+
+const WorkflowProgressEventListSchema = z.array(WorkflowProgressEventSchema);
+
+const WorkflowProgressErrorResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    error: z.string().optional(),
+  })
+  .passthrough();
+
+interface WorkflowProgressApiContract<T> {
+  parse(input: unknown): T;
 }
+
+export type WorkflowProgressEvent = z.output<typeof WorkflowProgressEventSchema>;
 
 export async function listWorkflowProgressEvents(
   threadId: string
@@ -130,7 +53,11 @@ export async function listWorkflowProgressEvents(
     cache: "no-store",
   });
   await requireWorkflowProgressOk(response, "Carregar histórico de progresso");
-  return response.json() as Promise<WorkflowProgressEvent[]>;
+  return readWorkflowProgressJson(
+    response,
+    "Carregar histórico de progresso",
+    WorkflowProgressEventListSchema
+  );
 }
 
 async function requireWorkflowProgressOk(
@@ -140,10 +67,11 @@ async function requireWorkflowProgressOk(
   if (response.ok) return;
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
-    const body = (await response.json().catch(() => null)) as
-      | { message?: string; error?: string }
-      | null;
-    const detail = body?.message ?? body?.error ?? response.statusText;
+    const payload = await response.json().catch(() => null);
+    const parsed = WorkflowProgressErrorResponseSchema.safeParse(payload);
+    const detail = parsed.success
+      ? parsed.data.message ?? parsed.data.error ?? response.statusText
+      : response.statusText;
     throw new Error(`${action} falhou (${response.status}): ${detail}`);
   }
   const body = await response.text().catch(() => "");
@@ -152,6 +80,33 @@ async function requireWorkflowProgressOk(
       body.trim() || response.statusText || "sem detalhe retornado"
     }`
   );
+}
+
+async function readWorkflowProgressJson<T>(
+  response: Response,
+  action: string,
+  contract: WorkflowProgressApiContract<T>
+): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `${action} retornou content-type inesperado: ${
+        contentType || "ausente"
+      }. ${body.trim() || "sem corpo retornado"}`
+    );
+  }
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (err) {
+    throw new Error(`${action} retornou JSON inválido: ${errorMessage(err)}`);
+  }
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new Error(`${action} retornou contrato inválido: ${errorMessage(err)}`);
+  }
 }
 
 export function isTerminalWorkflowEvent(event: WorkflowProgressEvent): boolean {
@@ -189,21 +144,14 @@ export function parseWorkflowProgressEventPayload(
 ): ParseWorkflowProgressEventResult {
   if (!data || data === "undefined") return { kind: "ignore" };
   try {
-    const parsed = JSON.parse(data) as Partial<WorkflowProgressEvent>;
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      typeof parsed.id !== "string" ||
-      typeof parsed.threadId !== "string" ||
-      typeof parsed.sequence !== "number" ||
-      typeof parsed.type !== "string"
-    ) {
+    const parsed = WorkflowProgressEventSchema.safeParse(JSON.parse(data));
+    if (!parsed.success) {
       return {
         kind: "error",
-        message: "Invalid workflow progress event payload contract.",
+        message: `Invalid workflow progress event payload contract: ${parsed.error.message}`,
       };
     }
-    return { kind: "event", event: parsed as WorkflowProgressEvent };
+    return { kind: "event", event: parsed.data };
   } catch (err) {
     return {
       kind: "error",

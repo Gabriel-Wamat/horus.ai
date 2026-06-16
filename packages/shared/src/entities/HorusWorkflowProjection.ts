@@ -114,10 +114,22 @@ export function mapWorkflowEventToHorusRunEvent(
     ...(nodeId ? { nodeId } : {}),
     ...(agentName ? { agentName } : {}),
     ...(profileFields ? profileFields : {}),
+    ...(isToolWorkflowEvent(event) ? { toolName: event.toolName } : {}),
     ...(userStoryId ? { userStoryId } : {}),
     ...(retryCount !== undefined ? { attempt: retryCount } : {}),
     title: titleForWorkflowEvent(event),
     ...(summary ? { summary } : {}),
+    ...(event.type === "tool_call_finished" ? { status: event.status } : {}),
+    ...(event.type === "tool_call_blocked" ? { errorMessage: event.errorMessage } : {}),
+    ...(event.type === "status_changed" ? { status: event.status } : {}),
+    ...(event.type === "fallback_executed"
+      ? {
+          action: event.action,
+          status: event.status,
+          message: event.message,
+        }
+      : {}),
+    ...(event.type === "recovery_decision" ? { decision: event.decision } : {}),
     ...(event.type === "validation_evidence" ? { evidence: event.evidence } : {}),
     ...(event.type === "context_receipt" ? { receipt: event.receipt } : {}),
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
@@ -134,6 +146,14 @@ export function mapWorkflowEventToHorusRunEvent(
     ...(event.type === "command_output" ? { commandIds: [event.commandId] } : {}),
     ...(event.type === "command_approval_requested"
       ? { commandIds: [event.commandId] }
+      : {}),
+    ...(event.type === "command_approval_requested"
+      ? {
+          commandId: event.commandId,
+          approvalReason: event.approvalReason,
+          policyReason: event.policyReason,
+          risk: event.risk,
+        }
       : {}),
     ...(event.type === "command_output"
       ? {

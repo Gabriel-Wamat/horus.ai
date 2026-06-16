@@ -2,6 +2,10 @@ import { z } from "zod";
 import { AgentRunbookEntrySchema } from "./AgentRunbook.js";
 import { AgentContextReceiptSchema } from "./AgentContextReceipt.js";
 import {
+  HorusRecoveryActionSchema,
+  HorusRecoveryDecisionSchema,
+} from "./HorusError.js";
+import {
   AgentNameSchema,
   AgentProfileIdSchema,
   AgentProfileSchema,
@@ -121,10 +125,15 @@ export const HorusRunEventSnapshotSchema = z.object({
   agentName: AgentNameSchema.optional(),
   agentProfileId: AgentProfileIdSchema.optional(),
   agentProfile: AgentProfileSchema.optional(),
+  toolName: AgentToolNameSchema.optional(),
   userStoryId: z.string().uuid().optional(),
   attempt: z.number().int().nonnegative().optional(),
   title: z.string().min(1),
   summary: z.string().optional(),
+  status: z.string().trim().min(1).optional(),
+  action: HorusRecoveryActionSchema.optional(),
+  message: z.string().trim().min(1).optional(),
+  decision: HorusRecoveryDecisionSchema.optional(),
   evidence: RuntimeValidationEvidenceSchema.optional(),
   receipt: AgentContextReceiptSchema.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
@@ -144,6 +153,9 @@ export const HorusRunEventSnapshotSchema = z.object({
   stream: z.enum(["stdout", "stderr"]).optional(),
   chunk: z.string().optional(),
   chunkSequence: z.number().int().nonnegative().optional(),
+  approvalReason: z.string().trim().min(1).nullable().optional(),
+  policyReason: z.string().trim().min(1).nullable().optional(),
+  risk: z.enum(["low", "medium", "high"]).optional(),
   validationGateId: z.string().trim().min(1).optional(),
   causedByEventId: z.string().trim().min(1).optional(),
   errorMessage: z.string().optional(),
