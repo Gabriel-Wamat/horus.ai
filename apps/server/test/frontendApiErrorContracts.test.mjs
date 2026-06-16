@@ -137,6 +137,34 @@ test("preview API validates response contracts before exposing visual state", as
   assert.match(source, /PreviewTimelineResponseSchema/);
 });
 
+test("Horus chat API validates response and stream contracts before exposing chat state", async () => {
+  const source = await readFile(
+    join(repositoryRoot, "apps/web/src/api/horusChatApi.ts"),
+    "utf8"
+  );
+
+  const forbiddenHorusChatCasts = [
+    "const body = (await res.json()) as { sessions: ChatSession[] }",
+    "const body = (await res.json()) as { session: ChatSession }",
+    "const body = (await res.json()) as { messages: ChatMessage[] }",
+    "return res.json() as Promise<HorusChatTurnResponse>",
+    "JSON.parse(data) as HorusChatStreamEvent",
+  ];
+
+  for (const fragment of forbiddenHorusChatCasts) {
+    assert.equal(source.includes(fragment), false, fragment);
+  }
+
+  assert.match(source, /readHorusChatJson/);
+  assert.match(source, /parseHorusChatStreamEvent/);
+  assert.match(source, /ChatSessionSchema/);
+  assert.match(source, /ChatMessageSchema/);
+  assert.match(source, /HorusChatTurnResponseSchema/);
+  assert.match(source, /HorusChatStreamEventSchema/);
+  assert.match(source, /ChatSessionsResponseSchema/);
+  assert.match(source, /ChatMessagesResponseSchema/);
+});
+
 test("workflow API validates workspace response contracts before exposing state", async () => {
   const source = await readFile(
     join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
