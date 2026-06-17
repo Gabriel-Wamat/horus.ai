@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { access, mkdtemp, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,7 +16,19 @@ const previewCommand = {
   env: {},
 };
 
-function buildValidManifest(projectId) {
+const installCommand = {
+  id: "install-root-dependencies",
+  executable: process.execPath,
+  args: [
+    "-e",
+    "require('node:fs').mkdirSync('node_modules', { recursive: true }); console.log('installed');",
+  ],
+  cwd: ".",
+  env: {},
+  timeoutMs: 5000,
+};
+
+function buildValidManifest(projectId, commandCatalog = [previewCommand]) {
   return {
     schemaVersion: 1,
     projectId,
@@ -32,7 +44,7 @@ function buildValidManifest(projectId) {
       packageManager: "pnpm",
     },
     entrypoints: ["src/main.tsx"],
-    commandCatalog: [previewCommand],
+    commandCatalog,
     architecture: {
       summary: "Generated project manifest used by preview ownership checks.",
       sourceRoots: ["src"],
@@ -158,4 +170,62 @@ test("preview health reports corrupt project manifest instead of treating it as 
   assert.equal(project.lifecycleStatus, "failed");
   assert.equal(project.healthReasons.includes("manifest_invalid"), true);
   assert.equal(project.healthReasons.includes("manifest_missing"), false);
+});
+
+test("preview dependency bootstrap runs cataloged install before readiness", async () => {
+  const root = await mkdtemp(join(tmpdir(), "horus-preview-bootstrap-"));
+  await writeFile(
+    join(root, "package.json"),
+    JSON.stringify({ name: "preview-bootstrap", scripts: { dev: "vite" } }),
+    "utf-8"
+  );
+  await writeFile(
+    join(root, "horus.project.json"),
+    JSON.stringify(buildValidManifest("55555555-5555-4555-8555-555555555555")),
+    "utf-8"
+  );
+
+  const project = {
+    ...buildProject(root),
+    commandCatalog: [installCommand, previewCommand],
+  };
+  const adapter = new ProcessBrowserPreviewAdapter({ fetchTimeoutMs: 500 });
+
+  const evidence = await adapter.bootstrapDependenciesIfNeeded(project);
+  assert.ok(evidence);
+  assert.equal(evidence.commandId, "install-root-dependencies");
+  assert.equal(evidence.exitCode, 0);
+  assert.equal(evidence.reason, "dependency_bootstrap");
+  assert.equal(evidence.stdoutTail.includes("installed"), true);
+  await access(join(root, "node_modules"));
+
+  assert.equal(await adapter.bootstrapDependenciesIfNeeded(project), null);
+});
+
+test("preview dependency bootstrap can recover install command from project manifest", async () => {
+  const root = await mkdtemp(join(tmpdir(), "horus-preview-manifest-bootstrap-"));
+  await writeFile(
+    join(root, "package.json"),
+    JSON.stringify({ name: "preview-manifest-bootstrap", scripts: { dev: "vite" } }),
+    "utf-8"
+  );
+  await writeFile(
+    join(root, "horus.project.json"),
+    JSON.stringify(
+      buildValidManifest("66666666-6666-4666-8666-666666666666", [
+        installCommand,
+        previewCommand,
+      ])
+    ),
+    "utf-8"
+  );
+
+  const project = buildProject(root);
+  const adapter = new ProcessBrowserPreviewAdapter({ fetchTimeoutMs: 500 });
+
+  const evidence = await adapter.bootstrapDependenciesIfNeeded(project);
+  assert.ok(evidence);
+  assert.equal(evidence.commandId, "install-root-dependencies");
+  assert.equal(evidence.exitCode, 0);
+  await access(join(root, "node_modules"));
 });

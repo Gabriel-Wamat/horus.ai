@@ -11,6 +11,7 @@ import { usePreviewEvents } from "../hooks/usePreviewEvents.js";
 import { ExecutionConsolePanel } from "./ExecutionConsolePanel.js";
 import { PreviewCanvas } from "./PreviewCanvas.js";
 import { PreviewConversationPanel } from "./PreviewConversationPanel.js";
+import { PreviewTimeline } from "./PreviewTimeline.js";
 import { PreviewToolbar } from "./PreviewToolbar.js";
 import {
   mergeEvents,
@@ -375,6 +376,16 @@ export function VisualPreviewConsole({
           session={session}
           refreshToken={chatRuntime.previewRefreshToken}
         />
+        <section
+          className="preview-runtime-panel"
+          aria-label="Evidência de execução do preview"
+        >
+          <div className="preview-runtime-head">
+            <span>Evidência de runtime</span>
+            <strong>{timeline.length} eventos</strong>
+          </div>
+          <PreviewTimeline events={timeline} />
+        </section>
       </section>
 
       <ExecutionConsolePanel
