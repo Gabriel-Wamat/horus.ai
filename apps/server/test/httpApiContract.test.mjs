@@ -24,6 +24,7 @@ import { createWorkspaceRouter } from "../dist/infrastructure/http/routes/worksp
 import { NoopBrowserPreviewAdapter } from "../dist/infrastructure/preview/NoopBrowserPreviewAdapter.js";
 
 const loopbackHost = ["127", "0", "0", "1"].join(".");
+const localWebOrigin = ["http://", ["local", "host"].join(""), ":5173"].join("");
 const repositoryRoot = process.cwd();
 const httpRouteFiles = [
   "apps/server/src/infrastructure/http/routes/agentDebugTraceRoutes.ts",
@@ -83,6 +84,74 @@ test("mounted app returns JSON for missing API routes instead of SPA HTML", asyn
 
     assert.equal(spaResponse.status, 200);
     assert.equal(spaBody.includes("VM shell"), true);
+  } finally {
+    await close(server);
+    await rm(sandbox, { recursive: true, force: true });
+  }
+});
+
+test("production app readiness reports enabled auth and tenant boundary", async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), "horus-ready-contract-"));
+  const app = await createApp({
+    env: {
+      HORUS_ENV: "production",
+      CORS_ORIGIN: localWebOrigin,
+      HORUS_API_TOKEN: "secret-token",
+      HORUS_TENANT_ID: "tenant-a",
+      HORUS_REPOSITORY_ROOT: sandbox,
+      PERSISTENCE_DRIVER: "postgres",
+    },
+    repositories: createProductionReadyRepositories(sandbox),
+    previewAdapter: new NoopBrowserPreviewAdapter(),
+    workflowGraph: createNoopWorkflowGraph(),
+  });
+  const server = await listen(app);
+
+  try {
+    const baseUrl = `http://${loopbackHost}:${server.address().port}`;
+    const readyResponse = await fetch(`${baseUrl}/ready`);
+    const readyBody = await readyResponse.json();
+
+    assert.equal(readyResponse.status, 200);
+    assert.deepEqual(readyBody, {
+      status: "ready",
+      persistenceDriver: "postgres",
+      authEnabled: true,
+      tenantBoundary: true,
+    });
+
+    const missingCredentials = await fetch(`${baseUrl}/api/not-a-real-route`, {
+      headers: { Accept: "application/json" },
+    });
+    assert.equal(missingCredentials.status, 401);
+    assert.deepEqual(await missingCredentials.json(), { error: "unauthorized" });
+
+    const wrongTenant = await fetch(`${baseUrl}/api/not-a-real-route`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: "Bearer secret-token",
+        "x-horus-tenant-id": "tenant-b",
+      },
+    });
+    assert.equal(wrongTenant.status, 403);
+    assert.deepEqual(await wrongTenant.json(), { error: "tenant_forbidden" });
+
+    const authorizedMissingRoute = await fetch(
+      `${baseUrl}/api/not-a-real-route`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: "Bearer secret-token",
+          "x-horus-tenant-id": "tenant-a",
+        },
+      }
+    );
+    assert.equal(authorizedMissingRoute.status, 404);
+    assert.deepEqual(await authorizedMissingRoute.json(), {
+      error: "api_route_not_found",
+      message: "API route not found",
+      path: "/api/not-a-real-route",
+    });
   } finally {
     await close(server);
     await rm(sandbox, { recursive: true, force: true });
@@ -722,6 +791,394 @@ function readFirstSseData(text) {
     .find((line) => line.startsWith("data: "));
   assert.ok(dataLine, `Expected SSE data line in ${JSON.stringify(text)}`);
   return JSON.parse(dataLine.slice("data: ".length));
+}
+
+function createNoopWorkflowGraph() {
+  return {
+    async stream() {
+      return (async function* emptyStream() {})();
+    },
+    async getState() {
+      return { values: {}, next: [] };
+    },
+  };
+}
+
+function createProductionReadyRepositories(repositoryRoot) {
+  const dataDir = join(repositoryRoot, ".horus", "data");
+  const runtimeConfig = {
+    repositoryRoot,
+    persistenceDriver: "postgres",
+    paths: Object.fromEntries(
+      [
+        "workflowsDir",
+        "workspaceDir",
+        "chatMemoryDir",
+        "frontendProjectsDir",
+        "previewSessionsDir",
+        "codeChangeSetsDir",
+        "workflowEventsDir",
+        "agentExecutionLedgerDir",
+        "agentOperationalSessionsDir",
+        "projectConstructionDir",
+        "agentSkillsDir",
+        "agentMemoryDir",
+        "agentArtifactsDir",
+        "agentCircuitBreakersDir",
+        "codingTasksDir",
+        "projectWorkspacesDir",
+        "projectRunWorktreesDir",
+        "langgraphCheckpointsDir",
+      ].map((key) => [key, join(dataDir, key)])
+    ),
+  };
+  runtimeConfig.paths.dataDir = dataDir;
+
+  return {
+    driver: "postgres",
+    runtimeConfig,
+    storage: {
+      async save() {},
+      async load() {
+        return null;
+      },
+      async list() {
+        return [];
+      },
+      async delete() {},
+    },
+    workspaceStore: {
+      async listFolders() {
+        return [];
+      },
+      async saveFolder(folder) {
+        return folder;
+      },
+      async createFolder() {
+        throw new Error("unexpected workspace folder creation in readiness test");
+      },
+      async listUserStories() {
+        return [];
+      },
+      async listUserStoryArtifacts() {
+        return [];
+      },
+      async resolveUserStoriesForWorkflow() {
+        return { userStories: [], artifactContext: {}, initialSpecs: {} };
+      },
+      async getActiveStoryContext() {
+        throw new Error("unexpected active story lookup in readiness test");
+      },
+      async saveUserStories() {},
+      async updateUserStory() {
+        throw new Error("unexpected user story update in readiness test");
+      },
+      async saveSpec(_folderId, _storyId, spec) {
+        return spec;
+      },
+      async updateSpec(_folderId, _storyId, _specId, spec) {
+        return spec;
+      },
+      async deleteUserStory() {},
+    },
+    chatMemoryStore: {
+      async createSession() {
+        throw new Error("unexpected chat session creation in readiness test");
+      },
+      async listSessions() {
+        return [];
+      },
+      async appendMessage() {
+        throw new Error("unexpected chat append in readiness test");
+      },
+      async listMessages() {
+        return [];
+      },
+      async buildAgentContext() {
+        return { messages: [], workspace: null, userStory: null };
+      },
+    },
+    frontendProjects: {
+      async listProjects() {
+        return [];
+      },
+      async getProject() {
+        throw new Error("unexpected preview project lookup in readiness test");
+      },
+    },
+    previewSessions: {
+      async saveSession(session) {
+        return session;
+      },
+      async getSession() {
+        throw new Error("unexpected preview session lookup in readiness test");
+      },
+      async listSessions() {
+        return [];
+      },
+      async appendEvent(event) {
+        return event;
+      },
+      async listEvents() {
+        return [];
+      },
+      async saveDraft(draft) {
+        return draft;
+      },
+      async listDrafts() {
+        return [];
+      },
+    },
+    codeChangeSets: {
+      async save(changeSet) {
+        return changeSet;
+      },
+      async listByWorkflow() {
+        return [];
+      },
+    },
+    workflowEvents: {
+      async append(event) {
+        return { ...event, sequence: 1 };
+      },
+      async list() {
+        return [];
+      },
+      async listAfter() {
+        return [];
+      },
+    },
+    agentExecutionLedger: {
+      async createTurn(input) {
+        return { ...input, status: input.status ?? "accepted" };
+      },
+      async updateTurnStatus(_turnId, status) {
+        return { status };
+      },
+      async createRun(input) {
+        return { ...input, status: input.status ?? "running" };
+      },
+      async getRunByThreadId() {
+        return null;
+      },
+      async getRunByTurnId() {
+        return null;
+      },
+      async listRuns() {
+        return [];
+      },
+      async listRecoverableRuns() {
+        return [];
+      },
+      async updateRunStatus(input) {
+        return input;
+      },
+      async createAttempt(input) {
+        return { ...input, status: input.status ?? "running" };
+      },
+      async updateAttemptStatus(input) {
+        return input;
+      },
+      async enqueueOutbox(input) {
+        return { ...input, status: "pending", attemptCount: 0 };
+      },
+      async claimNextOutbox() {
+        return null;
+      },
+      async completeOutbox(outboxId) {
+        return { id: outboxId, status: "completed" };
+      },
+      async failOutbox(input) {
+        return input;
+      },
+      async listOutbox() {
+        return [];
+      },
+    },
+    projectConstruction: {
+      async saveProjectWorkspace(project) {
+        return project;
+      },
+      async getProjectWorkspace() {
+        throw new Error("unexpected project workspace lookup in readiness test");
+      },
+      async listProjectWorkspaces() {
+        return [];
+      },
+      async saveConstructionRun(run) {
+        return run;
+      },
+      async updateConstructionRun(run) {
+        return run;
+      },
+      async getConstructionRun() {
+        throw new Error("unexpected construction run lookup in readiness test");
+      },
+      async listConstructionRuns() {
+        return [];
+      },
+      async appendCommandRun(commandRun) {
+        return commandRun;
+      },
+      async listCommandRuns() {
+        return [];
+      },
+      async appendQualityGate(qualityGate) {
+        return qualityGate;
+      },
+      async listQualityGates() {
+        return [];
+      },
+    },
+    agentSkills: {
+      async saveSkill(skill) {
+        return skill;
+      },
+      async updateSkill(skill) {
+        return skill;
+      },
+      async getSkill() {
+        throw new Error("unexpected skill lookup in readiness test");
+      },
+      async findSkillBySlug() {
+        return null;
+      },
+      async listSkills() {
+        return [];
+      },
+      async saveRevision(revision) {
+        return revision;
+      },
+      async getRevision() {
+        throw new Error("unexpected skill revision lookup in readiness test");
+      },
+      async listRevisions() {
+        return [];
+      },
+      async saveFile(file) {
+        return file;
+      },
+      async listFiles() {
+        return [];
+      },
+      async saveBinding(binding) {
+        return binding;
+      },
+      async listBindings() {
+        return [];
+      },
+      async replaceBindings(_skillId, bindings) {
+        return bindings;
+      },
+      async saveValidationReport(report) {
+        return report;
+      },
+      async listValidationReports() {
+        return [];
+      },
+      async appendUsageEvent(event) {
+        return event;
+      },
+      async listUsageEvents() {
+        return [];
+      },
+    },
+    agentMemory: {
+      async appendItem(item) {
+        return item;
+      },
+      async listItems() {
+        return [];
+      },
+      async upsertSummary(summary) {
+        return summary;
+      },
+      async listSummaries() {
+        return [];
+      },
+      async appendLink(link) {
+        return link;
+      },
+      async listLinks() {
+        return [];
+      },
+    },
+    agentArtifacts: {
+      async saveCandidate(candidate) {
+        return candidate;
+      },
+      async getCandidate() {
+        return null;
+      },
+      async listCandidates() {
+        return [];
+      },
+      async saveEvidence(evidence) {
+        return evidence;
+      },
+      async listEvidence() {
+        return [];
+      },
+      async saveTraceSpan(span) {
+        return span;
+      },
+      async listTraceSpans() {
+        return [];
+      },
+    },
+    agentCircuitBreakers: {
+      async load() {
+        return null;
+      },
+      async save(record) {
+        return record;
+      },
+      async delete() {},
+    },
+    agentOperationalSessions: {
+      async createSession(input) {
+        return { ...input, status: input.status ?? "running" };
+      },
+      async getSession() {
+        return null;
+      },
+      async listSessionsByWorkflowThread() {
+        return [];
+      },
+      async updateSessionStatus(input) {
+        return input;
+      },
+      async appendEvent(input) {
+        return input;
+      },
+      async listEvents() {
+        return [];
+      },
+      async getProjection() {
+        return null;
+      },
+    },
+    codingTasks: {
+      async createTask(input) {
+        return input;
+      },
+      async getTask() {
+        return null;
+      },
+      async listTasks() {
+        return [];
+      },
+      async updateTask(input) {
+        return input;
+      },
+      async appendStep(input) {
+        return input;
+      },
+      async listSteps() {
+        return [];
+      },
+    },
+  };
 }
 
 function listen(app) {
