@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "db:migrate": "tsx src/infrastructure/database/migrateCli.ts",
+    "db:seed": "tsx src/infrastructure/database/seedCli.ts",
     "build": "tsc --project tsconfig.json",
     "start": "node dist/main.js",
     "lint": "tsc --noEmit",

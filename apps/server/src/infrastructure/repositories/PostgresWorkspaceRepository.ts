@@ -70,6 +70,28 @@ export class PostgresWorkspaceRepository implements WorkspaceRepository {
     return result.rows.map(folderFromRow);
   }
 
+  async saveFolder(folder: WorkspaceFolder): Promise<WorkspaceFolder> {
+    const validated = WorkspaceFolderSchema.parse(folder);
+    await this.pool.query(
+      `
+      INSERT INTO workspace_folders (id, name, slug, created_at, story_count)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        slug = EXCLUDED.slug,
+        story_count = EXCLUDED.story_count
+      `,
+      [
+        validated.id,
+        validated.name,
+        validated.slug,
+        validated.createdAt,
+        validated.storyCount,
+      ]
+    );
+    return validated;
+  }
+
   async createFolder(name: string): Promise<WorkspaceFolder> {
     const folders = await this.listFolders();
     const used = new Set(folders.map((folder) => folder.slug));

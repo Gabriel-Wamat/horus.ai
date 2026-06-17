@@ -71,6 +71,12 @@ export class PostgresFrontendProjectRepository
     return projectFromRow(row);
   }
 
+  async saveProject(project: FrontendProject): Promise<FrontendProject> {
+    const validated = FrontendProjectSchema.parse(project);
+    await this.upsertProject(validated);
+    return validated;
+  }
+
   async registerProject(input: {
     name: string;
     rootPath: string;

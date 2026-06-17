@@ -468,6 +468,17 @@ export class FileWorkspaceStore {
     return this.readFolders();
   }
 
+  async saveFolder(folder: WorkspaceFolder): Promise<WorkspaceFolder> {
+    const validated = WorkspaceFolderSchema.parse(folder);
+    const folders = await this.readFolders();
+    await fs.mkdir(this.folderPath(validated), { recursive: true });
+    await this.writeFolders([
+      ...folders.filter((item) => item.id !== validated.id),
+      validated,
+    ]);
+    return validated;
+  }
+
   async createFolder(name: string): Promise<WorkspaceFolder> {
     const folders = await this.readFolders();
     const folder: WorkspaceFolder = {

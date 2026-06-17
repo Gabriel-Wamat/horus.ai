@@ -90,6 +90,7 @@ export interface ActiveWorkspaceStoryContext {
 
 export interface WorkspaceRepository {
   listFolders(): Promise<WorkspaceFolder[]>;
+  saveFolder(folder: WorkspaceFolder): Promise<WorkspaceFolder>;
   createFolder(name: string): Promise<WorkspaceFolder>;
   listUserStories(folderId: string): Promise<UserStory[]>;
   listUserStoryArtifacts(
@@ -139,6 +140,7 @@ export interface ChatMemoryRepository {
 export interface FrontendProjectRepository {
   listProjects(): Promise<FrontendProject[]>;
   getProject(projectId: string): Promise<FrontendProject>;
+  saveProject?(project: FrontendProject): Promise<FrontendProject>;
   registerProject?(input: {
     name: string;
     rootPath: string;
