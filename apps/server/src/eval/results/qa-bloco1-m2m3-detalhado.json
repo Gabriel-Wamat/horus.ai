@@ -1,0 +1,1285 @@
+[
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "tc_id": "TC-01",
+    "criterion": "A lista exibe o nome de cada servidor e seu status atual (online ou offline).",
+    "steps": [
+      "Abrir a página da lista de servidores.",
+      "Verificar se a lista exibe o nome de cada servidor.",
+      "Verificar se a lista exibe o status atual de cada servidor (online ou offline)."
+    ],
+    "expected": "A lista exibe o nome de cada servidor e seu status atual (online ou offline) corretamente.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "tc_id": "TC-02",
+    "criterion": "A lista é responsiva e acessível.",
+    "steps": [
+      "Abrir a página da lista de servidores em diferentes tamanhos de tela (desktop, tablet, mobile).",
+      "Verificar se a lista se adapta corretamente a cada tamanho de tela.",
+      "Verificar se a lista é acessível para usuários com deficiência (teclado, leitor de tela, etc.)."
+    ],
+    "expected": "A lista é responsiva e acessível em diferentes tamanhos de tela e para usuários com deficiência.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "tc_id": "TC-03",
+    "criterion": "Os componentes de lista e status são renderizados corretamente.",
+    "steps": [
+      "Abrir a página da lista de servidores.",
+      "Verificar se os componentes de lista e status são renderizados corretamente.",
+      "Verificar se os componentes de lista e status têm o layout e a aparência esperados."
+    ],
+    "expected": "Os componentes de lista e status são renderizados corretamente e têm o layout e a aparência esperados.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "tc_id": "TC-04",
+    "criterion": "Prontidão do frontend para o contrato de API GET /servidores",
+    "steps": [
+      "Abrir a página da lista de servidores.",
+      "Simular uma resposta de sucesso do contrato de API GET /servidores.",
+      "Verificar se a lista é renderizada corretamente com os dados da resposta."
+    ],
+    "expected": "A lista é renderizada corretamente com os dados da resposta do contrato de API GET /servidores.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "tc_id": "TC-05",
+    "criterion": "Prontidão do frontend para o contrato de API GET /servidor/{id}",
+    "steps": [
+      "Abrir a página da lista de servidores.",
+      "Simular uma resposta de sucesso do contrato de API GET /servidor/{id}.",
+      "Verificar se o status do servidor é renderizado corretamente com os dados da resposta."
+    ],
+    "expected": "O status do servidor é renderizado corretamente com os dados da resposta do contrato de API GET /servidor/{id}.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "tc_id": "TC-06",
+    "criterion": "Cobertura visual para visualContract",
+    "steps": [
+      "Abrir a página da lista de servidores.",
+      "Verificar se a lista segue os tokens de design (cores, tipografia, etc.).",
+      "Verificar se a lista segue a densidade e o layout esperados.",
+      "Verificar se a lista é responsiva e acessível."
+    ],
+    "expected": "A lista segue os tokens de design, densidade e layout esperados, e é responsiva e acessível.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-01",
+    "criterion": "O painel exibe colunas por fila de atendimento com contagem de tickets abertos.",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Verificar a presença de colunas para cada fila de atendimento",
+      "Verificar a contagem de tickets abertos em cada coluna"
+    ],
+    "expected": "As colunas por fila de atendimento são exibidas com a contagem de tickets abertos.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-02",
+    "criterion": "Cada ticket exibe indicador visual de SLA (dentro do prazo, em risco, vencido).",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Selecionar um ticket",
+      "Verificar a presença do indicador visual de SLA"
+    ],
+    "expected": "O indicador visual de SLA é exibido para cada ticket, indicando se está dentro do prazo, em risco ou vencido.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-03",
+    "criterion": "É possível filtrar tickets por agente responsável, fila e status simultaneamente.",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Acessar a barra de filtros",
+      "Selecionar um agente responsável, uma fila e um status",
+      "Aplicar os filtros"
+    ],
+    "expected": "Os tickets são filtrados corretamente de acordo com os critérios selecionados.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-04",
+    "criterion": "Uma seção lateral lista agentes disponíveis com sua carga atual de tickets.",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Verificar a presença da seção lateral de agentes disponíveis",
+      "Verificar a lista de agentes com sua carga atual de tickets"
+    ],
+    "expected": "A seção lateral lista os agentes disponíveis com sua carga atual de tickets.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-05",
+    "criterion": "Ao reatribuir um ticket, o histórico de reatribuições é registrado e exibido em um painel de auditoria.",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Selecionar um ticket",
+      "Reatribuir o ticket a um novo agente",
+      "Verificar o histórico de reatribuições no painel de auditoria"
+    ],
+    "expected": "O histórico de reatribuições é registrado e exibido corretamente no painel de auditoria.",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-06",
+    "criterion": "É possível exportar a visão atual filtrada como relatório (CSV ou similar).",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Acessar a barra de filtros",
+      "Selecionar os filtros desejados",
+      "Aplicar os filtros",
+      "Clicar no botão de exportação de relatório"
+    ],
+    "expected": "A visão atual filtrada é exportada corretamente como um relatório CSV ou similar.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-07",
+    "criterion": "Tickets vencidos aparecem destacados visualmente em relação aos demais.",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Verificar a presença de tickets vencidos",
+      "Verificar se os tickets vencidos são destacados visualmente"
+    ],
+    "expected": "Os tickets vencidos são destacados visualmente em relação aos demais.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "tc_id": "TC-08",
+    "criterion": "O painel atualiza a contagem de tickets por fila sem exigir recarregamento manual da página.",
+    "steps": [
+      "Abrir a página do painel de operações",
+      "Verificar a contagem de tickets por fila",
+      "Realizar uma ação que atualize a contagem de tickets (por exemplo, reatribuir um ticket)",
+      "Verificar se a contagem de tickets é atualizada automaticamente"
+    ],
+    "expected": "A contagem de tickets por fila é atualizada automaticamente sem exigir recarregamento manual da página.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-01",
+    "criterion": "Ao enviar uma pergunta, a resposta do assistente é exibida abaixo do campo de entrada.",
+    "steps": [
+      "Abrir a página de perguntas e respostas",
+      "Digitar uma pergunta no campo de entrada",
+      "Clicar no botão de enviar pergunta"
+    ],
+    "expected": "A resposta do assistente é exibida abaixo do campo de entrada com o texto correspondente à pergunta enviada",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-02",
+    "criterion": "O campo de entrada de pergunta é acessível e responsivo",
+    "steps": [
+      "Abrir a página de perguntas e respostas em diferentes tamanhos de tela (desktop, tablet, mobile)",
+      "Verificar se o campo de entrada de pergunta é visível e acessível em todos os tamanhos de tela"
+    ],
+    "expected": "O campo de entrada de pergunta é visível e acessível em todos os tamanhos de tela, com layout responsivo",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-03",
+    "criterion": "A resposta do assistente é exibida com sucesso após o envio da pergunta",
+    "steps": [
+      "Abrir a página de perguntas e respostas",
+      "Digitar uma pergunta no campo de entrada",
+      "Clicar no botão de enviar pergunta",
+      "Verificar se a resposta do assistente é exibida após alguns segundos"
+    ],
+    "expected": "A resposta do assistente é exibida com sucesso após o envio da pergunta, com texto correspondente à pergunta enviada",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-04",
+    "criterion": "O sistema lida corretamente com erros de envio de pergunta ou obtenção de resposta",
+    "steps": [
+      "Abrir a página de perguntas e respostas",
+      "Digitar uma pergunta inválida no campo de entrada (por exemplo, uma pergunta muito longa)",
+      "Clicar no botão de enviar pergunta",
+      "Verificar se o sistema exibe uma mensagem de erro ou aviso"
+    ],
+    "expected": "O sistema exibe uma mensagem de erro ou aviso quando ocorre um erro de envio de pergunta ou obtenção de resposta",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-05",
+    "criterion": "Contrato futuro de API/Rotas: GET /perguntas",
+    "steps": [
+      "Abrir a página de perguntas e respostas",
+      "Verificar se o componente de perguntas é carregado corretamente",
+      "Simular uma requisição GET /perguntas com um boundary/adapters injetável"
+    ],
+    "expected": "O componente de perguntas é carregado corretamente e exibe as perguntas obtidas da requisição GET /perguntas",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-06",
+    "criterion": "Contrato futuro de API/Rotas: GET /respostas",
+    "steps": [
+      "Abrir a página de perguntas e respostas",
+      "Digitar uma pergunta no campo de entrada",
+      "Clicar no botão de enviar pergunta",
+      "Simular uma requisição GET /respostas com um boundary/adapters injetável"
+    ],
+    "expected": "A resposta do assistente é exibida com sucesso após o envio da pergunta, com texto correspondente à pergunta enviada",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "tc_id": "TC-07",
+    "criterion": "VisualContract: tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns",
+    "steps": [
+      "Abrir a página de perguntas e respostas",
+      "Verificar se a página atende aos tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns definidos no VisualContract"
+    ],
+    "expected": "A página atende aos tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns definidos no VisualContract",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-01",
+    "criterion": "O painel esquerdo exibe o histórico de mensagens organizado por etapa do relatório.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Verificar se o painel esquerdo está visível e contém o histórico de mensagens.",
+      "Verificar se as mensagens estão organizadas por etapa do relatório."
+    ],
+    "expected": "O painel esquerdo exibe o histórico de mensagens organizado por etapa do relatório, com cada etapa claramente identificada e as mensagens correspondentes abaixo.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-02",
+    "criterion": "O painel direito exibe a prévia do relatório atualizada após cada resposta do assistente.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Interagir com o assistente e obter uma resposta.",
+      "Verificar se a prévia do relatório no painel direito é atualizada após a resposta do assistente."
+    ],
+    "expected": "A prévia do relatório no painel direito é atualizada após cada resposta do assistente, refletindo as alterações realizadas.",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-03",
+    "criterion": "Cada versão do relatório gerada é salva no histórico de versões com timestamp.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Gerar uma nova versão do relatório.",
+      "Verificar se a versão é salva no histórico de versões com um timestamp correto."
+    ],
+    "expected": "Cada versão do relatório gerada é salva no histórico de versões com um timestamp correto, permitindo que o usuário veja a evolução do relatório ao longo do tempo.",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-04",
+    "criterion": "É possível selecionar uma versão anterior do histórico e reverter a prévia para ela.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Selecionar uma versão anterior do histórico de versões.",
+      "Verificar se a prévia do relatório é revertida para a versão selecionada."
+    ],
+    "expected": "A prévia do relatório é revertida para a versão selecionada, permitindo que o usuário visualize e edite a versão anterior do relatório.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-05",
+    "criterion": "Um indicador visual mostra em qual etapa do fluxo a conversa está.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Verificar se um indicador visual está presente e mostra a etapa atual da conversa."
+    ],
+    "expected": "Um indicador visual claro e visível mostra a etapa atual da conversa, ajudando o usuário a entender o progresso e o contexto da conversa.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-06",
+    "criterion": "O usuário pode anexar uma fonte de dados à conversa, e ela aparece listada na etapa de fontes.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Anexar uma fonte de dados à conversa.",
+      "Verificar se a fonte de dados é listada na etapa de fontes."
+    ],
+    "expected": "A fonte de dados anexada é listada na etapa de fontes, permitindo que o usuário visualize e gerencie as fontes de dados utilizadas na conversa.",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-07",
+    "criterion": "Ao finalizar a revisão final, um botão permite exportar o relatório consolidado.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Finalizar a revisão final do relatório.",
+      "Verificar se um botão de exportação está presente e funcional."
+    ],
+    "expected": "Um botão de exportação está presente e funcional, permitindo que o usuário exporte o relatório consolidado em um formato apropriado para uso posterior.",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-08",
+    "criterion": "Teste de prontidão do frontend para o contrato futuro de API de salvar relatório.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Simular a resposta do contrato de API de salvar relatório.",
+      "Verificar se o frontend lida corretamente com a resposta e atualiza o estado do relatório."
+    ],
+    "expected": "O frontend lida corretamente com a resposta do contrato de API de salvar relatório, atualizando o estado do relatório e exibindo uma mensagem de confirmação de sucesso ou erro, conforme aplicável.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-09",
+    "criterion": "Teste de prontidão do frontend para o contrato futuro de API de histórico de relatórios.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Simular a resposta do contrato de API de histórico de relatórios.",
+      "Verificar se o frontend lida corretamente com a resposta e exibe o histórico de relatórios."
+    ],
+    "expected": "O frontend lida corretamente com a resposta do contrato de API de histórico de relatórios, exibindo o histórico de relatórios de forma clara e organizada, com cada relatório listado com seu respectivo timestamp.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "tc_id": "TC-10",
+    "criterion": "Teste de prontidão do frontend para o contrato futuro de API de exportação de relatórios.",
+    "steps": [
+      "Abrir a página do workbench de geração de relatórios.",
+      "Simular a resposta do contrato de API de exportação de relatórios.",
+      "Verificar se o frontend lida corretamente com a resposta e fornece o relatório exportado."
+    ],
+    "expected": "O frontend lida corretamente com a resposta do contrato de API de exportação de relatórios, fornecendo o relatório exportado em um formato apropriado e exibindo uma mensagem de confirmação de sucesso ou erro, conforme aplicável.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Visualização simples de duas etapas conectadas",
+    "tc_id": "TC-01",
+    "criterion": "As duas etapas são exibidas como caixas conectadas por uma seta indicando a ordem.",
+    "steps": [
+      "Abrir a página em um navegador.",
+      "Verificar se as duas etapas são exibidas como caixas.",
+      "Verificar se as caixas estão conectadas por uma seta.",
+      "Verificar se a seta indica a ordem correta das etapas."
+    ],
+    "expected": "As duas etapas são exibidas como caixas conectadas por uma seta que indica a ordem correta.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Visualização simples de duas etapas conectadas",
+    "tc_id": "TC-02",
+    "criterion": "A seta é clicável e executa a ação correspondente.",
+    "steps": [
+      "Abrir a página em um navegador.",
+      "Clicar na seta que conecta as duas etapas.",
+      "Verificar se a ação correspondente é executada."
+    ],
+    "expected": "A ação correspondente é executada quando a seta é clicada.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Visualização simples de duas etapas conectadas",
+    "tc_id": "TC-03",
+    "criterion": "A página é responsiva e acessível em diferentes tamanhos de tela.",
+    "steps": [
+      "Abrir a página em um navegador.",
+      "Redimensionar a janela do navegador para diferentes tamanhos.",
+      "Verificar se a página é responsiva e acessível em cada tamanho de tela."
+    ],
+    "expected": "A página é responsiva e acessível em diferentes tamanhos de tela, com layout adaptado e elementos clicáveis.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Visualização simples de duas etapas conectadas",
+    "tc_id": "TC-04",
+    "criterion": "A página atende ao visualContract.",
+    "steps": [
+      "Abrir a página em um navegador.",
+      "Verificar se a página atende aos tokens de design (cores, tipografia, etc.).",
+      "Verificar se a página atende à densidade e componentes existentes.",
+      "Verificar se a página atende à responsividade e acessibilidade."
+    ],
+    "expected": "A página atende ao visualContract, com tokens de design, densidade, componentes existentes, responsividade e acessibilidade conforme especificado.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Visualização simples de duas etapas conectadas",
+    "tc_id": "TC-05",
+    "criterion": "A página não contém antiPatterns.",
+    "steps": [
+      "Abrir a página em um navegador.",
+      "Verificar se a página contém excesso de frames.",
+      "Verificar se a página contém cores high-light."
+    ],
+    "expected": "A página não contém excesso de frames e cores high-light.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-01",
+    "criterion": "Cada serviço é exibido como um nó com nome, versão e status de saúde atual",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar a existência de nós de serviço com nome, versão e status de saúde"
+    ],
+    "expected": "Todos os serviços são exibidos com nome, versão e status de saúde atual",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-02",
+    "criterion": "As arestas representam chamadas de dependência entre serviços, com direção visível",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar a existência de arestas entre os nós de serviço",
+      "Verificar a direção das arestas"
+    ],
+    "expected": "As arestas representam as dependências entre os serviços e têm direção visível",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-03",
+    "criterion": "Ao selecionar um nó e acionar 'simular falha', todos os nós afetados a jusante são destacados visualmente",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Selecionar um nó de serviço",
+      "Acionar o botão 'simular falha'",
+      "Verificar se os nós afetados a jusante são destacados visualmente"
+    ],
+    "expected": "Os nós afetados a jusante são destacados visualmente após simular a falha",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-04",
+    "criterion": "Caminhos críticos (sem redundância) são exibidos com estilo visual distinto das demais arestas",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar a existência de caminhos críticos",
+      "Verificar se os caminhos críticos têm estilo visual distinto"
+    ],
+    "expected": "Os caminhos críticos são exibidos com estilo visual distinto das demais arestas",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-05",
+    "criterion": "Clicar em um nó abre um painel lateral com o histórico de incidentes daquele serviço",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Clicar em um nó de serviço",
+      "Verificar se o painel lateral com o histórico de incidentes é aberto"
+    ],
+    "expected": "O painel lateral com o histórico de incidentes é aberto após clicar no nó",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-06",
+    "criterion": "É possível filtrar o grafo por domínio/equipe responsável, ocultando nós de outros domínios",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Selecionar um domínio/equipe responsável",
+      "Verificar se os nós de outros domínios são ocultados"
+    ],
+    "expected": "Os nós de outros domínios são ocultados após selecionar o domínio/equipe responsável",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-07",
+    "criterion": "Nós com incidentes ativos no momento são destacados com indicador visual diferente de nós saudáveis",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar a existência de nós com incidentes ativos",
+      "Verificar se os nós com incidentes ativos têm indicador visual diferente"
+    ],
+    "expected": "Os nós com incidentes ativos têm indicador visual diferente de nós saudáveis",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-08",
+    "criterion": "Prontidão do frontend para API de serviços",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar se o frontend é capaz de lidar com a API de serviços",
+      "Verificar se os dados são exibidos corretamente"
+    ],
+    "expected": "O frontend é capaz de lidar com a API de serviços e exibir os dados corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-09",
+    "criterion": "Prontidão do frontend para API de dependências",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar se o frontend é capaz de lidar com a API de dependências",
+      "Verificar se as dependências são exibidas corretamente"
+    ],
+    "expected": "O frontend é capaz de lidar com a API de dependências e exibir as dependências corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-10",
+    "criterion": "Prontidão do frontend para API de incidentes",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar se o frontend é capaz de lidar com a API de incidentes",
+      "Verificar se os incidentes são exibidos corretamente"
+    ],
+    "expected": "O frontend é capaz de lidar com a API de incidentes e exibir os incidentes corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-11",
+    "criterion": "Responsividade do mapa de dependências",
+    "steps": [
+      "Abrir a página do mapa de dependências em diferentes tamanhos de tela",
+      "Verificar se o mapa de dependências é exibido corretamente em diferentes tamanhos de tela"
+    ],
+    "expected": "O mapa de dependências é exibido corretamente em diferentes tamanhos de tela",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "tc_id": "TC-12",
+    "criterion": "Acessibilidade do mapa de dependências",
+    "steps": [
+      "Abrir a página do mapa de dependências",
+      "Verificar se o mapa de dependências é acessível para usuários com deficiência"
+    ],
+    "expected": "O mapa de dependências é acessível para usuários com deficiência",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-01",
+    "criterion": "O campo de texto permite digitar o nome da categoria.",
+    "steps": [
+      "Abrir a página de cadastro de categorias",
+      "Localizar o campo de texto para digitar o nome da categoria",
+      "Digitar um nome de categoria"
+    ],
+    "expected": "O campo de texto aceita a entrada de texto e não apresenta erros",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-02",
+    "criterion": "O botão de salvar adiciona a nova categoria à lista.",
+    "steps": [
+      "Abrir a página de cadastro de categorias",
+      "Localizar o campo de texto para digitar o nome da categoria",
+      "Digitar um nome de categoria",
+      "Clicar no botão de salvar"
+    ],
+    "expected": "A nova categoria é adicionada à lista de categorias abaixo do campo de texto",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-03",
+    "criterion": "A lista de categorias é exibida abaixo do campo de texto.",
+    "steps": [
+      "Abrir a página de cadastro de categorias",
+      "Localizar a lista de categorias"
+    ],
+    "expected": "A lista de categorias é exibida abaixo do campo de texto e está vazia inicialmente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-04",
+    "criterion": "A aplicação é responsiva e acessível.",
+    "steps": [
+      "Abrir a página de cadastro de categorias em diferentes tamanhos de tela",
+      "Verificar se a aplicação se adapta corretamente a cada tamanho de tela",
+      "Verificar se os elementos da aplicação são acessíveis via teclado"
+    ],
+    "expected": "A aplicação se adapta corretamente a diferentes tamanhos de tela e os elementos são acessíveis via teclado",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-05",
+    "criterion": "Contrato futuro de API/Route: GET /categorias",
+    "steps": [
+      "Abrir a página de cadastro de categorias",
+      "Localizar a lista de categorias",
+      "Verificar se a aplicação exibe um estado de loading ou empty"
+    ],
+    "expected": "A aplicação exibe um estado de loading ou empty enquanto aguarda a resposta da API",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-06",
+    "criterion": "Contrato futuro de API/Route: GET /categorias/salvar",
+    "steps": [
+      "Abrir a página de cadastro de categorias",
+      "Localizar o campo de texto para digitar o nome da categoria",
+      "Digitar um nome de categoria",
+      "Clicar no botão de salvar",
+      "Verificar se a aplicação exibe um estado de sucesso ou error"
+    ],
+    "expected": "A aplicação exibe um estado de sucesso ou error após tentar salvar a nova categoria",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "tc_id": "TC-07",
+    "criterion": "VisualContract: tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns",
+    "steps": [
+      "Abrir a página de cadastro de categorias",
+      "Verificar se a aplicação segue os tokens de design definidos no VisualContract",
+      "Verificar se a aplicação tem densidade e componentes existentes corretos",
+      "Verificar se a aplicação é responsiva e acessível",
+      "Verificar se a aplicação exibe os estados corretos (loading, empty, error, success)",
+      "Verificar se a aplicação não contém antiPatterns"
+    ],
+    "expected": "A aplicação segue os tokens de design definidos no VisualContract, tem densidade e componentes existentes corretos, é responsiva e acessível, exibe os estados corretos e não contém antiPatterns",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-01",
+    "criterion": "A lista de usuários exibe nome, e-mail, papel atribuído e status (ativo, bloqueado, pendente).",
+    "steps": [
+      "Abrir a página de lista de usuários",
+      "Verificar se os campos nome, e-mail, papel e status estão visíveis para cada usuário"
+    ],
+    "expected": "A lista de usuários exibe os campos nome, e-mail, papel e status para cada usuário",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-02",
+    "criterion": "Um formulário permite criar usuário definindo papel e marcando permissões granulares por módulo.",
+    "steps": [
+      "Abrir a página de criação de usuário",
+      "Preencher o formulário com informações válidas",
+      "Verificar se o papel e as permissões podem ser definidos"
+    ],
+    "expected": "O formulário permite criar um usuário com papel e permissões definidos",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-03",
+    "criterion": "Cada alteração em um usuário (papel, permissões, status) é registrada em um histórico de auditoria visível no perfil do usuário.",
+    "steps": [
+      "Abrir a página de perfil de um usuário",
+      "Realizar uma alteração no usuário (papel, permissões, status)",
+      "Verificar se a alteração é registrada no histórico de auditoria"
+    ],
+    "expected": "A alteração é registrada no histórico de auditoria do usuário",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-04",
+    "criterion": "É possível importar múltiplos usuários de uma vez via upload de arquivo CSV, com validação de erros linha a linha.",
+    "steps": [
+      "Abrir a página de importação de usuários",
+      "Upload de um arquivo CSV com informações válidas",
+      "Verificar se os usuários são importados com sucesso"
+    ],
+    "expected": "Os usuários são importados com sucesso e erros são validados linha a linha",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-05",
+    "criterion": "Ao bloquear um usuário, um campo obrigatório de motivo deve ser preenchido antes de confirmar.",
+    "steps": [
+      "Abrir a página de perfil de um usuário",
+      "Tentar bloquear o usuário sem preencher o campo de motivo",
+      "Verificar se o sistema exige o preenchimento do campo de motivo"
+    ],
+    "expected": "O sistema exige o preenchimento do campo de motivo antes de bloquear o usuário",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-06",
+    "criterion": "Usuários bloqueados aparecem com indicador visual distinto e não podem ter permissões editadas até serem desbloqueados.",
+    "steps": [
+      "Abrir a página de lista de usuários",
+      "Verificar se os usuários bloqueados têm um indicador visual distinto",
+      "Tentar editar as permissões de um usuário bloqueado"
+    ],
+    "expected": "Os usuários bloqueados têm um indicador visual distinto e não permitem edição de permissões",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-07",
+    "criterion": "É possível buscar e filtrar usuários por papel, status e módulo de permissão simultaneamente.",
+    "steps": [
+      "Abrir a página de lista de usuários",
+      " usar os filtros de papel, status e módulo de permissão",
+      "Verificar se os resultados são filtrados corretamente"
+    ],
+    "expected": "Os usuários são filtrados corretamente pelos critérios de papel, status e módulo de permissão",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "tc_id": "TC-08",
+    "criterion": "Tentar excluir um usuário com histórico de atividade exige uma segunda confirmação explícita.",
+    "steps": [
+      "Abrir a página de perfil de um usuário com histórico de atividade",
+      "Tentar excluir o usuário",
+      "Verificar se o sistema exige uma segunda confirmação explícita"
+    ],
+    "expected": "O sistema exige uma segunda confirmação explícita antes de excluir o usuário",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Página simples de divulgação de evento",
+    "tc_id": "TC-01",
+    "criterion": "A página exibe o nome do evento.",
+    "steps": [
+      "Abrir a página de divulgação do evento.",
+      "Verificar se o nome do evento está visível na página."
+    ],
+    "expected": "O nome do evento está visível e corresponde ao esperado.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Página simples de divulgação de evento",
+    "tc_id": "TC-02",
+    "criterion": "A página exibe a data do evento.",
+    "steps": [
+      "Abrir a página de divulgação do evento.",
+      "Verificar se a data do evento está visível na página."
+    ],
+    "expected": "A data do evento está visível e corresponde ao esperado.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Página simples de divulgação de evento",
+    "tc_id": "TC-03",
+    "criterion": "A página exibe um botão de inscrição.",
+    "steps": [
+      "Abrir a página de divulgação do evento.",
+      "Verificar se o botão de inscrição está visível na página."
+    ],
+    "expected": "O botão de inscrição está visível e tem a label 'Inscrição'.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Página simples de divulgação de evento",
+    "tc_id": "TC-04",
+    "criterion": "O botão de inscrição é clicável.",
+    "steps": [
+      "Abrir a página de divulgação do evento.",
+      "Clicar no botão de inscrição.",
+      "Verificar se o botão responde ao clique."
+    ],
+    "expected": "O botão de inscrição responde ao clique e executa a ação correspondente.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Página simples de divulgação de evento",
+    "tc_id": "TC-05",
+    "criterion": "A página é responsiva e acessível.",
+    "steps": [
+      "Abrir a página de divulgação do evento em diferentes dispositivos (desktop, tablet, mobile).",
+      "Verificar se a página se adapta às diferentes telas e é acessível.",
+      "Verificar se os elementos da página têm labels e são acessíveis via teclado."
+    ],
+    "expected": "A página é responsiva e acessível em diferentes dispositivos e tem elementos acessíveis.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-01",
+    "criterion": "A seção hero exibe headline, subtítulo, vídeo demonstrativo embutido e botão de CTA principal",
+    "steps": [
+      "Abrir a página",
+      "Localizar a seção hero",
+      "Verificar a presença de headline, subtítulo, vídeo demonstrativo embutido e botão de CTA principal"
+    ],
+    "expected": "A seção hero exibe headline, subtítulo, vídeo demonstrativo embutido e botão de CTA principal corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-02",
+    "criterion": "A seção de funcionalidades lista ao menos 4 recursos do produto com ícone, título e descrição",
+    "steps": [
+      "Abrir a página",
+      "Localizar a seção de funcionalidades",
+      "Verificar a presença de ao menos 4 recursos do produto com ícone, título e descrição"
+    ],
+    "expected": "A seção de funcionalidades lista ao menos 4 recursos do produto com ícone, título e descrição corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-03",
+    "criterion": "A seção de planos exibe ao menos 2 opções de preço em formato de comparação lado a lado",
+    "steps": [
+      "Abrir a página",
+      "Localizar a seção de planos",
+      "Verificar a presença de ao menos 2 opções de preço em formato de comparação lado a lado"
+    ],
+    "expected": "A seção de planos exibe ao menos 2 opções de preço em formato de comparação lado a lado corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-04",
+    "criterion": "A seção de prova social exibe logos de clientes e um carrossel navegável de depoimentos",
+    "steps": [
+      "Abrir a página",
+      "Localizar a seção de prova social",
+      "Verificar a presença de logos de clientes e um carrossel navegável de depoimentos"
+    ],
+    "expected": "A seção de prova social exibe logos de clientes e um carrossel navegável de depoimentos corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-05",
+    "criterion": "A seção de FAQ permite expandir e recolher cada pergunta individualmente",
+    "steps": [
+      "Abrir a página",
+      "Localizar a seção de FAQ",
+      "Verificar a possibilidade de expandir e recolher cada pergunta individualmente"
+    ],
+    "expected": "A seção de FAQ permite expandir e recolher cada pergunta individualmente corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-06",
+    "criterion": "O formulário de captura de lead valida campos obrigatórios antes de permitir o envio",
+    "steps": [
+      "Abrir a página",
+      "Localizar o formulário de captura de lead",
+      "Preencher o formulário com dados inválidos",
+      "Verificar a mensagem de erro",
+      "Preencher o formulário com dados válidos",
+      "Verificar a possibilidade de enviar o formulário"
+    ],
+    "expected": "O formulário de captura de lead valida campos obrigatórios antes de permitir o envio corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-07",
+    "criterion": "Ao submeter o formulário com sucesso, uma mensagem de confirmação visual é exibida ao usuário",
+    "steps": [
+      "Abrir a página",
+      "Localizar o formulário de captura de lead",
+      "Preencher o formulário com dados válidos",
+      "Enviar o formulário",
+      "Verificar a presença de uma mensagem de confirmação visual"
+    ],
+    "expected": "Ao submeter o formulário com sucesso, uma mensagem de confirmação visual é exibida ao usuário corretamente",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-08",
+    "criterion": "O rodapé contém um campo de inscrição para newsletter com validação de formato de e-mail",
+    "steps": [
+      "Abrir a página",
+      "Localizar o rodapé",
+      "Verificar a presença de um campo de inscrição para newsletter",
+      "Preencher o campo com um e-mail inválido",
+      "Verificar a mensagem de erro",
+      "Preencher o campo com um e-mail válido",
+      "Verificar a possibilidade de enviar o formulário"
+    ],
+    "expected": "O rodapé contém um campo de inscrição para newsletter com validação de formato de e-mail corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-09",
+    "criterion": "Contrato futuro de API/Rotas: GET /api/leads",
+    "steps": [
+      "Abrir a página",
+      "Localizar a seção de lead",
+      "Verificar a presença de um botão de envio",
+      "Simular o envio de um lead",
+      "Verificar a presença de uma mensagem de confirmação visual"
+    ],
+    "expected": "O contrato futuro de API/Rotas: GET /api/leads é testado corretamente por meio de boundary/adapters injetáveis, estados de loading/empty/error/success e compatibilidade de shape",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-10",
+    "criterion": "Contrato futuro de API/Rotas: GET /api/newsletter",
+    "steps": [
+      "Abrir a página",
+      "Localizar o rodapé",
+      "Verificar a presença de um campo de inscrição para newsletter",
+      "Preencher o campo com um e-mail válido",
+      "Simular o envio do formulário",
+      "Verificar a presença de uma mensagem de confirmação visual"
+    ],
+    "expected": "O contrato futuro de API/Rotas: GET /api/newsletter é testado corretamente por meio de boundary/adapters injetáveis, estados de loading/empty/error/success e compatibilidade de shape",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "tc_id": "TC-11",
+    "criterion": "VisualContract: tokens, densidade, componentes existentes, responsividade, acessibilidade, estados e antiPatterns",
+    "steps": [
+      "Abrir a página",
+      "Verificar a presença de tokens de design",
+      "Verificar a densidade de design",
+      "Verificar a presença de componentes existentes",
+      "Verificar a responsividade da página",
+      "Verificar a acessibilidade da página",
+      "Verificar a presença de estados de loading/empty/error/success",
+      "Verificar a presença de antiPatterns"
+    ],
+    "expected": "A página atende aos requisitos do VisualContract",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Quadro simples de notas adesivas",
+    "tc_id": "TC-01",
+    "criterion": "O usuário pode criar uma nota de texto na área da tela.",
+    "steps": [
+      "Abrir o quadro de notas",
+      "Clicar no botão de criar nota",
+      "Digitar o texto da nota",
+      "Clicar no botão de salvar nota"
+    ],
+    "expected": "A nota é exibida corretamente na área da tela com o texto digitado.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Quadro simples de notas adesivas",
+    "tc_id": "TC-02",
+    "criterion": "O usuário pode arrastar a nota para outra posição.",
+    "steps": [
+      "Abrir o quadro de notas",
+      "Clicar e arrastar a nota para uma nova posição",
+      "Solte o botão do mouse"
+    ],
+    "expected": "A nota é movida para a nova posição e permanece visível.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Quadro simples de notas adesivas",
+    "tc_id": "TC-03",
+    "criterion": "A nota é exibida corretamente após ser criada e movida.",
+    "steps": [
+      "Abrir o quadro de notas",
+      "Clicar no botão de criar nota",
+      "Digitar o texto da nota",
+      "Clicar no botão de salvar nota",
+      "Clicar e arrastar a nota para uma nova posição",
+      "Solte o botão do mouse"
+    ],
+    "expected": "A nota é exibida corretamente na nova posição com o texto digitado.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Quadro simples de notas adesivas",
+    "tc_id": "TC-04",
+    "criterion": "O quadro responde corretamente a diferentes tamanhos de tela.",
+    "steps": [
+      "Abrir o quadro de notas em um dispositivo móvel",
+      "Redimensionar a tela para diferentes tamanhos",
+      "Verificar a disposição das notas no quadro"
+    ],
+    "expected": "O quadro se adapta corretamente a diferentes tamanhos de tela e as notas permanecem visíveis e funcionais.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Quadro simples de notas adesivas",
+    "tc_id": "TC-05",
+    "criterion": "O quadro é acessível para usuários com deficiência.",
+    "steps": [
+      "Abrir o quadro de notas com um leitor de tela",
+      "Navegar pelo quadro usando teclas de atalho",
+      "Verificar a leitura correta das notas e controles"
+    ],
+    "expected": "O quadro é acessível e pode ser navegado corretamente usando um leitor de tela e teclas de atalho.",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-01",
+    "criterion": "O usuário pode adicionar uma nova camada de som.",
+    "steps": [
+      "Abrir a aplicação",
+      "Clicar no botão de adicionar camada",
+      "Verificar se uma nova camada é adicionada à lista de camadas"
+    ],
+    "expected": "Uma nova camada é adicionada à lista de camadas com um controle deslizante de volume e uma forma de onda visual",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-02",
+    "criterion": "Cada camada exibe sua forma de onda visual e um controle deslizante de volume.",
+    "steps": [
+      "Abrir a aplicação",
+      "Selecionar uma camada existente",
+      "Verificar se a forma de onda visual e o controle deslizante de volume estão visíveis"
+    ],
+    "expected": "A forma de onda visual e o controle deslizante de volume estão visíveis e funcionais para a camada selecionada",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-03",
+    "criterion": "O controle de BPM ajusta a velocidade de reprodução de todas as camadas.",
+    "steps": [
+      "Abrir a aplicação",
+      "Ajustar o controle de BPM",
+      "Verificar se a velocidade de reprodução de todas as camadas é ajustada"
+    ],
+    "expected": "A velocidade de reprodução de todas as camadas é ajustada de acordo com o valor do controle de BPM",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-04",
+    "criterion": "Cada camada possui controles de efeito ajustáveis.",
+    "steps": [
+      "Abrir a aplicação",
+      "Selecionar uma camada existente",
+      "Verificar se os controles de efeito estão visíveis e funcionais"
+    ],
+    "expected": "Os controles de efeito estão visíveis e funcionais para a camada selecionada",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-05",
+    "criterion": "O usuário pode silenciar ou isolar uma camada.",
+    "steps": [
+      "Abrir a aplicação",
+      "Selecionar uma camada existente",
+      "Clicar no botão de silenciar ou isolar",
+      "Verificar se a camada é silenciada ou isolada"
+    ],
+    "expected": "A camada é silenciada ou isolada de acordo com a ação do usuário",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-06",
+    "criterion": "A composição pode ser salva como projeto e recarregada.",
+    "steps": [
+      "Abrir a aplicação",
+      "Criar uma composição",
+      "Clicar no botão de salvar",
+      "Fechar e reabrir a aplicação",
+      "Verificar se a composição é recarregada corretamente"
+    ],
+    "expected": "A composição é salva e recarregada corretamente",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-07",
+    "criterion": "O botão de exportação gera a mixagem final.",
+    "steps": [
+      "Abrir a aplicação",
+      "Criar uma composição",
+      "Clicar no botão de exportação",
+      "Verificar se a mixagem final é gerada corretamente"
+    ],
+    "expected": "A mixagem final é gerada corretamente",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-08",
+    "criterion": "Camadas podem ser reordenadas ou removidas.",
+    "steps": [
+      "Abrir a aplicação",
+      "Criar uma composição",
+      "Selecionar uma camada existente",
+      "Reordenar ou remover a camada",
+      "Verificar se a camada é reordenada ou removida corretamente"
+    ],
+    "expected": "A camada é reordenada ou removida corretamente",
+    "m2_step_reproducible": false,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-09",
+    "criterion": "Prontidão do frontend para o contrato de API de GET /projects",
+    "steps": [
+      "Abrir a aplicação",
+      "Simular uma resposta de sucesso do contrato de API de GET /projects",
+      "Verificar se a lista de projetos é exibida corretamente"
+    ],
+    "expected": "A lista de projetos é exibida corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-10",
+    "criterion": "Prontidão do frontend para o contrato de API de GET /projects/:id",
+    "steps": [
+      "Abrir a aplicação",
+      "Simular uma resposta de sucesso do contrato de API de GET /projects/:id",
+      "Verificar se o projeto é exibido corretamente"
+    ],
+    "expected": "O projeto é exibido corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": false
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-11",
+    "criterion": "Prontidão do frontend para o contrato de API de GET /export/mix",
+    "steps": [
+      "Abrir a aplicação",
+      "Simular uma resposta de sucesso do contrato de API de GET /export/mix",
+      "Verificar se a mixagem final é gerada corretamente"
+    ],
+    "expected": "A mixagem final é gerada corretamente",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "tc_id": "TC-12",
+    "criterion": "Cobertura visual para visualContract",
+    "steps": [
+      "Abrir a aplicação",
+      "Verificar se a densidade, tokens, componentes existentes, responsividade, acessibilidade e estados estão de acordo com o visualContract"
+    ],
+    "expected": "A densidade, tokens, componentes existentes, responsividade, acessibilidade e estados estão de acordo com o visualContract",
+    "m2_step_reproducible": true,
+    "m3_expected_specific": true
+  }
+]

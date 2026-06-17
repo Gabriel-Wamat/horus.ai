@@ -1,0 +1,109 @@
+bloco,us_title,criterio_num,criterio_texto,visivel,tem_gatilho,especifico,score_m5
+bloco1,Painel de monitoramento de tarefas da equipe,1,"A tabela exibe colunas: tarefa, responsavel, status e data limite.",TRUE,FALSE,TRUE,0
+bloco1,Painel de monitoramento de tarefas da equipe,2,"E possivel filtrar tarefas por status (aberto, em andamento, concluido).",TRUE,FALSE,TRUE,0
+bloco1,Painel de monitoramento de tarefas da equipe,3,Tarefas atrasadas aparecem com destaque visual distinto.,TRUE,FALSE,TRUE,0
+bloco1,Painel de monitoramento de tarefas da equipe,4,"Ao clicar em uma tarefa, um painel lateral exibe os detalhes completos.",TRUE,TRUE,TRUE,1
+bloco1,Interface de chat com previa de codigo gerado,1,O painel esquerdo exibe o historico de mensagens do chat.,TRUE,FALSE,TRUE,0
+bloco1,Interface de chat com previa de codigo gerado,2,O painel direito exibe o ultimo trecho de codigo gerado com highlight de sintaxe.,TRUE,FALSE,TRUE,0
+bloco1,Interface de chat com previa de codigo gerado,3,Um botao 'Copiar' permite copiar o codigo gerado para a area de transferencia.,TRUE,TRUE,TRUE,1
+bloco1,Interface de chat com previa de codigo gerado,4,O campo de entrada suporta envio com a tecla Enter e exibe contador de caracteres.,TRUE,TRUE,TRUE,1
+bloco1,Interface de chat com previa de codigo gerado,5,A interface e responsiva e acessivel.,FALSE,FALSE,FALSE,0
+bloco1,Mapa visual do pipeline de dados,1,Cada etapa do pipeline e exibida como um no com nome e status de execucao.,TRUE,FALSE,TRUE,0
+bloco1,Mapa visual do pipeline de dados,2,As arestas entre nos representam dependencias entre as etapas.,TRUE,FALSE,TRUE,0
+bloco1,Mapa visual do pipeline de dados,3,Nos com falha de execucao sao destacados em vermelho.,TRUE,FALSE,TRUE,0
+bloco1,Mapa visual do pipeline de dados,4,Clicar em um no exibe seus logs de execucao em um painel lateral.,TRUE,TRUE,TRUE,1
+bloco1,Mapa visual do pipeline de dados,5,A aplicacao e responsiva e acessivel em diferentes tamanhos de tela.,FALSE,FALSE,FALSE,0
+bloco1,Gerenciamento de chaves de API,1,"A lista de chaves e exibida com nome, data de criacao e permissoes associadas.",TRUE,FALSE,TRUE,0
+bloco1,Gerenciamento de chaves de API,2,O formulario de criacao de chave permite informar nome e selecionar permissoes.,TRUE,TRUE,TRUE,1
+bloco1,Gerenciamento de chaves de API,3,A revogacao de uma chave e feita com etapa de confirmacao antes de excluir.,TRUE,TRUE,TRUE,1
+bloco1,Gerenciamento de chaves de API,4,Chaves revogadas sao exibidas com indicador visual distinto e nao permitem edicao.,TRUE,FALSE,TRUE,0
+bloco1,Pagina de lancamento de produto SaaS,1,"A pagina exibe secao hero com headline, subtitulo e botao de chamada para acao.",TRUE,FALSE,TRUE,0
+bloco1,Pagina de lancamento de produto SaaS,2,Secao de beneficios lista 3 diferenciais do produto com icone e descricao curta.,TRUE,FALSE,TRUE,0
+bloco1,Pagina de lancamento de produto SaaS,3,Secao de depoimentos exibe ao menos 2 testemunhos com nome e cargo do autor.,TRUE,FALSE,TRUE,0
+bloco1,Pagina de lancamento de produto SaaS,4,O rodape contem links para politica de privacidade e pagina de contato.,TRUE,FALSE,TRUE,0
+bloco1,Pagina de lancamento de produto SaaS,5,A pagina e responsiva e acessivel em dispositivos moveis e desktop.,FALSE,FALSE,FALSE,0
+bloco1,Editor de fluxos de automacao por blocos,1,A tela exibe uma paleta lateral com tipos de blocos disponiveis.,TRUE,FALSE,TRUE,0
+bloco1,Editor de fluxos de automacao por blocos,2,Blocos podem ser arrastados da paleta para a area de trabalho e conectados entre si.,TRUE,TRUE,TRUE,1
+bloco1,Editor de fluxos de automacao por blocos,3,Cada bloco tem um formulario inline de configuracao exibido ao ser selecionado.,TRUE,TRUE,TRUE,1
+bloco1,Editor de fluxos de automacao por blocos,4,O fluxo pode ser salvo com um nome e recarregado em sessoes futuras.,TRUE,TRUE,TRUE,1
+bloco1,Editor de fluxos de automacao por blocos,5,A tela exibe aviso visual quando ha blocos presentes mas desconectados no fluxo.,TRUE,FALSE,TRUE,0
+bloco2,Lista simples de status dos servidores,1,A lista exibe o nome de cada servidor e seu status atual (online ou offline).,TRUE,FALSE,TRUE,0
+bloco2,Lista simples de status dos servidores,2,A lista e responsiva e acessivel.,FALSE,FALSE,FALSE,0
+bloco2,Lista simples de status dos servidores,3,Os componentes de lista e status sao renderizados corretamente.,FALSE,FALSE,FALSE,0
+bloco2,Central de operacoes de suporte multi-fila,1,O painel exibe colunas por fila de atendimento com contagem de tickets abertos.,TRUE,FALSE,TRUE,0
+bloco2,Central de operacoes de suporte multi-fila,2,"Cada ticket exibe indicador visual de SLA (dentro do prazo, em risco, vencido).",TRUE,FALSE,TRUE,0
+bloco2,Central de operacoes de suporte multi-fila,3,"E possivel filtrar tickets por agente responsavel, fila e status simultaneamente.",TRUE,FALSE,TRUE,0
+bloco2,Central de operacoes de suporte multi-fila,4,Uma secao lateral lista agentes disponiveis com sua carga atual de tickets.,TRUE,FALSE,TRUE,0
+bloco2,Central de operacoes de suporte multi-fila,5,"Ao reatribuir um ticket, o historico de reatribuicoes e registrado e exibido em um painel de auditoria.",TRUE,TRUE,TRUE,1
+bloco2,Central de operacoes de suporte multi-fila,6,E possivel exportar a visao atual filtrada como relatorio (CSV ou similar).,TRUE,FALSE,TRUE,0
+bloco2,Central de operacoes de suporte multi-fila,7,Tickets vencidos aparecem destacados visualmente em relacao aos demais.,TRUE,FALSE,TRUE,0
+bloco2,Central de operacoes de suporte multi-fila,8,O painel atualiza a contagem de tickets por fila sem exigir recarregamento manual da pagina.,TRUE,FALSE,TRUE,0
+bloco2,Caixa de perguntas e respostas simples,1,"Ao enviar uma pergunta, a resposta do assistente e exibida abaixo do campo de entrada.",TRUE,TRUE,TRUE,1
+bloco2,Caixa de perguntas e respostas simples,2,O campo de entrada de pergunta e acessivel e responsivo.,FALSE,FALSE,FALSE,0
+bloco2,Caixa de perguntas e respostas simples,3,A resposta do assistente e exibida com sucesso apos o envio da pergunta.,TRUE,FALSE,FALSE,0
+bloco2,Caixa de perguntas e respostas simples,4,O sistema lida corretamente com erros de envio de pergunta ou obtencao de resposta.,FALSE,FALSE,FALSE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,1,O painel esquerdo exibe o historico de mensagens organizado por etapa do relatorio.,TRUE,FALSE,TRUE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,2,O painel direito exibe a previa do relatorio atualizada apos cada resposta do assistente.,TRUE,FALSE,TRUE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,3,Cada versao do relatorio gerada e salva no historico de versoes com timestamp.,TRUE,FALSE,TRUE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,4,E possivel selecionar uma versao anterior do historico e reverter a previa para ela.,TRUE,FALSE,TRUE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,5,Um indicador visual mostra em qual etapa do fluxo a conversa esta.,TRUE,FALSE,TRUE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,6,"O usuario pode anexar uma fonte de dados a conversa, e ela aparece listada na etapa de fontes.",TRUE,FALSE,TRUE,0
+bloco2,Workbench de geracao de relatorios com revisao por etapas,7,"Ao finalizar a revisao final, um botao permite exportar o relatorio consolidado.",TRUE,TRUE,TRUE,1
+bloco2,Visualizacao simples de duas etapas conectadas,1,As duas etapas sao exibidas como caixas conectadas por uma seta indicando a ordem.,TRUE,FALSE,TRUE,0
+bloco2,Visualizacao simples de duas etapas conectadas,2,A seta e clicavel e executa a acao correspondente.,TRUE,TRUE,FALSE,0
+bloco2,Visualizacao simples de duas etapas conectadas,3,A pagina e responsiva e acessivel em diferentes tamanhos de tela.,FALSE,FALSE,FALSE,0
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,1,"Cada servico e exibido como um no com nome, versao e status de saude atual",TRUE,FALSE,TRUE,0
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,2,"As arestas representam chamadas de dependencia entre servicos, com direcao visivel",TRUE,FALSE,TRUE,0
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,3,"Ao selecionar um no e acionar 'simular falha', todos os nos afetados a jusante sao destacados visualmente",TRUE,TRUE,TRUE,1
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,4,Caminhos criticos (sem redundancia) sao exibidos com estilo visual distinto das demais arestas,TRUE,FALSE,TRUE,0
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,5,Clicar em um no abre um painel lateral com o historico de incidentes daquele servico,TRUE,FALSE,TRUE,0
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,6,"E possivel filtrar o grafo por dominio/equipe responsavel, ocultando nos de outros dominios",TRUE,FALSE,TRUE,0
+bloco2,Mapa de dependencias de microsservicos com simulacao de impacto,7,Nos com incidentes ativos no momento sao destacados com indicador visual diferente de nos saudaveis,TRUE,FALSE,TRUE,0
+bloco2,Cadastro simples de categorias,1,O campo de texto permite digitar o nome da categoria.,TRUE,FALSE,TRUE,0
+bloco2,Cadastro simples de categorias,2,O botao de salvar adiciona a nova categoria a lista.,TRUE,TRUE,TRUE,1
+bloco2,Cadastro simples de categorias,3,A lista de categorias e exibida abaixo do campo de texto.,TRUE,FALSE,TRUE,0
+bloco2,Cadastro simples de categorias,4,A aplicacao e responsiva e acessivel.,FALSE,FALSE,FALSE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,1,"A lista de usuarios exibe nome, e-mail, papel atribuido e status (ativo, bloqueado, pendente).",TRUE,FALSE,TRUE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,2,Um formulario permite criar usuario definindo papel e marcando permissoes granulares por modulo.,TRUE,FALSE,TRUE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,3,Cada alteracao em um usuario e registrada em um historico de auditoria visivel no perfil do usuario.,TRUE,FALSE,TRUE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,4,"E possivel importar multiplos usuarios via upload de arquivo CSV, com validacao de erros linha a linha.",TRUE,FALSE,TRUE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,5,"Ao bloquear um usuario, um campo obrigatorio de motivo deve ser preenchido antes de confirmar.",TRUE,TRUE,TRUE,1
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,6,Usuarios bloqueados aparecem com indicador visual distinto e nao podem ter permissoes editadas.,TRUE,FALSE,TRUE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,7,"E possivel buscar e filtrar usuarios por papel, status e modulo de permissao simultaneamente.",TRUE,FALSE,TRUE,0
+bloco2,Console de gestao de usuarios com papeis permissoes e auditoria,8,Tentar excluir um usuario com historico de atividade exige uma segunda confirmacao explicita.,TRUE,TRUE,TRUE,1
+bloco2,Pagina simples de divulgacao de evento,1,A pagina exibe o nome do evento.,TRUE,FALSE,TRUE,0
+bloco2,Pagina simples de divulgacao de evento,2,A pagina exibe a data do evento.,TRUE,FALSE,TRUE,0
+bloco2,Pagina simples de divulgacao de evento,3,A pagina exibe um botao de inscricao.,TRUE,FALSE,TRUE,0
+bloco2,Pagina simples de divulgacao de evento,4,O botao de inscricao e clicavel.,TRUE,TRUE,FALSE,0
+bloco2,Pagina simples de divulgacao de evento,5,A pagina e responsiva e acessivel.,FALSE,FALSE,FALSE,0
+bloco2,Landing page completa de lancamento com prova social e FAQ,1,"A secao hero exibe headline, subtitulo, video demonstrativo embutido e botao de CTA principal",TRUE,FALSE,TRUE,0
+bloco2,Landing page completa de lancamento com prova social e FAQ,2,"A secao de funcionalidades lista ao menos 4 recursos do produto com icone, titulo e descricao",TRUE,FALSE,TRUE,0
+bloco2,Landing page completa de lancamento com prova social e FAQ,3,A secao de planos exibe ao menos 2 opcoes de preco em formato de comparacao lado a lado,TRUE,FALSE,TRUE,0
+bloco2,Landing page completa de lancamento com prova social e FAQ,4,A secao de prova social exibe logos de clientes e um carrossel navegavel de depoimentos,TRUE,FALSE,TRUE,0
+bloco2,Landing page completa de lancamento com prova social e FAQ,5,A secao de FAQ permite expandir e recolher cada pergunta individualmente,TRUE,TRUE,TRUE,1
+bloco2,Landing page completa de lancamento com prova social e FAQ,6,O formulario de captura de lead valida campos obrigatorios antes de permitir o envio,TRUE,FALSE,TRUE,0
+bloco2,Landing page completa de lancamento com prova social e FAQ,7,"Ao submeter o formulario com sucesso, uma mensagem de confirmacao visual e exibida ao usuario",TRUE,TRUE,TRUE,1
+bloco2,Landing page completa de lancamento com prova social e FAQ,8,O rodape contem um campo de inscricao para newsletter com validacao de formato de e-mail,TRUE,FALSE,TRUE,0
+bloco2,Quadro simples de notas adesivas,1,O usuario pode criar uma nota de texto na area da tela.,TRUE,FALSE,TRUE,0
+bloco2,Quadro simples de notas adesivas,2,O usuario pode arrastar a nota para outra posicao.,TRUE,TRUE,TRUE,1
+bloco2,Quadro simples de notas adesivas,3,A nota e exibida corretamente apos ser criada e movida.,FALSE,FALSE,FALSE,0
+bloco2,Quadro simples de notas adesivas,4,O quadro responde corretamente a diferentes tamanhos de tela.,FALSE,FALSE,FALSE,0
+bloco2,Quadro simples de notas adesivas,5,O quadro e acessivel para usuarios com deficiencia.,FALSE,FALSE,FALSE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,1,O usuario pode adicionar uma nova camada de som.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,2,Cada camada exibe sua forma de onda visual e um controle deslizante de volume.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,3,O controle de BPM ajusta a velocidade de reproducao de todas as camadas.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,4,Cada camada possui controles de efeito ajustaveis.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,5,O usuario pode silenciar ou isolar uma camada.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,6,A composicao pode ser salva como projeto e recarregada.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,7,O botao de exportacao gera a mixagem final.,TRUE,FALSE,TRUE,0
+bloco2,Mesa de composicao musical por camadas com mixagem ao vivo,8,Camadas podem ser reordenadas ou removidas.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Visualizacao de relatorio de vendas,1,O relatorio exibe o total de vendas do mes atual.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Visualizacao de relatorio de vendas,2,O relatorio e carregado corretamente.,FALSE,FALSE,FALSE,0
+bloco3-armadilha,Visualizacao de relatorio de vendas,3,O relatorio e acessivel em diferentes tamanhos de tela.,FALSE,FALSE,FALSE,0
+bloco3-armadilha,Crie uma pagina incrivel para gerenciar os pedidos da loja,1,A pagina exibe a lista de pedidos recebidos.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Crie uma pagina incrivel para gerenciar os pedidos da loja,2,E possivel atualizar o status de um pedido.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Crie uma pagina incrivel para gerenciar os pedidos da loja,3,E possivel buscar um pedido especifico por numero ou nome do cliente.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Crie uma pagina incrivel para gerenciar os pedidos da loja,4,A pagina e responsiva e acessivel.,FALSE,FALSE,FALSE,0
+bloco3-armadilha,Tela de relatorios,1,A tela exibe uma lista de relatorios.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Tela de relatorios,2,A tela exibe detalhes de um relatorio selecionado.,TRUE,FALSE,TRUE,0
+bloco3-armadilha,Tela de relatorios,3,A tela e responsiva e acessivel.,FALSE,FALSE,FALSE,0

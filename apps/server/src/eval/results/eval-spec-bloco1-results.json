@@ -1,0 +1,1033 @@
+[
+  {
+    "us_title": "Painel de monitoramento de tarefas da equipe",
+    "us_id": "8b4cf35a-3722-4b7e-b61f-998694a5348e",
+    "complexidade": "média",
+    "pattern_gabarito": "operational-dashboard",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "operational-dashboard",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "2427209f-e12d-433d-be5b-f5bf87b70b2c",
+      "userStoryId": "8b4cf35a-3722-4b7e-b61f-998694a5348e",
+      "version": 1,
+      "summary": "Desenvolver um painel de monitoramento de tarefas da equipe com tabela filtrável e detalhes de tarefas.",
+      "technicalApproach": "Estrutura em React/TypeScript, utilizando Pattern: operational-dashboard, com componentes de tabela, filtro e painel lateral, responsividade e acessibilidade garantidas.",
+      "components": [
+        {
+          "name": "TabelaTarefas",
+          "type": "ui",
+          "description": "TabelaTarefas",
+          "dependencies": []
+        },
+        {
+          "name": "FiltroTarefas",
+          "type": "ui",
+          "description": "FiltroTarefas",
+          "dependencies": []
+        },
+        {
+          "name": "PainelDetalhes",
+          "type": "ui",
+          "description": "PainelDetalhes",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/tarefas",
+          "description": "Endpoint /tarefas"
+        },
+        {
+          "method": "GET",
+          "path": "/tarefas/filtrar",
+          "description": "Endpoint /tarefas/filtrar"
+        }
+      ],
+      "dataModels": [
+        "Tarefa"
+      ],
+      "acceptanceCriteria": [
+        "A tabela exibe colunas: tarefa, responsável, status e data limite.",
+        "É possível filtrar tarefas por status (aberto, em andamento, concluído).",
+        "Tarefas atrasadas aparecem com destaque visual distinto.",
+        "Ao clicar em uma tarefa, um painel lateral exibe os detalhes completos.",
+        "A tabela é responsiva e acessível em diferentes dispositivos e tamanhos de tela."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "operational-dashboard",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "tabela",
+            "filtro",
+            "painel lateral"
+          ],
+          "forbiddenPatterns": [
+            "cards aninhados",
+            "paleta monocromática"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:39:03.906Z"
+    },
+    "spec_summary": "Desenvolver um painel de monitoramento de tarefas da equipe com tabela filtrável e detalhes de tarefas.",
+    "spec_technicalApproach": "Estrutura em React/TypeScript, utilizando Pattern: operational-dashboard, com componentes de tabela, filtro e painel lateral, responsividade e acessibilidade garantidas.",
+    "spec_components": [
+      {
+        "name": "TabelaTarefas",
+        "type": "ui",
+        "description": "TabelaTarefas",
+        "dependencies": []
+      },
+      {
+        "name": "FiltroTarefas",
+        "type": "ui",
+        "description": "FiltroTarefas",
+        "dependencies": []
+      },
+      {
+        "name": "PainelDetalhes",
+        "type": "ui",
+        "description": "PainelDetalhes",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A tabela exibe colunas: tarefa, responsável, status e data limite.",
+      "É possível filtrar tarefas por status (aberto, em andamento, concluído).",
+      "Tarefas atrasadas aparecem com destaque visual distinto.",
+      "Ao clicar em uma tarefa, um painel lateral exibe os detalhes completos.",
+      "A tabela é responsiva e acessível em diferentes dispositivos e tamanhos de tela."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/tarefas",
+        "description": "Endpoint /tarefas"
+      },
+      {
+        "method": "GET",
+        "path": "/tarefas/filtrar",
+        "description": "Endpoint /tarefas/filtrar"
+      }
+    ],
+    "spec_dataModels": [
+      "Tarefa"
+    ]
+  },
+  {
+    "us_title": "Interface de chat com prévia de código gerado",
+    "us_id": "4ff7952e-d945-4812-94bf-076b2a1f33b2",
+    "complexidade": "média",
+    "pattern_gabarito": "chat-preview-workbench",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "chat-preview-workbench",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "9961138a-acc8-4b78-97da-8bab7b414960",
+      "userStoryId": "4ff7952e-d945-4812-94bf-076b2a1f33b2",
+      "version": 1,
+      "summary": "Desenvolver uma interface de chat com prévia de código gerado para revisão e cópia rápida.",
+      "technicalApproach": "Pattern: chat-preview-workbench. Utiliza React/TypeScript, com estrutura de componentes em painéis esquerdo e direito, e contador de caracteres no campo de entrada. Responsividade e acessibilidade são garantidas.",
+      "components": [
+        {
+          "name": "ChatPanel",
+          "type": "ui",
+          "description": "ChatPanel",
+          "dependencies": []
+        },
+        {
+          "name": "CodePreview",
+          "type": "ui",
+          "description": "CodePreview",
+          "dependencies": []
+        },
+        {
+          "name": "MessageService",
+          "type": "service",
+          "description": "MessageService",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/messages",
+          "description": "Endpoint /messages"
+        },
+        {
+          "method": "GET",
+          "path": "/code-generation",
+          "description": "Endpoint /code-generation"
+        }
+      ],
+      "dataModels": [
+        "Message",
+        "Code"
+      ],
+      "acceptanceCriteria": [
+        "O painel esquerdo exibe o histórico de mensagens do chat.",
+        "O painel direito exibe o último trecho de código gerado com highlight de sintaxe.",
+        "Um botão 'Copiar' permite copiar o código gerado para a área de transferência.",
+        "O campo de entrada suporta envio com a tecla Enter e exibe contador de caracteres."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "chat-preview-workbench",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "chat-preview-workbench"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "workflow-map"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:39:07.456Z"
+    },
+    "spec_summary": "Desenvolver uma interface de chat com prévia de código gerado para revisão e cópia rápida.",
+    "spec_technicalApproach": "Pattern: chat-preview-workbench. Utiliza React/TypeScript, com estrutura de componentes em painéis esquerdo e direito, e contador de caracteres no campo de entrada. Responsividade e acessibilidade são garantidas.",
+    "spec_components": [
+      {
+        "name": "ChatPanel",
+        "type": "ui",
+        "description": "ChatPanel",
+        "dependencies": []
+      },
+      {
+        "name": "CodePreview",
+        "type": "ui",
+        "description": "CodePreview",
+        "dependencies": []
+      },
+      {
+        "name": "MessageService",
+        "type": "service",
+        "description": "MessageService",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O painel esquerdo exibe o histórico de mensagens do chat.",
+      "O painel direito exibe o último trecho de código gerado com highlight de sintaxe.",
+      "Um botão 'Copiar' permite copiar o código gerado para a área de transferência.",
+      "O campo de entrada suporta envio com a tecla Enter e exibe contador de caracteres."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/messages",
+        "description": "Endpoint /messages"
+      },
+      {
+        "method": "GET",
+        "path": "/code-generation",
+        "description": "Endpoint /code-generation"
+      }
+    ],
+    "spec_dataModels": [
+      "Message",
+      "Code"
+    ]
+  },
+  {
+    "us_title": "Mapa visual do pipeline de dados",
+    "us_id": "6db085c5-dd5f-4ee9-8b4a-4da6005839a4",
+    "complexidade": "média",
+    "pattern_gabarito": "workflow-map",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "workflow-map",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "e0a50f6f-d61d-4118-8798-e1790a87235c",
+      "userStoryId": "6db085c5-dd5f-4ee9-8b4a-4da6005839a4",
+      "version": 1,
+      "summary": "Desenvolver um mapa visual interativo do pipeline de dados para identificar gargalos e dependências críticas.",
+      "technicalApproach": "Utilizar Pattern: workflow-map para exibir etapas do pipeline como nós e arestas, com destacamento de falhas em vermelho e logs de execução em painel lateral, aplicando responsividade e acessibilidade.",
+      "components": [
+        {
+          "name": "PipelineNode",
+          "type": "ui",
+          "description": "PipelineNode",
+          "dependencies": []
+        },
+        {
+          "name": "DependencyEdge",
+          "type": "ui",
+          "description": "DependencyEdge",
+          "dependencies": []
+        },
+        {
+          "name": "ExecutionLogPanel",
+          "type": "ui",
+          "description": "ExecutionLogPanel",
+          "dependencies": []
+        },
+        {
+          "name": "PipelineDataService",
+          "type": "service",
+          "description": "PipelineDataService",
+          "dependencies": []
+        },
+        {
+          "name": "PipelineDataModel",
+          "type": "model",
+          "description": "PipelineDataModel",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/pipelines",
+          "description": "Endpoint /pipelines"
+        },
+        {
+          "method": "GET",
+          "path": "/pipeline-steps",
+          "description": "Endpoint /pipeline-steps"
+        },
+        {
+          "method": "GET",
+          "path": "/execution-logs",
+          "description": "Endpoint /execution-logs"
+        }
+      ],
+      "dataModels": [
+        "PipelineStep",
+        "Dependency",
+        "ExecutionLog"
+      ],
+      "acceptanceCriteria": [
+        "Cada etapa do pipeline é exibida como um nó com nome e status de execução.",
+        "As arestas entre nós representam dependências entre as etapas.",
+        "Nós com falha de execução são destacados em vermelho.",
+        "Clicar em um nó exibe seus logs de execução em um painel lateral.",
+        "A interface é responsiva e acessível."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "workflow-map",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "workflow-map"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:39:11.053Z"
+    },
+    "spec_summary": "Desenvolver um mapa visual interativo do pipeline de dados para identificar gargalos e dependências críticas.",
+    "spec_technicalApproach": "Utilizar Pattern: workflow-map para exibir etapas do pipeline como nós e arestas, com destacamento de falhas em vermelho e logs de execução em painel lateral, aplicando responsividade e acessibilidade.",
+    "spec_components": [
+      {
+        "name": "PipelineNode",
+        "type": "ui",
+        "description": "PipelineNode",
+        "dependencies": []
+      },
+      {
+        "name": "DependencyEdge",
+        "type": "ui",
+        "description": "DependencyEdge",
+        "dependencies": []
+      },
+      {
+        "name": "ExecutionLogPanel",
+        "type": "ui",
+        "description": "ExecutionLogPanel",
+        "dependencies": []
+      },
+      {
+        "name": "PipelineDataService",
+        "type": "service",
+        "description": "PipelineDataService",
+        "dependencies": []
+      },
+      {
+        "name": "PipelineDataModel",
+        "type": "model",
+        "description": "PipelineDataModel",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "Cada etapa do pipeline é exibida como um nó com nome e status de execução.",
+      "As arestas entre nós representam dependências entre as etapas.",
+      "Nós com falha de execução são destacados em vermelho.",
+      "Clicar em um nó exibe seus logs de execução em um painel lateral.",
+      "A interface é responsiva e acessível."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/pipelines",
+        "description": "Endpoint /pipelines"
+      },
+      {
+        "method": "GET",
+        "path": "/pipeline-steps",
+        "description": "Endpoint /pipeline-steps"
+      },
+      {
+        "method": "GET",
+        "path": "/execution-logs",
+        "description": "Endpoint /execution-logs"
+      }
+    ],
+    "spec_dataModels": [
+      "PipelineStep",
+      "Dependency",
+      "ExecutionLog"
+    ]
+  },
+  {
+    "us_title": "Gerenciamento de chaves de API",
+    "us_id": "0cfd9331-e914-49dc-92ff-926f0dbe96b0",
+    "complexidade": "média",
+    "pattern_gabarito": "form-crud-tool",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "form-crud-tool",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "6835f607-64b2-4cc2-976e-1e08a700ce01",
+      "userStoryId": "0cfd9331-e914-49dc-92ff-926f0dbe96b0",
+      "version": 1,
+      "summary": "Gerenciamento de chaves de API com criação, visualização e revogação de chaves, controle de permissões e indicação visual de chaves revogadas.",
+      "technicalApproach": "Estrutura de React/TypeScript com Pattern: form-crud-tool, utilizando componentes de formulário e lista para gerenciar chaves de API, com contratos reais de API para dados remotos e responsividade.",
+      "components": [
+        {
+          "name": "ChaveAPIForm",
+          "type": "ui",
+          "description": "ChaveAPIForm",
+          "dependencies": []
+        },
+        {
+          "name": "ChaveAPILista",
+          "type": "ui",
+          "description": "ChaveAPILista",
+          "dependencies": []
+        },
+        {
+          "name": "ChaveAPIService",
+          "type": "service",
+          "description": "ChaveAPIService",
+          "dependencies": []
+        },
+        {
+          "name": "ChaveAPIDataModel",
+          "type": "model",
+          "description": "ChaveAPIDataModel",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/chaves",
+          "description": "Endpoint /api/chaves"
+        },
+        {
+          "method": "GET",
+          "path": "/api/chaves/:id",
+          "description": "Endpoint /api/chaves/:id"
+        },
+        {
+          "method": "GET",
+          "path": "/api/chaves/:id/revogar",
+          "description": "Endpoint /api/chaves/:id/revogar"
+        }
+      ],
+      "dataModels": [
+        "ChaveAPI"
+      ],
+      "acceptanceCriteria": [
+        "A lista de chaves de API é exibida com nome, data de criação e permissões associadas.",
+        "O formulário de criação de chave de API permite informar nome e selecionar permissões.",
+        "A revogação de uma chave de API é realizada com etapa de confirmação antes de excluir.",
+        "Chaves de API revogadas são exibidas com indicador visual distinto e não permitem edição."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "form-crud-tool",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "form-crud-tool"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:39:14.832Z"
+    },
+    "spec_summary": "Gerenciamento de chaves de API com criação, visualização e revogação de chaves, controle de permissões e indicação visual de chaves revogadas.",
+    "spec_technicalApproach": "Estrutura de React/TypeScript com Pattern: form-crud-tool, utilizando componentes de formulário e lista para gerenciar chaves de API, com contratos reais de API para dados remotos e responsividade.",
+    "spec_components": [
+      {
+        "name": "ChaveAPIForm",
+        "type": "ui",
+        "description": "ChaveAPIForm",
+        "dependencies": []
+      },
+      {
+        "name": "ChaveAPILista",
+        "type": "ui",
+        "description": "ChaveAPILista",
+        "dependencies": []
+      },
+      {
+        "name": "ChaveAPIService",
+        "type": "service",
+        "description": "ChaveAPIService",
+        "dependencies": []
+      },
+      {
+        "name": "ChaveAPIDataModel",
+        "type": "model",
+        "description": "ChaveAPIDataModel",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A lista de chaves de API é exibida com nome, data de criação e permissões associadas.",
+      "O formulário de criação de chave de API permite informar nome e selecionar permissões.",
+      "A revogação de uma chave de API é realizada com etapa de confirmação antes de excluir.",
+      "Chaves de API revogadas são exibidas com indicador visual distinto e não permitem edição."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/api/chaves",
+        "description": "Endpoint /api/chaves"
+      },
+      {
+        "method": "GET",
+        "path": "/api/chaves/:id",
+        "description": "Endpoint /api/chaves/:id"
+      },
+      {
+        "method": "GET",
+        "path": "/api/chaves/:id/revogar",
+        "description": "Endpoint /api/chaves/:id/revogar"
+      }
+    ],
+    "spec_dataModels": [
+      "ChaveAPI"
+    ]
+  },
+  {
+    "us_title": "Página de lançamento de produto SaaS",
+    "us_id": "616ecdd7-5296-4aa9-8658-5100694dee1a",
+    "complexidade": "média",
+    "pattern_gabarito": "content-landing",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "content-landing",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 6,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": true,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "a8cace88-3b50-4ecb-b1cf-fad6171f6a73",
+      "userStoryId": "616ecdd7-5296-4aa9-8658-5100694dee1a",
+      "version": 1,
+      "summary": "Desenvolver página de lançamento de produto SaaS com seções de benefícios, depoimentos e chamada para ação.",
+      "technicalApproach": "Utilizar React/TypeScript, com Pattern: content-landing, para criar uma página de apresentação do produto com seções responsivas e acessíveis.",
+      "components": [
+        {
+          "name": "HeroSection",
+          "type": "ui",
+          "description": "HeroSection",
+          "dependencies": []
+        },
+        {
+          "name": "BenefitsList",
+          "type": "ui",
+          "description": "BenefitsList",
+          "dependencies": []
+        },
+        {
+          "name": "TestimonialsSection",
+          "type": "ui",
+          "description": "TestimonialsSection",
+          "dependencies": []
+        },
+        {
+          "name": "Footer",
+          "type": "ui",
+          "description": "Footer",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [],
+      "dataModels": [
+        "Benefit",
+        "Testimonial"
+      ],
+      "acceptanceCriteria": [
+        "A página exibe seção hero com headline, subtítulo e botão de chamada para ação.",
+        "Seção de benefícios lista 3 diferenciais do produto com ícone e descrição curta.",
+        "Seção de depoimentos exibe ao menos 2 testemunhos com nome e cargo do autor.",
+        "O rodapé contém links para política de privacidade e página de contato.",
+        "A página é responsiva e acessível em diferentes dispositivos e tamanhos de tela."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "content-landing",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "content-landing"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench",
+            "workflow-map",
+            "form-crud-tool",
+            "custom-product-surface"
+          ]
+        },
+        "states": [
+          "loading",
+          "empty",
+          "error",
+          "success"
+        ],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados",
+          "cores high-light",
+          "paleta monocromática",
+          "overflow de texto"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:39:18.388Z"
+    },
+    "spec_summary": "Desenvolver página de lançamento de produto SaaS com seções de benefícios, depoimentos e chamada para ação.",
+    "spec_technicalApproach": "Utilizar React/TypeScript, com Pattern: content-landing, para criar uma página de apresentação do produto com seções responsivas e acessíveis.",
+    "spec_components": [
+      {
+        "name": "HeroSection",
+        "type": "ui",
+        "description": "HeroSection",
+        "dependencies": []
+      },
+      {
+        "name": "BenefitsList",
+        "type": "ui",
+        "description": "BenefitsList",
+        "dependencies": []
+      },
+      {
+        "name": "TestimonialsSection",
+        "type": "ui",
+        "description": "TestimonialsSection",
+        "dependencies": []
+      },
+      {
+        "name": "Footer",
+        "type": "ui",
+        "description": "Footer",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A página exibe seção hero com headline, subtítulo e botão de chamada para ação.",
+      "Seção de benefícios lista 3 diferenciais do produto com ícone e descrição curta.",
+      "Seção de depoimentos exibe ao menos 2 testemunhos com nome e cargo do autor.",
+      "O rodapé contém links para política de privacidade e página de contato.",
+      "A página é responsiva e acessível em diferentes dispositivos e tamanhos de tela."
+    ],
+    "spec_apiEndpoints": [],
+    "spec_dataModels": [
+      "Benefit",
+      "Testimonial"
+    ]
+  },
+  {
+    "us_title": "Editor de fluxos de automação por blocos",
+    "us_id": "ac903899-2e5c-4e99-877a-ca102142c16e",
+    "complexidade": "média",
+    "pattern_gabarito": "custom-product-surface",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "workflow-map",
+    "m2_pattern_correto": false,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "04ebecf2-7bc3-4299-aa4a-abf5b1f43e72",
+      "userStoryId": "ac903899-2e5c-4e99-877a-ca102142c16e",
+      "version": 1,
+      "summary": "Desenvolver uma interface de usuário para montar fluxos de automação por blocos, permitindo que os analistas de operações criem regras de negócio sem escrever código.",
+      "technicalApproach": "Pattern: workflow-map. Utiliza React/TypeScript, com uma paleta lateral e uma área de trabalho para arrastar e conectar blocos. Cada bloco tem um formulário inline de configuração. O frontend usa contratos reais para salvar e recarregar fluxos.",
+      "components": [
+        {
+          "name": "Blocos de Condição",
+          "type": "ui",
+          "description": "Blocos de Condição",
+          "dependencies": []
+        },
+        {
+          "name": "Blocos de Ação",
+          "type": "ui",
+          "description": "Blocos de Ação",
+          "dependencies": []
+        },
+        {
+          "name": "Blocos de Espera",
+          "type": "ui",
+          "description": "Blocos de Espera",
+          "dependencies": []
+        },
+        {
+          "name": "Paleta Lateral",
+          "type": "ui",
+          "description": "Paleta Lateral",
+          "dependencies": []
+        },
+        {
+          "name": "Área de Trabalho",
+          "type": "ui",
+          "description": "Área de Trabalho",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/fluxos/salvar",
+          "description": "Endpoint /fluxos/salvar"
+        },
+        {
+          "method": "GET",
+          "path": "/fluxos/recarregar",
+          "description": "Endpoint /fluxos/recarregar"
+        }
+      ],
+      "dataModels": [
+        "Fluxo",
+        "Bloco"
+      ],
+      "acceptanceCriteria": [
+        "A paleta lateral exibe os tipos de blocos disponíveis.",
+        "Os blocos podem ser arrastados da paleta para a área de trabalho e conectados entre si.",
+        "Cada bloco exibe um formulário inline de configuração ao ser selecionado.",
+        "O fluxo pode ser salvo com um nome e recarregado em sessões futuras.",
+        "A tela exibe um aviso visual quando há blocos presentes mas desconectados no fluxo."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "workflow-map",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "workflow-map"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:39:22.127Z"
+    },
+    "spec_summary": "Desenvolver uma interface de usuário para montar fluxos de automação por blocos, permitindo que os analistas de operações criem regras de negócio sem escrever código.",
+    "spec_technicalApproach": "Pattern: workflow-map. Utiliza React/TypeScript, com uma paleta lateral e uma área de trabalho para arrastar e conectar blocos. Cada bloco tem um formulário inline de configuração. O frontend usa contratos reais para salvar e recarregar fluxos.",
+    "spec_components": [
+      {
+        "name": "Blocos de Condição",
+        "type": "ui",
+        "description": "Blocos de Condição",
+        "dependencies": []
+      },
+      {
+        "name": "Blocos de Ação",
+        "type": "ui",
+        "description": "Blocos de Ação",
+        "dependencies": []
+      },
+      {
+        "name": "Blocos de Espera",
+        "type": "ui",
+        "description": "Blocos de Espera",
+        "dependencies": []
+      },
+      {
+        "name": "Paleta Lateral",
+        "type": "ui",
+        "description": "Paleta Lateral",
+        "dependencies": []
+      },
+      {
+        "name": "Área de Trabalho",
+        "type": "ui",
+        "description": "Área de Trabalho",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A paleta lateral exibe os tipos de blocos disponíveis.",
+      "Os blocos podem ser arrastados da paleta para a área de trabalho e conectados entre si.",
+      "Cada bloco exibe um formulário inline de configuração ao ser selecionado.",
+      "O fluxo pode ser salvo com um nome e recarregado em sessões futuras.",
+      "A tela exibe um aviso visual quando há blocos presentes mas desconectados no fluxo."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/fluxos/salvar",
+        "description": "Endpoint /fluxos/salvar"
+      },
+      {
+        "method": "GET",
+        "path": "/fluxos/recarregar",
+        "description": "Endpoint /fluxos/recarregar"
+      }
+    ],
+    "spec_dataModels": [
+      "Fluxo",
+      "Bloco"
+    ]
+  }
+]
