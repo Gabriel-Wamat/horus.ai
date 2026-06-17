@@ -1,0 +1,467 @@
+[
+  {
+    "us_title": "Visualização de relatório de vendas",
+    "us_id": "e2d9d2d5-97a8-4af4-8771-664f553eb6c6",
+    "complexidade": "armadilha-ambiguidade-dados",
+    "pattern_gabarito": "operational-dashboard",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "operational-dashboard",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "628ee848-71f3-4b49-afe5-621392ddb956",
+      "userStoryId": "e2d9d2d5-97a8-4af4-8771-664f553eb6c6",
+      "version": 1,
+      "summary": "Desenvolver relatório de vendas do mês atual para gerentes de vendas.",
+      "technicalApproach": "Pattern: operational-dashboard. Utilizando React/TypeScript, estrutura de HTML/CSS/JS organizada em componentes de responsabilidade, com estados e interações visuais, utilizando contratos reais de API para dados remotos.",
+      "components": [
+        {
+          "name": "RelatorioVendas",
+          "type": "ui",
+          "description": "RelatorioVendas",
+          "dependencies": []
+        },
+        {
+          "name": "VendasService",
+          "type": "service",
+          "description": "VendasService",
+          "dependencies": []
+        },
+        {
+          "name": "VendasModel",
+          "type": "model",
+          "description": "VendasModel",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/vendas/total",
+          "description": "Endpoint /vendas/total"
+        }
+      ],
+      "dataModels": [
+        "Vendas"
+      ],
+      "acceptanceCriteria": [
+        "O relatório exibe o total de vendas do mês atual.",
+        "O relatório é carregado corretamente.",
+        "O relatório é acessível em diferentes tamanhos de tela."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "operational-dashboard",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "operational-dashboard"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T18:04:39.697Z"
+    },
+    "spec_summary": "Desenvolver relatório de vendas do mês atual para gerentes de vendas.",
+    "spec_technicalApproach": "Pattern: operational-dashboard. Utilizando React/TypeScript, estrutura de HTML/CSS/JS organizada em componentes de responsabilidade, com estados e interações visuais, utilizando contratos reais de API para dados remotos.",
+    "spec_components": [
+      {
+        "name": "RelatorioVendas",
+        "type": "ui",
+        "description": "RelatorioVendas",
+        "dependencies": []
+      },
+      {
+        "name": "VendasService",
+        "type": "service",
+        "description": "VendasService",
+        "dependencies": []
+      },
+      {
+        "name": "VendasModel",
+        "type": "model",
+        "description": "VendasModel",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O relatório exibe o total de vendas do mês atual.",
+      "O relatório é carregado corretamente.",
+      "O relatório é acessível em diferentes tamanhos de tela."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/vendas/total",
+        "description": "Endpoint /vendas/total"
+      }
+    ],
+    "spec_dataModels": [
+      "Vendas"
+    ]
+  },
+  {
+    "us_title": "Crie uma página incrível para gerenciar os pedidos da loja",
+    "us_id": "6e4e3fb8-e212-4e58-9102-3fa24c5b22b1",
+    "complexidade": "armadilha-marketing-bias",
+    "pattern_gabarito": "operational-dashboard",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "form-crud-tool",
+    "m2_pattern_correto": false,
+    "m3_completeness_score": 6,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": true,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "3ad6b8be-a27c-408e-a7da-c6985e322f61",
+      "userStoryId": "6e4e3fb8-e212-4e58-9102-3fa24c5b22b1",
+      "version": 1,
+      "summary": "Criação de uma página para gerenciar pedidos da loja com visual impactante e experiência encantadora.",
+      "technicalApproach": "Pattern: form-crud-tool. Utiliza React/TypeScript com organização visual em componentes de responsabilidade, estados e dados. Acessibilidade e responsividade são consideradas.",
+      "components": [
+        {
+          "name": "PedidoList",
+          "type": "ui",
+          "description": "PedidoList",
+          "dependencies": []
+        },
+        {
+          "name": "PedidoForm",
+          "type": "ui",
+          "description": "PedidoForm",
+          "dependencies": []
+        },
+        {
+          "name": "PedidoService",
+          "type": "service",
+          "description": "PedidoService",
+          "dependencies": []
+        },
+        {
+          "name": "PedidoModel",
+          "type": "model",
+          "description": "PedidoModel",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/pedidos",
+          "description": "Endpoint /pedidos"
+        },
+        {
+          "method": "GET",
+          "path": "/pedidos/{id}",
+          "description": "Endpoint /pedidos/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/pedidos/{id}/status",
+          "description": "Endpoint /pedidos/{id}/status"
+        }
+      ],
+      "dataModels": [
+        "Pedido"
+      ],
+      "acceptanceCriteria": [
+        "A página exibe a lista de pedidos recebidos.",
+        "É possível atualizar o status de um pedido.",
+        "É possível buscar um pedido específico por número ou nome do cliente.",
+        "A página é responsiva e acessível."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "form-crud-tool",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "form-crud-tool"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [
+          "loading",
+          "empty",
+          "error",
+          "success"
+        ],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T18:04:43.051Z"
+    },
+    "spec_summary": "Criação de uma página para gerenciar pedidos da loja com visual impactante e experiência encantadora.",
+    "spec_technicalApproach": "Pattern: form-crud-tool. Utiliza React/TypeScript com organização visual em componentes de responsabilidade, estados e dados. Acessibilidade e responsividade são consideradas.",
+    "spec_components": [
+      {
+        "name": "PedidoList",
+        "type": "ui",
+        "description": "PedidoList",
+        "dependencies": []
+      },
+      {
+        "name": "PedidoForm",
+        "type": "ui",
+        "description": "PedidoForm",
+        "dependencies": []
+      },
+      {
+        "name": "PedidoService",
+        "type": "service",
+        "description": "PedidoService",
+        "dependencies": []
+      },
+      {
+        "name": "PedidoModel",
+        "type": "model",
+        "description": "PedidoModel",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A página exibe a lista de pedidos recebidos.",
+      "É possível atualizar o status de um pedido.",
+      "É possível buscar um pedido específico por número ou nome do cliente.",
+      "A página é responsiva e acessível."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/pedidos",
+        "description": "Endpoint /pedidos"
+      },
+      {
+        "method": "GET",
+        "path": "/pedidos/{id}",
+        "description": "Endpoint /pedidos/{id}"
+      },
+      {
+        "method": "GET",
+        "path": "/pedidos/{id}/status",
+        "description": "Endpoint /pedidos/{id}/status"
+      }
+    ],
+    "spec_dataModels": [
+      "Pedido"
+    ]
+  },
+  {
+    "us_title": "Tela de relatórios",
+    "us_id": "65b53c86-22ac-4641-9cdd-8430191023f8",
+    "complexidade": "armadilha-us-enxuta",
+    "pattern_gabarito": "operational-dashboard",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "operational-dashboard",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "5e0ce11a-c55c-41d5-9e94-d483776d0673",
+      "userStoryId": "65b53c86-22ac-4641-9cdd-8430191023f8",
+      "version": 1,
+      "summary": "Desenvolver uma tela de relatórios utilizando o padrão de design operational-dashboard.",
+      "technicalApproach": "Estrutura em React/TypeScript com Pattern: operational-dashboard, utilizando componentes de relatórios e gráficos, com responsividade e acessibilidade.",
+      "components": [
+        {
+          "name": "RelatorioList",
+          "type": "ui",
+          "description": "RelatorioList",
+          "dependencies": []
+        },
+        {
+          "name": "RelatorioDetails",
+          "type": "ui",
+          "description": "RelatorioDetails",
+          "dependencies": []
+        },
+        {
+          "name": "RelatorioService",
+          "type": "service",
+          "description": "RelatorioService",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/relatorios",
+          "description": "Endpoint /relatorios"
+        }
+      ],
+      "dataModels": [
+        "Relatorio"
+      ],
+      "acceptanceCriteria": [
+        "A tela exibe uma lista de relatórios.",
+        "A tela exibe detalhes de um relatório selecionado.",
+        "A tela é responsiva e acessível."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "operational-dashboard",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "operational-dashboard"
+          ],
+          "forbiddenPatterns": []
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T18:04:46.232Z"
+    },
+    "spec_summary": "Desenvolver uma tela de relatórios utilizando o padrão de design operational-dashboard.",
+    "spec_technicalApproach": "Estrutura em React/TypeScript com Pattern: operational-dashboard, utilizando componentes de relatórios e gráficos, com responsividade e acessibilidade.",
+    "spec_components": [
+      {
+        "name": "RelatorioList",
+        "type": "ui",
+        "description": "RelatorioList",
+        "dependencies": []
+      },
+      {
+        "name": "RelatorioDetails",
+        "type": "ui",
+        "description": "RelatorioDetails",
+        "dependencies": []
+      },
+      {
+        "name": "RelatorioService",
+        "type": "service",
+        "description": "RelatorioService",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A tela exibe uma lista de relatórios.",
+      "A tela exibe detalhes de um relatório selecionado.",
+      "A tela é responsiva e acessível."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/relatorios",
+        "description": "Endpoint /relatorios"
+      }
+    ],
+    "spec_dataModels": [
+      "Relatorio"
+    ]
+  }
+]

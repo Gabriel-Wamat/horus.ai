@@ -1,0 +1,71 @@
+us_title,complexidade,criterio_num,criterio_texto,visivel,tem_gatilho,especifico,score_m5
+Lista simples de status dos servidores,baixa,1,"A lista exibe o nome de cada servidor e seu status atual (online ou offline).",TRUE,FALSE,TRUE,0
+Lista simples de status dos servidores,baixa,2,"A lista e responsiva e acessivel.",FALSE,FALSE,FALSE,0
+Lista simples de status dos servidores,baixa,3,"Os componentes de lista e status sao renderizados corretamente.",FALSE,FALSE,FALSE,0
+Central de operacoes de suporte multi-fila,alta,1,"O painel exibe colunas por fila de atendimento com contagem de tickets abertos.",TRUE,FALSE,TRUE,0
+Central de operacoes de suporte multi-fila,alta,2,"Cada ticket exibe indicador visual de SLA (dentro do prazo, em risco, vencido).",TRUE,FALSE,TRUE,0
+Central de operacoes de suporte multi-fila,alta,3,"E possivel filtrar tickets por agente responsavel, fila e status simultaneamente.",TRUE,FALSE,TRUE,0
+Central de operacoes de suporte multi-fila,alta,4,"Uma secao lateral lista agentes disponiveis com sua carga atual de tickets.",TRUE,FALSE,TRUE,0
+Central de operacoes de suporte multi-fila,alta,5,"Ao reatribuir um ticket, o historico de reatribuicoes e registrado e exibido em um painel de auditoria.",TRUE,TRUE,TRUE,1
+Central de operacoes de suporte multi-fila,alta,6,"E possivel exportar a visao atual filtrada como relatorio (CSV ou similar).",TRUE,FALSE,TRUE,0
+Central de operacoes de suporte multi-fila,alta,7,"Tickets vencidos aparecem destacados visualmente em relacao aos demais.",TRUE,FALSE,TRUE,0
+Central de operacoes de suporte multi-fila,alta,8,"O painel atualiza a contagem de tickets por fila sem exigir recarregamento manual da pagina.",TRUE,FALSE,TRUE,0
+Caixa de perguntas e respostas simples,baixa,1,"Ao enviar uma pergunta, a resposta do assistente e exibida abaixo do campo de entrada.",TRUE,TRUE,TRUE,1
+Caixa de perguntas e respostas simples,baixa,2,"O campo de entrada de pergunta e acessivel e responsivo.",FALSE,FALSE,FALSE,0
+Caixa de perguntas e respostas simples,baixa,3,"A resposta do assistente e exibida com sucesso apos o envio da pergunta.",TRUE,FALSE,FALSE,0
+Caixa de perguntas e respostas simples,baixa,4,"O sistema lida corretamente com erros de envio de pergunta ou obtencao de resposta.",FALSE,FALSE,FALSE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,1,"O painel esquerdo exibe o historico de mensagens organizado por etapa do relatorio.",TRUE,FALSE,TRUE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,2,"O painel direito exibe a previa do relatorio atualizada apos cada resposta do assistente.",TRUE,FALSE,TRUE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,3,"Cada versao do relatorio gerada e salva no historico de versoes com timestamp.",TRUE,FALSE,TRUE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,4,"E possivel selecionar uma versao anterior do historico e reverter a previa para ela.",TRUE,FALSE,TRUE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,5,"Um indicador visual mostra em qual etapa do fluxo a conversa esta.",TRUE,FALSE,TRUE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,6,"O usuario pode anexar uma fonte de dados a conversa, e ela aparece listada na etapa de fontes.",TRUE,FALSE,TRUE,0
+Workbench de geracao de relatorios com revisao por etapas,alta,7,"Ao finalizar a revisao final, um botao permite exportar o relatorio consolidado.",TRUE,TRUE,TRUE,1
+Visualizacao simples de duas etapas conectadas,baixa,1,"As duas etapas sao exibidas como caixas conectadas por uma seta indicando a ordem.",TRUE,FALSE,TRUE,0
+Visualizacao simples de duas etapas conectadas,baixa,2,"A seta e clicavel e executa a acao correspondente.",TRUE,TRUE,FALSE,0
+Visualizacao simples de duas etapas conectadas,baixa,3,"A pagina e responsiva e acessivel em diferentes tamanhos de tela.",FALSE,FALSE,FALSE,0
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,1,"Cada servico e exibido como um no com nome, versao e status de saude atual",TRUE,FALSE,TRUE,0
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,2,"As arestas representam chamadas de dependencia entre servicos, com direcao visivel",TRUE,FALSE,TRUE,0
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,3,"Ao selecionar um no e acionar 'simular falha', todos os nos afetados a jusante sao destacados visualmente",TRUE,TRUE,TRUE,1
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,4,"Caminhos criticos (sem redundancia) sao exibidos com estilo visual distinto das demais arestas",TRUE,FALSE,TRUE,0
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,5,"Clicar em um no abre um painel lateral com o historico de incidentes daquele servico",TRUE,FALSE,TRUE,0
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,6,"E possivel filtrar o grafo por dominio/equipe responsavel, ocultando nos de outros dominios",TRUE,FALSE,TRUE,0
+Mapa de dependencias de microsservicos com simulacao de impacto,alta,7,"Nos com incidentes ativos no momento sao destacados com indicador visual diferente de nos saudaveis",TRUE,FALSE,TRUE,0
+Cadastro simples de categorias,baixa,1,"O campo de texto permite digitar o nome da categoria.",TRUE,FALSE,TRUE,0
+Cadastro simples de categorias,baixa,2,"O botao de salvar adiciona a nova categoria a lista.",TRUE,TRUE,TRUE,1
+Cadastro simples de categorias,baixa,3,"A lista de categorias e exibida abaixo do campo de texto.",TRUE,FALSE,TRUE,0
+Cadastro simples de categorias,baixa,4,"A aplicacao e responsiva e acessivel.",FALSE,FALSE,FALSE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,1,"A lista de usuarios exibe nome, e-mail, papel atribuido e status (ativo, bloqueado, pendente).",TRUE,FALSE,TRUE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,2,"Um formulario permite criar usuario definindo papel e marcando permissoes granulares por modulo.",TRUE,FALSE,TRUE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,3,"Cada alteracao em um usuario e registrada em um historico de auditoria visivel no perfil do usuario.",TRUE,FALSE,TRUE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,4,"E possivel importar multiplos usuarios via upload de arquivo CSV, com validacao de erros linha a linha.",TRUE,FALSE,TRUE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,5,"Ao bloquear um usuario, um campo obrigatorio de motivo deve ser preenchido antes de confirmar.",TRUE,TRUE,TRUE,1
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,6,"Usuarios bloqueados aparecem com indicador visual distinto e nao podem ter permissoes editadas.",TRUE,FALSE,TRUE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,7,"E possivel buscar e filtrar usuarios por papel, status e modulo de permissao simultaneamente.",TRUE,FALSE,TRUE,0
+Console de gestao de usuarios com papeis permissoes e auditoria,alta,8,"Tentar excluir um usuario com historico de atividade exige uma segunda confirmacao explicita.",TRUE,TRUE,TRUE,1
+Pagina simples de divulgacao de evento,baixa,1,"A pagina exibe o nome do evento.",TRUE,FALSE,TRUE,0
+Pagina simples de divulgacao de evento,baixa,2,"A pagina exibe a data do evento.",TRUE,FALSE,TRUE,0
+Pagina simples de divulgacao de evento,baixa,3,"A pagina exibe um botao de inscricao.",TRUE,FALSE,TRUE,0
+Pagina simples de divulgacao de evento,baixa,4,"O botao de inscricao e clicavel.",TRUE,TRUE,FALSE,0
+Pagina simples de divulgacao de evento,baixa,5,"A pagina e responsiva e acessivel.",FALSE,FALSE,FALSE,0
+Landing page completa de lancamento com prova social e FAQ,alta,1,"A secao hero exibe headline, subtitulo, video demonstrativo embutido e botao de CTA principal",TRUE,FALSE,TRUE,0
+Landing page completa de lancamento com prova social e FAQ,alta,2,"A secao de funcionalidades lista ao menos 4 recursos do produto com icone, titulo e descricao",TRUE,FALSE,TRUE,0
+Landing page completa de lancamento com prova social e FAQ,alta,3,"A secao de planos exibe ao menos 2 opcoes de preco em formato de comparacao lado a lado",TRUE,FALSE,TRUE,0
+Landing page completa de lancamento com prova social e FAQ,alta,4,"A secao de prova social exibe logos de clientes e um carrossel navegavel de depoimentos",TRUE,FALSE,TRUE,0
+Landing page completa de lancamento com prova social e FAQ,alta,5,"A secao de FAQ permite expandir e recolher cada pergunta individualmente",TRUE,TRUE,TRUE,1
+Landing page completa de lancamento com prova social e FAQ,alta,6,"O formulario de captura de lead valida campos obrigatorios antes de permitir o envio",TRUE,FALSE,TRUE,0
+Landing page completa de lancamento com prova social e FAQ,alta,7,"Ao submeter o formulario com sucesso, uma mensagem de confirmacao visual e exibida ao usuario",TRUE,TRUE,TRUE,1
+Landing page completa de lancamento com prova social e FAQ,alta,8,"O rodape contem um campo de inscricao para newsletter com validacao de formato de e-mail",TRUE,FALSE,TRUE,0
+Quadro simples de notas adesivas,baixa,1,"O usuario pode criar uma nota de texto na area da tela.",TRUE,FALSE,TRUE,0
+Quadro simples de notas adesivas,baixa,2,"O usuario pode arrastar a nota para outra posicao.",TRUE,TRUE,TRUE,1
+Quadro simples de notas adesivas,baixa,3,"A nota e exibida corretamente apos ser criada e movida.",FALSE,FALSE,FALSE,0
+Quadro simples de notas adesivas,baixa,4,"O quadro responde corretamente a diferentes tamanhos de tela.",FALSE,FALSE,FALSE,0
+Quadro simples de notas adesivas,baixa,5,"O quadro e acessivel para usuarios com deficiencia.",FALSE,FALSE,FALSE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,1,"O usuario pode adicionar uma nova camada de som.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,2,"Cada camada exibe sua forma de onda visual e um controle deslizante de volume.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,3,"O controle de BPM ajusta a velocidade de reproducao de todas as camadas.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,4,"Cada camada possui controles de efeito ajustaveis.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,5,"O usuario pode silenciar ou isolar uma camada.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,6,"A composicao pode ser salva como projeto e recarregada.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,7,"O botao de exportacao gera a mixagem final.",TRUE,FALSE,TRUE,0
+Mesa de composicao musical por camadas com mixagem ao vivo,alta,8,"Camadas podem ser reordenadas ou removidas.",TRUE,FALSE,TRUE,0

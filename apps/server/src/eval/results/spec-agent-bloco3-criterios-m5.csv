@@ -1,0 +1,11 @@
+us_title,armadilha_tipo,criterio_num,criterio_texto,visivel,tem_gatilho,especifico,score_m5
+Visualizacao de relatorio de vendas,ambiguidade-dados,1,"O relatorio exibe o total de vendas do mes atual.",TRUE,FALSE,TRUE,0
+Visualizacao de relatorio de vendas,ambiguidade-dados,2,"O relatorio e carregado corretamente.",FALSE,FALSE,FALSE,0
+Visualizacao de relatorio de vendas,ambiguidade-dados,3,"O relatorio e acessivel em diferentes tamanhos de tela.",FALSE,FALSE,FALSE,0
+Crie uma pagina incrivel para gerenciar os pedidos da loja,vies-marketing,1,"A pagina exibe a lista de pedidos recebidos.",TRUE,FALSE,TRUE,0
+Crie uma pagina incrivel para gerenciar os pedidos da loja,vies-marketing,2,"E possivel atualizar o status de um pedido.",TRUE,FALSE,TRUE,0
+Crie uma pagina incrivel para gerenciar os pedidos da loja,vies-marketing,3,"E possivel buscar um pedido especifico por numero ou nome do cliente.",TRUE,FALSE,TRUE,0
+Crie uma pagina incrivel para gerenciar os pedidos da loja,vies-marketing,4,"A pagina e responsiva e acessivel.",FALSE,FALSE,FALSE,0
+Tela de relatorios,us-enxuta,1,"A tela exibe uma lista de relatorios.",TRUE,FALSE,TRUE,0
+Tela de relatorios,us-enxuta,2,"A tela exibe detalhes de um relatorio selecionado.",TRUE,FALSE,TRUE,0
+Tela de relatorios,us-enxuta,3,"A tela e responsiva e acessivel.",FALSE,FALSE,FALSE,0

@@ -1,0 +1,7 @@
+us_id,us_title,pattern_gabarito,pattern_extraido,m2_correto,m1_schema_pass,m3_completeness_score,m3_max,m4_alucinacao_detectada,m4_observacao,m5_score,m5_total_criterios,m5_percentual
+74411d82-3ffd-4040-bc4a-30cad2f8466e,Painel de monitoramento de tarefas da equipe,operational-dashboard,operational-dashboard,TRUE,TRUE,5,6,FALSE,"endpoint /tasks/filter nao solicitado pela US (suspeita leve)",1,4,25
+82861696-0257-4a9a-a06c-533b9bac8f37,Interface de chat com previa de codigo gerado,chat-preview-workbench,chat-preview-workbench,TRUE,TRUE,5,6,FALSE,"criterio extra nao solicitado: responsividade/acessibilidade generica",2,5,40
+cbc4e03a-a623-490f-bd3a-e5ca2cc02ebb,Mapa visual do pipeline de dados,workflow-map,workflow-map,TRUE,TRUE,5,6,FALSE,"criterio extra nao solicitado: responsividade/acessibilidade generica",1,5,20
+9f4c0fea-f6a9-49f4-b065-33f4c04eeef1,Gerenciamento de chaves de API,form-crud-tool,form-crud-tool,TRUE,TRUE,5,6,TRUE,"todos os apiEndpoints com method GET, incluindo operacao de revogar (deveria ser DELETE/POST)",2,4,50
+1c7392c0-03ad-47c2-a2f0-d075c03d1c01,Pagina de lancamento de produto SaaS,content-landing,content-landing,TRUE,TRUE,6,6,FALSE,"criterio extra nao solicitado: responsividade/acessibilidade generica",0,5,0
+456208b8-b608-44d1-a7d4-b2862f68a7a9,Editor de fluxos de automacao por blocos,custom-product-surface,workflow-map,FALSE,TRUE,5,6,TRUE,"apiEndpoints /fluxos/salvar e /fluxos/recarregar com method GET (salvar deveria ser POST); erro de pattern: vies lexical para workflow-map por mencionar fluxo/conectar",3,5,60

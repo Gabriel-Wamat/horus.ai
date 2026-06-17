@@ -1,0 +1,2176 @@
+[
+  {
+    "us_title": "Lista simples de status dos servidores",
+    "us_id": "3b2f50d4-7a3f-414b-8d6a-4b31e93656c8",
+    "complexidade": "baixa",
+    "pattern_gabarito": "operational-dashboard",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "operational-dashboard",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "f6a4f7dd-c1d8-4be7-bde5-8fbdfe0a936a",
+      "userStoryId": "3b2f50d4-7a3f-414b-8d6a-4b31e93656c8",
+      "version": 1,
+      "summary": "Lista simples de status dos servidores com informações de online/offline.",
+      "technicalApproach": "Pattern: operational-dashboard. Estrutura de React/TypeScript com componentes de lista e status. Responsividade e acessibilidade garantidas. Contratos reais de API para dados remotos.",
+      "components": [
+        {
+          "name": "ServidorLista",
+          "type": "ui",
+          "description": "ServidorLista",
+          "dependencies": []
+        },
+        {
+          "name": "StatusServidor",
+          "type": "ui",
+          "description": "StatusServidor",
+          "dependencies": []
+        },
+        {
+          "name": "ServidorService",
+          "type": "service",
+          "description": "ServidorService",
+          "dependencies": []
+        },
+        {
+          "name": "ServidorModel",
+          "type": "model",
+          "description": "ServidorModel",
+          "dependencies": []
+        },
+        {
+          "name": "ServidorApi",
+          "type": "api",
+          "description": "ServidorApi",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/servidores",
+          "description": "Endpoint /servidores"
+        },
+        {
+          "method": "GET",
+          "path": "/servidor/{id}",
+          "description": "Endpoint /servidor/{id}"
+        }
+      ],
+      "dataModels": [
+        "Servidor",
+        "ServidorLista"
+      ],
+      "acceptanceCriteria": [
+        "A lista exibe o nome de cada servidor e seu status atual (online ou offline).",
+        "A lista é responsiva e acessível.",
+        "Os componentes de lista e status são renderizados corretamente."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "operational-dashboard",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "operational-dashboard"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light",
+          "paleta monocromática"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:41:56.955Z"
+    },
+    "spec_summary": "Lista simples de status dos servidores com informações de online/offline.",
+    "spec_technicalApproach": "Pattern: operational-dashboard. Estrutura de React/TypeScript com componentes de lista e status. Responsividade e acessibilidade garantidas. Contratos reais de API para dados remotos.",
+    "spec_components": [
+      {
+        "name": "ServidorLista",
+        "type": "ui",
+        "description": "ServidorLista",
+        "dependencies": []
+      },
+      {
+        "name": "StatusServidor",
+        "type": "ui",
+        "description": "StatusServidor",
+        "dependencies": []
+      },
+      {
+        "name": "ServidorService",
+        "type": "service",
+        "description": "ServidorService",
+        "dependencies": []
+      },
+      {
+        "name": "ServidorModel",
+        "type": "model",
+        "description": "ServidorModel",
+        "dependencies": []
+      },
+      {
+        "name": "ServidorApi",
+        "type": "api",
+        "description": "ServidorApi",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A lista exibe o nome de cada servidor e seu status atual (online ou offline).",
+      "A lista é responsiva e acessível.",
+      "Os componentes de lista e status são renderizados corretamente."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/servidores",
+        "description": "Endpoint /servidores"
+      },
+      {
+        "method": "GET",
+        "path": "/servidor/{id}",
+        "description": "Endpoint /servidor/{id}"
+      }
+    ],
+    "spec_dataModels": [
+      "Servidor",
+      "ServidorLista"
+    ]
+  },
+  {
+    "us_title": "Central de operações de suporte multi-fila",
+    "us_id": "e6541244-5132-4f4e-acb9-936e946e944a",
+    "complexidade": "alta",
+    "pattern_gabarito": "operational-dashboard",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "operational-dashboard",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "aab5af7b-2cd9-42f8-831f-5e3b239d19ae",
+      "userStoryId": "e6541244-5132-4f4e-acb9-936e946e944a",
+      "version": 1,
+      "summary": "Painel operacional para gerenciar filas de atendimento, agentes e tickets em tempo real.",
+      "technicalApproach": "Estrutura em React/TypeScript, utilizando Pattern: operational-dashboard, com componentes de tabela, filtragem e exportação de relatórios, além de uma seção lateral para agentes disponíveis.",
+      "components": [
+        {
+          "name": "TicketTable",
+          "type": "ui",
+          "description": "TicketTable",
+          "dependencies": []
+        },
+        {
+          "name": "FilterBar",
+          "type": "ui",
+          "description": "FilterBar",
+          "dependencies": []
+        },
+        {
+          "name": "AgentSidebar",
+          "type": "ui",
+          "description": "AgentSidebar",
+          "dependencies": []
+        },
+        {
+          "name": "ReportExporter",
+          "type": "utility",
+          "description": "ReportExporter",
+          "dependencies": []
+        },
+        {
+          "name": "TicketService",
+          "type": "service",
+          "description": "TicketService",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/tickets",
+          "description": "Endpoint /tickets"
+        },
+        {
+          "method": "GET",
+          "path": "/agents",
+          "description": "Endpoint /agents"
+        },
+        {
+          "method": "GET",
+          "path": "/reports",
+          "description": "Endpoint /reports"
+        }
+      ],
+      "dataModels": [
+        "Ticket",
+        "Agent"
+      ],
+      "acceptanceCriteria": [
+        "O painel exibe colunas por fila de atendimento com contagem de tickets abertos.",
+        "Cada ticket exibe indicador visual de SLA (dentro do prazo, em risco, vencido).",
+        "É possível filtrar tickets por agente responsável, fila e status simultaneamente.",
+        "Uma seção lateral lista agentes disponíveis com sua carga atual de tickets.",
+        "Ao reatribuir um ticket, o histórico de reatribuições é registrado e exibido em um painel de auditoria.",
+        "É possível exportar a visão atual filtrada como relatório (CSV ou similar).",
+        "Tickets vencidos aparecem destacados visualmente em relação aos demais.",
+        "O painel atualiza a contagem de tickets por fila sem exigir recarregamento manual da página."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "operational-dashboard",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "operational-dashboard"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:00.633Z"
+    },
+    "spec_summary": "Painel operacional para gerenciar filas de atendimento, agentes e tickets em tempo real.",
+    "spec_technicalApproach": "Estrutura em React/TypeScript, utilizando Pattern: operational-dashboard, com componentes de tabela, filtragem e exportação de relatórios, além de uma seção lateral para agentes disponíveis.",
+    "spec_components": [
+      {
+        "name": "TicketTable",
+        "type": "ui",
+        "description": "TicketTable",
+        "dependencies": []
+      },
+      {
+        "name": "FilterBar",
+        "type": "ui",
+        "description": "FilterBar",
+        "dependencies": []
+      },
+      {
+        "name": "AgentSidebar",
+        "type": "ui",
+        "description": "AgentSidebar",
+        "dependencies": []
+      },
+      {
+        "name": "ReportExporter",
+        "type": "utility",
+        "description": "ReportExporter",
+        "dependencies": []
+      },
+      {
+        "name": "TicketService",
+        "type": "service",
+        "description": "TicketService",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O painel exibe colunas por fila de atendimento com contagem de tickets abertos.",
+      "Cada ticket exibe indicador visual de SLA (dentro do prazo, em risco, vencido).",
+      "É possível filtrar tickets por agente responsável, fila e status simultaneamente.",
+      "Uma seção lateral lista agentes disponíveis com sua carga atual de tickets.",
+      "Ao reatribuir um ticket, o histórico de reatribuições é registrado e exibido em um painel de auditoria.",
+      "É possível exportar a visão atual filtrada como relatório (CSV ou similar).",
+      "Tickets vencidos aparecem destacados visualmente em relação aos demais.",
+      "O painel atualiza a contagem de tickets por fila sem exigir recarregamento manual da página."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/tickets",
+        "description": "Endpoint /tickets"
+      },
+      {
+        "method": "GET",
+        "path": "/agents",
+        "description": "Endpoint /agents"
+      },
+      {
+        "method": "GET",
+        "path": "/reports",
+        "description": "Endpoint /reports"
+      }
+    ],
+    "spec_dataModels": [
+      "Ticket",
+      "Agent"
+    ]
+  },
+  {
+    "us_title": "Caixa de perguntas e respostas simples",
+    "us_id": "1c5223a0-3b9c-4622-9ca9-95a4f22a9302",
+    "complexidade": "baixa",
+    "pattern_gabarito": "chat-preview-workbench",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "chat-preview-workbench",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "4e3e7342-6e79-45a8-a4bb-1ea99806f914",
+      "userStoryId": "1c5223a0-3b9c-4622-9ca9-95a4f22a9302",
+      "version": 1,
+      "summary": "Desenvolver uma caixa de perguntas e respostas simples com capacidade de enviar perguntas e exibir respostas do assistente.",
+      "technicalApproach": "Utilizar Pattern: chat-preview-workbench com HTML/CSS/JS estruturados em componentes React, garantindo responsividade e acessibilidade, além de integração com API para obter respostas do assistente.",
+      "components": [
+        {
+          "name": "PerguntaInput",
+          "type": "ui",
+          "description": "PerguntaInput",
+          "dependencies": []
+        },
+        {
+          "name": "RespostaOutput",
+          "type": "ui",
+          "description": "RespostaOutput",
+          "dependencies": []
+        },
+        {
+          "name": "AssistenteService",
+          "type": "service",
+          "description": "AssistenteService",
+          "dependencies": []
+        },
+        {
+          "name": "PerguntaModel",
+          "type": "model",
+          "description": "PerguntaModel",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/perguntas",
+          "description": "Endpoint /perguntas"
+        },
+        {
+          "method": "GET",
+          "path": "/respostas",
+          "description": "Endpoint /respostas"
+        }
+      ],
+      "dataModels": [
+        "Pergunta",
+        "Resposta"
+      ],
+      "acceptanceCriteria": [
+        "Ao enviar uma pergunta, a resposta do assistente é exibida abaixo do campo de entrada.",
+        "O campo de entrada de pergunta é acessível e responsivo.",
+        "A resposta do assistente é exibida com sucesso após o envio da pergunta.",
+        "O sistema lida corretamente com erros de envio de pergunta ou obtenção de resposta."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "chat-preview-workbench",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "chat-preview-workbench"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "workflow-map",
+            "form-crud-tool",
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados",
+          "cores high-light",
+          "paleta monocromática",
+          "overflow de texto"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:04.270Z"
+    },
+    "spec_summary": "Desenvolver uma caixa de perguntas e respostas simples com capacidade de enviar perguntas e exibir respostas do assistente.",
+    "spec_technicalApproach": "Utilizar Pattern: chat-preview-workbench com HTML/CSS/JS estruturados em componentes React, garantindo responsividade e acessibilidade, além de integração com API para obter respostas do assistente.",
+    "spec_components": [
+      {
+        "name": "PerguntaInput",
+        "type": "ui",
+        "description": "PerguntaInput",
+        "dependencies": []
+      },
+      {
+        "name": "RespostaOutput",
+        "type": "ui",
+        "description": "RespostaOutput",
+        "dependencies": []
+      },
+      {
+        "name": "AssistenteService",
+        "type": "service",
+        "description": "AssistenteService",
+        "dependencies": []
+      },
+      {
+        "name": "PerguntaModel",
+        "type": "model",
+        "description": "PerguntaModel",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "Ao enviar uma pergunta, a resposta do assistente é exibida abaixo do campo de entrada.",
+      "O campo de entrada de pergunta é acessível e responsivo.",
+      "A resposta do assistente é exibida com sucesso após o envio da pergunta.",
+      "O sistema lida corretamente com erros de envio de pergunta ou obtenção de resposta."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/perguntas",
+        "description": "Endpoint /perguntas"
+      },
+      {
+        "method": "GET",
+        "path": "/respostas",
+        "description": "Endpoint /respostas"
+      }
+    ],
+    "spec_dataModels": [
+      "Pergunta",
+      "Resposta"
+    ]
+  },
+  {
+    "us_title": "Workbench de geração de relatórios com revisão por etapas",
+    "us_id": "0bf5f840-2672-437c-bb16-650afb55e8af",
+    "complexidade": "alta",
+    "pattern_gabarito": "chat-preview-workbench",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "chat-preview-workbench",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "c949126a-a9b0-4c72-8366-2517ca859aa3",
+      "userStoryId": "0bf5f840-2672-437c-bb16-650afb55e8af",
+      "version": 1,
+      "summary": "Desenvolver um workbench de geração de relatórios com revisão por etapas, utilizando um chat com prévia do relatório ao lado.",
+      "technicalApproach": "Pattern: chat-preview-workbench. Utiliza React/TypeScript, com estrutura de painéis esquerdo e direito, componentes de histórico de mensagens e prévia do relatório, além de indicador visual de etapa e botão de exportar relatório. Responsividade e acessibilidade garantidas.",
+      "components": [
+        {
+          "name": "ChatPanel",
+          "type": "ui",
+          "description": "ChatPanel",
+          "dependencies": []
+        },
+        {
+          "name": "ReportPreview",
+          "type": "ui",
+          "description": "ReportPreview",
+          "dependencies": []
+        },
+        {
+          "name": "HistoryVersionService",
+          "type": "service",
+          "description": "HistoryVersionService",
+          "dependencies": []
+        },
+        {
+          "name": "ReportDataModel",
+          "type": "model",
+          "description": "ReportDataModel",
+          "dependencies": []
+        },
+        {
+          "name": "ReportExporter",
+          "type": "utility",
+          "description": "ReportExporter",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/report/save",
+          "description": "Endpoint /report/save"
+        },
+        {
+          "method": "GET",
+          "path": "/report/history",
+          "description": "Endpoint /report/history"
+        },
+        {
+          "method": "GET",
+          "path": "/report/export",
+          "description": "Endpoint /report/export"
+        }
+      ],
+      "dataModels": [
+        "Report",
+        "Version"
+      ],
+      "acceptanceCriteria": [
+        "O painel esquerdo exibe o histórico de mensagens organizado por etapa do relatório.",
+        "O painel direito exibe a prévia do relatório atualizada após cada resposta do assistente.",
+        "Cada versão do relatório gerada é salva no histórico de versões com timestamp.",
+        "É possível selecionar uma versão anterior do histórico e reverter a prévia para ela.",
+        "Um indicador visual mostra em qual etapa do fluxo a conversa está.",
+        "O usuário pode anexar uma fonte de dados à conversa, e ela aparece listada na etapa de fontes.",
+        "Ao finalizar a revisão final, um botão permite exportar o relatório consolidado."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "chat-preview-workbench",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "chat-preview-workbench"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "workflow-map",
+            "form-crud-tool",
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [
+          "loading",
+          "error",
+          "success"
+        ],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados",
+          "cores high-light",
+          "paleta monocromática",
+          "overflow de texto"
+        ],
+        "referenceFiles": [
+          "default.css",
+          "tokens.json"
+        ]
+      },
+      "generatedAt": "2026-06-17T17:42:08.092Z"
+    },
+    "spec_summary": "Desenvolver um workbench de geração de relatórios com revisão por etapas, utilizando um chat com prévia do relatório ao lado.",
+    "spec_technicalApproach": "Pattern: chat-preview-workbench. Utiliza React/TypeScript, com estrutura de painéis esquerdo e direito, componentes de histórico de mensagens e prévia do relatório, além de indicador visual de etapa e botão de exportar relatório. Responsividade e acessibilidade garantidas.",
+    "spec_components": [
+      {
+        "name": "ChatPanel",
+        "type": "ui",
+        "description": "ChatPanel",
+        "dependencies": []
+      },
+      {
+        "name": "ReportPreview",
+        "type": "ui",
+        "description": "ReportPreview",
+        "dependencies": []
+      },
+      {
+        "name": "HistoryVersionService",
+        "type": "service",
+        "description": "HistoryVersionService",
+        "dependencies": []
+      },
+      {
+        "name": "ReportDataModel",
+        "type": "model",
+        "description": "ReportDataModel",
+        "dependencies": []
+      },
+      {
+        "name": "ReportExporter",
+        "type": "utility",
+        "description": "ReportExporter",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O painel esquerdo exibe o histórico de mensagens organizado por etapa do relatório.",
+      "O painel direito exibe a prévia do relatório atualizada após cada resposta do assistente.",
+      "Cada versão do relatório gerada é salva no histórico de versões com timestamp.",
+      "É possível selecionar uma versão anterior do histórico e reverter a prévia para ela.",
+      "Um indicador visual mostra em qual etapa do fluxo a conversa está.",
+      "O usuário pode anexar uma fonte de dados à conversa, e ela aparece listada na etapa de fontes.",
+      "Ao finalizar a revisão final, um botão permite exportar o relatório consolidado."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/report/save",
+        "description": "Endpoint /report/save"
+      },
+      {
+        "method": "GET",
+        "path": "/report/history",
+        "description": "Endpoint /report/history"
+      },
+      {
+        "method": "GET",
+        "path": "/report/export",
+        "description": "Endpoint /report/export"
+      }
+    ],
+    "spec_dataModels": [
+      "Report",
+      "Version"
+    ]
+  },
+  {
+    "us_title": "Visualização simples de duas etapas conectadas",
+    "us_id": "683a8f23-8db3-41d1-ba6d-3800abf5556e",
+    "complexidade": "baixa",
+    "pattern_gabarito": "workflow-map",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "workflow-map",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 6,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": true,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "89921ce3-b851-404e-97ac-2ac9d43e1aa4",
+      "userStoryId": "683a8f23-8db3-41d1-ba6d-3800abf5556e",
+      "version": 1,
+      "summary": "Visualização de duas etapas conectadas por uma seta para entender a ordem de execução.",
+      "technicalApproach": "Estrutura de React/TypeScript com Pattern: workflow-map, utilizando componentes de UI para representar as etapas e uma seta para indicar a ordem de execução. A responsividade e acessibilidade são garantidas por meio de CSS flexbox e atributos ARIA.",
+      "components": [
+        {
+          "name": "Etapas",
+          "type": "ui",
+          "description": "Etapas",
+          "dependencies": []
+        },
+        {
+          "name": "Seta",
+          "type": "ui",
+          "description": "Seta",
+          "dependencies": []
+        },
+        {
+          "name": "Processo",
+          "type": "model",
+          "description": "Processo",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [],
+      "dataModels": [
+        "Etapa"
+      ],
+      "acceptanceCriteria": [
+        "As duas etapas são exibidas como caixas conectadas por uma seta indicando a ordem.",
+        "A seta é clicável e executa a ação correspondente.",
+        "A página é responsiva e acessível em diferentes tamanhos de tela."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "workflow-map",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "workflow-map"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:11.474Z"
+    },
+    "spec_summary": "Visualização de duas etapas conectadas por uma seta para entender a ordem de execução.",
+    "spec_technicalApproach": "Estrutura de React/TypeScript com Pattern: workflow-map, utilizando componentes de UI para representar as etapas e uma seta para indicar a ordem de execução. A responsividade e acessibilidade são garantidas por meio de CSS flexbox e atributos ARIA.",
+    "spec_components": [
+      {
+        "name": "Etapas",
+        "type": "ui",
+        "description": "Etapas",
+        "dependencies": []
+      },
+      {
+        "name": "Seta",
+        "type": "ui",
+        "description": "Seta",
+        "dependencies": []
+      },
+      {
+        "name": "Processo",
+        "type": "model",
+        "description": "Processo",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "As duas etapas são exibidas como caixas conectadas por uma seta indicando a ordem.",
+      "A seta é clicável e executa a ação correspondente.",
+      "A página é responsiva e acessível em diferentes tamanhos de tela."
+    ],
+    "spec_apiEndpoints": [],
+    "spec_dataModels": [
+      "Etapa"
+    ]
+  },
+  {
+    "us_title": "Mapa de dependências de microsserviços com simulação de impacto",
+    "us_id": "f346bdf5-194f-4e65-89c5-dc9f777e1d83",
+    "complexidade": "alta",
+    "pattern_gabarito": "workflow-map",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "workflow-map",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "c1e61b36-c34f-4419-94a8-79dd6f5718fe",
+      "userStoryId": "f346bdf5-194f-4e65-89c5-dc9f777e1d83",
+      "version": 1,
+      "summary": "Desenvolver uma ferramenta de visualização de dependências de microsserviços com simulação de impacto de falha",
+      "technicalApproach": "Pattern: workflow-map, utilizando React/TypeScript, com estrutura de grafos e componentes personalizados para representar serviços e dependências, além de utilizar contratos reais de API para obtenção de dados",
+      "components": [
+        {
+          "name": "ServiceNode",
+          "type": "ui",
+          "description": "ServiceNode",
+          "dependencies": []
+        },
+        {
+          "name": "DependencyEdge",
+          "type": "ui",
+          "description": "DependencyEdge",
+          "dependencies": []
+        },
+        {
+          "name": "IncidentPanel",
+          "type": "ui",
+          "description": "IncidentPanel",
+          "dependencies": []
+        },
+        {
+          "name": "FilterService",
+          "type": "utility",
+          "description": "FilterService",
+          "dependencies": []
+        },
+        {
+          "name": "GraphRenderer",
+          "type": "ui",
+          "description": "GraphRenderer",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/services",
+          "description": "Endpoint /services"
+        },
+        {
+          "method": "GET",
+          "path": "/dependencies",
+          "description": "Endpoint /dependencies"
+        },
+        {
+          "method": "GET",
+          "path": "/incidents",
+          "description": "Endpoint /incidents"
+        }
+      ],
+      "dataModels": [
+        "Service",
+        "Dependency",
+        "Incident"
+      ],
+      "acceptanceCriteria": [
+        "Cada serviço é exibido como um nó com nome, versão e status de saúde atual",
+        "As arestas representam chamadas de dependência entre serviços, com direção visível",
+        "Ao selecionar um nó e acionar 'simular falha', todos os nós afetados a jusante são destacados visualmente",
+        "Caminhos críticos (sem redundância) são exibidos com estilo visual distinto das demais arestas",
+        "Clicar em um nó abre um painel lateral com o histórico de incidentes daquele serviço",
+        "É possível filtrar o grafo por domínio/equipe responsável, ocultando nós de outros domínios",
+        "Nós com incidentes ativos no momento são destacados com indicador visual diferente de nós saudáveis"
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "workflow-map",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "workflow-map"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:15.471Z"
+    },
+    "spec_summary": "Desenvolver uma ferramenta de visualização de dependências de microsserviços com simulação de impacto de falha",
+    "spec_technicalApproach": "Pattern: workflow-map, utilizando React/TypeScript, com estrutura de grafos e componentes personalizados para representar serviços e dependências, além de utilizar contratos reais de API para obtenção de dados",
+    "spec_components": [
+      {
+        "name": "ServiceNode",
+        "type": "ui",
+        "description": "ServiceNode",
+        "dependencies": []
+      },
+      {
+        "name": "DependencyEdge",
+        "type": "ui",
+        "description": "DependencyEdge",
+        "dependencies": []
+      },
+      {
+        "name": "IncidentPanel",
+        "type": "ui",
+        "description": "IncidentPanel",
+        "dependencies": []
+      },
+      {
+        "name": "FilterService",
+        "type": "utility",
+        "description": "FilterService",
+        "dependencies": []
+      },
+      {
+        "name": "GraphRenderer",
+        "type": "ui",
+        "description": "GraphRenderer",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "Cada serviço é exibido como um nó com nome, versão e status de saúde atual",
+      "As arestas representam chamadas de dependência entre serviços, com direção visível",
+      "Ao selecionar um nó e acionar 'simular falha', todos os nós afetados a jusante são destacados visualmente",
+      "Caminhos críticos (sem redundância) são exibidos com estilo visual distinto das demais arestas",
+      "Clicar em um nó abre um painel lateral com o histórico de incidentes daquele serviço",
+      "É possível filtrar o grafo por domínio/equipe responsável, ocultando nós de outros domínios",
+      "Nós com incidentes ativos no momento são destacados com indicador visual diferente de nós saudáveis"
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/services",
+        "description": "Endpoint /services"
+      },
+      {
+        "method": "GET",
+        "path": "/dependencies",
+        "description": "Endpoint /dependencies"
+      },
+      {
+        "method": "GET",
+        "path": "/incidents",
+        "description": "Endpoint /incidents"
+      }
+    ],
+    "spec_dataModels": [
+      "Service",
+      "Dependency",
+      "Incident"
+    ]
+  },
+  {
+    "us_title": "Cadastro simples de categorias",
+    "us_id": "139e413c-55b1-416d-9e35-2d566c690b62",
+    "complexidade": "baixa",
+    "pattern_gabarito": "form-crud-tool",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "form-crud-tool",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "f818f6fb-0a6c-42d3-adb3-7b139730ca9a",
+      "userStoryId": "139e413c-55b1-416d-9e35-2d566c690b62",
+      "version": 1,
+      "summary": "Cadastro simples de categorias com campo de texto e botão de salvar.",
+      "technicalApproach": "Estrutura em React/TypeScript com Pattern: form-crud-tool, responsividade e acessibilidade, utilizando componentes de formulário e lista.",
+      "components": [
+        {
+          "name": "CategoriaForm",
+          "type": "ui",
+          "description": "CategoriaForm",
+          "dependencies": []
+        },
+        {
+          "name": "CategoriaLista",
+          "type": "ui",
+          "description": "CategoriaLista",
+          "dependencies": []
+        },
+        {
+          "name": "CategoriaService",
+          "type": "service",
+          "description": "CategoriaService",
+          "dependencies": []
+        },
+        {
+          "name": "CategoriaModel",
+          "type": "model",
+          "description": "CategoriaModel",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/categorias",
+          "description": "Endpoint /categorias"
+        },
+        {
+          "method": "GET",
+          "path": "/categorias/salvar",
+          "description": "Endpoint /categorias/salvar"
+        }
+      ],
+      "dataModels": [
+        "Categoria"
+      ],
+      "acceptanceCriteria": [
+        "O campo de texto permite digitar o nome da categoria.",
+        "O botão de salvar adiciona a nova categoria à lista.",
+        "A lista de categorias é exibida abaixo do campo de texto.",
+        "A aplicação é responsiva e acessível."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "form-crud-tool",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "form-crud-tool"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench",
+            "workflow-map",
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados",
+          "cores high-light",
+          "paleta monocromática",
+          "overflow de texto"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:18.795Z"
+    },
+    "spec_summary": "Cadastro simples de categorias com campo de texto e botão de salvar.",
+    "spec_technicalApproach": "Estrutura em React/TypeScript com Pattern: form-crud-tool, responsividade e acessibilidade, utilizando componentes de formulário e lista.",
+    "spec_components": [
+      {
+        "name": "CategoriaForm",
+        "type": "ui",
+        "description": "CategoriaForm",
+        "dependencies": []
+      },
+      {
+        "name": "CategoriaLista",
+        "type": "ui",
+        "description": "CategoriaLista",
+        "dependencies": []
+      },
+      {
+        "name": "CategoriaService",
+        "type": "service",
+        "description": "CategoriaService",
+        "dependencies": []
+      },
+      {
+        "name": "CategoriaModel",
+        "type": "model",
+        "description": "CategoriaModel",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O campo de texto permite digitar o nome da categoria.",
+      "O botão de salvar adiciona a nova categoria à lista.",
+      "A lista de categorias é exibida abaixo do campo de texto.",
+      "A aplicação é responsiva e acessível."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/categorias",
+        "description": "Endpoint /categorias"
+      },
+      {
+        "method": "GET",
+        "path": "/categorias/salvar",
+        "description": "Endpoint /categorias/salvar"
+      }
+    ],
+    "spec_dataModels": [
+      "Categoria"
+    ]
+  },
+  {
+    "us_title": "Console de gestão de usuários com papéis, permissões e auditoria",
+    "us_id": "1a314b38-affd-497c-89c2-1acf4baf48b8",
+    "complexidade": "alta",
+    "pattern_gabarito": "form-crud-tool",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "operational-dashboard",
+    "m2_pattern_correto": false,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "f26e3fca-17f5-45d3-bd2a-55e310a1586c",
+      "userStoryId": "1a314b38-affd-497c-89c2-1acf4baf48b8",
+      "version": 1,
+      "summary": "Console de gestão de usuários com papéis, permissões e auditoria para controle de acesso completo e auditável.",
+      "technicalApproach": "Estrutura de React/TypeScript, Pattern: operational-dashboard, com componentes de lista de usuários, formulário de criação, histórico de alterações e importação em lote via CSV, utilizando contratos reais de API para dados remotos.",
+      "components": [
+        {
+          "name": "UserList",
+          "type": "ui",
+          "description": "UserList",
+          "dependencies": []
+        },
+        {
+          "name": "UserForm",
+          "type": "ui",
+          "description": "UserForm",
+          "dependencies": []
+        },
+        {
+          "name": "AuditLog",
+          "type": "ui",
+          "description": "AuditLog",
+          "dependencies": []
+        },
+        {
+          "name": "CSVImporter",
+          "type": "utility",
+          "description": "CSVImporter",
+          "dependencies": []
+        },
+        {
+          "name": "UserApi",
+          "type": "api",
+          "description": "UserApi",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/users",
+          "description": "Endpoint /users"
+        },
+        {
+          "method": "GET",
+          "path": "/users/create",
+          "description": "Endpoint /users/create"
+        },
+        {
+          "method": "GET",
+          "path": "/users/import",
+          "description": "Endpoint /users/import"
+        },
+        {
+          "method": "GET",
+          "path": "/users/{id}/audit",
+          "description": "Endpoint /users/{id}/audit"
+        },
+        {
+          "method": "GET",
+          "path": "/users/{id}/block",
+          "description": "Endpoint /users/{id}/block"
+        }
+      ],
+      "dataModels": [
+        "User",
+        "AuditLogEntry"
+      ],
+      "acceptanceCriteria": [
+        "A lista de usuários exibe nome, e-mail, papel atribuído e status (ativo, bloqueado, pendente).",
+        "Um formulário permite criar usuário definindo papel e marcando permissões granulares por módulo.",
+        "Cada alteração em um usuário (papel, permissões, status) é registrada em um histórico de auditoria visível no perfil do usuário.",
+        "É possível importar múltiplos usuários de uma vez via upload de arquivo CSV, com validação de erros linha a linha.",
+        "Ao bloquear um usuário, um campo obrigatório de motivo deve ser preenchido antes de confirmar.",
+        "Usuários bloqueados aparecem com indicador visual distinto e não podem ter permissões editadas até serem desbloqueados.",
+        "É possível buscar e filtrar usuários por papel, status e módulo de permissão simultaneamente.",
+        "Tentar excluir um usuário com histórico de atividade exige uma segunda confirmação explícita."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "operational-dashboard",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "operational-dashboard"
+          ],
+          "forbiddenPatterns": [
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:22.631Z"
+    },
+    "spec_summary": "Console de gestão de usuários com papéis, permissões e auditoria para controle de acesso completo e auditável.",
+    "spec_technicalApproach": "Estrutura de React/TypeScript, Pattern: operational-dashboard, com componentes de lista de usuários, formulário de criação, histórico de alterações e importação em lote via CSV, utilizando contratos reais de API para dados remotos.",
+    "spec_components": [
+      {
+        "name": "UserList",
+        "type": "ui",
+        "description": "UserList",
+        "dependencies": []
+      },
+      {
+        "name": "UserForm",
+        "type": "ui",
+        "description": "UserForm",
+        "dependencies": []
+      },
+      {
+        "name": "AuditLog",
+        "type": "ui",
+        "description": "AuditLog",
+        "dependencies": []
+      },
+      {
+        "name": "CSVImporter",
+        "type": "utility",
+        "description": "CSVImporter",
+        "dependencies": []
+      },
+      {
+        "name": "UserApi",
+        "type": "api",
+        "description": "UserApi",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A lista de usuários exibe nome, e-mail, papel atribuído e status (ativo, bloqueado, pendente).",
+      "Um formulário permite criar usuário definindo papel e marcando permissões granulares por módulo.",
+      "Cada alteração em um usuário (papel, permissões, status) é registrada em um histórico de auditoria visível no perfil do usuário.",
+      "É possível importar múltiplos usuários de uma vez via upload de arquivo CSV, com validação de erros linha a linha.",
+      "Ao bloquear um usuário, um campo obrigatório de motivo deve ser preenchido antes de confirmar.",
+      "Usuários bloqueados aparecem com indicador visual distinto e não podem ter permissões editadas até serem desbloqueados.",
+      "É possível buscar e filtrar usuários por papel, status e módulo de permissão simultaneamente.",
+      "Tentar excluir um usuário com histórico de atividade exige uma segunda confirmação explícita."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/users",
+        "description": "Endpoint /users"
+      },
+      {
+        "method": "GET",
+        "path": "/users/create",
+        "description": "Endpoint /users/create"
+      },
+      {
+        "method": "GET",
+        "path": "/users/import",
+        "description": "Endpoint /users/import"
+      },
+      {
+        "method": "GET",
+        "path": "/users/{id}/audit",
+        "description": "Endpoint /users/{id}/audit"
+      },
+      {
+        "method": "GET",
+        "path": "/users/{id}/block",
+        "description": "Endpoint /users/{id}/block"
+      }
+    ],
+    "spec_dataModels": [
+      "User",
+      "AuditLogEntry"
+    ]
+  },
+  {
+    "us_title": "Página simples de divulgação de evento",
+    "us_id": "e129aa3a-1a45-4d5c-8cc9-05aa3687c90e",
+    "complexidade": "baixa",
+    "pattern_gabarito": "content-landing",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "content-landing",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 6,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": true,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "3ed69a80-e1a3-47c0-8b57-197ade8e1962",
+      "userStoryId": "e129aa3a-1a45-4d5c-8cc9-05aa3687c90e",
+      "version": 1,
+      "summary": "Página simples de divulgação de evento com nome, data e botão de inscrição.",
+      "technicalApproach": "Estrutura de HTML/CSS/JS com React/TypeScript, Pattern: content-landing, componentes de evento e botão de inscrição, responsividade e acessibilidade.",
+      "components": [
+        {
+          "name": "EventoHeader",
+          "type": "ui",
+          "description": "EventoHeader",
+          "dependencies": []
+        },
+        {
+          "name": "InscricaoButton",
+          "type": "ui",
+          "description": "InscricaoButton",
+          "dependencies": []
+        },
+        {
+          "name": "EventoService",
+          "type": "service",
+          "description": "EventoService",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [],
+      "dataModels": [
+        "Evento"
+      ],
+      "acceptanceCriteria": [
+        "A página exibe o nome do evento.",
+        "A página exibe a data do evento.",
+        "A página exibe um botão de inscrição.",
+        "O botão de inscrição é clicável.",
+        "A página é responsiva e acessível."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "content-landing",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "content-landing"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:27.220Z"
+    },
+    "spec_summary": "Página simples de divulgação de evento com nome, data e botão de inscrição.",
+    "spec_technicalApproach": "Estrutura de HTML/CSS/JS com React/TypeScript, Pattern: content-landing, componentes de evento e botão de inscrição, responsividade e acessibilidade.",
+    "spec_components": [
+      {
+        "name": "EventoHeader",
+        "type": "ui",
+        "description": "EventoHeader",
+        "dependencies": []
+      },
+      {
+        "name": "InscricaoButton",
+        "type": "ui",
+        "description": "InscricaoButton",
+        "dependencies": []
+      },
+      {
+        "name": "EventoService",
+        "type": "service",
+        "description": "EventoService",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A página exibe o nome do evento.",
+      "A página exibe a data do evento.",
+      "A página exibe um botão de inscrição.",
+      "O botão de inscrição é clicável.",
+      "A página é responsiva e acessível."
+    ],
+    "spec_apiEndpoints": [],
+    "spec_dataModels": [
+      "Evento"
+    ]
+  },
+  {
+    "us_title": "Landing page completa de lançamento com prova social e FAQ",
+    "us_id": "9f163d64-61cb-4e32-95eb-96a647e39a38",
+    "complexidade": "alta",
+    "pattern_gabarito": "content-landing",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "content-landing",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 6,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": true,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "a9a511ee-2c32-480e-8ea2-38adf77bf73b",
+      "userStoryId": "9f163d64-61cb-4e32-95eb-96a647e39a38",
+      "version": 1,
+      "summary": "Landing page completa de lançamento com prova social e FAQ para maximizar a conversão de visitantes em leads qualificados",
+      "technicalApproach": "Estrutura de HTML/CSS/JS utilizando React/TypeScript, Pattern: content-landing, com componentes de hero, funcionalidades, planos, prova social, FAQ e formulário de captura de lead, utilizando contratos reais de API para validação e envio de dados",
+      "components": [
+        {
+          "name": "HeroSection",
+          "type": "ui",
+          "description": "HeroSection",
+          "dependencies": []
+        },
+        {
+          "name": "FeaturesList",
+          "type": "ui",
+          "description": "FeaturesList",
+          "dependencies": []
+        },
+        {
+          "name": "PricingTable",
+          "type": "ui",
+          "description": "PricingTable",
+          "dependencies": []
+        },
+        {
+          "name": "SocialProof",
+          "type": "ui",
+          "description": "SocialProof",
+          "dependencies": []
+        },
+        {
+          "name": "FaqAccordion",
+          "type": "ui",
+          "description": "FaqAccordion",
+          "dependencies": []
+        },
+        {
+          "name": "LeadForm",
+          "type": "ui",
+          "description": "LeadForm",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/leads",
+          "description": "Endpoint /api/leads"
+        },
+        {
+          "method": "GET",
+          "path": "/api/newsletter",
+          "description": "Endpoint /api/newsletter"
+        }
+      ],
+      "dataModels": [
+        "Lead",
+        "Newsletter"
+      ],
+      "acceptanceCriteria": [
+        "A seção hero exibe headline, subtítulo, vídeo demonstrativo embutido e botão de CTA principal",
+        "A seção de funcionalidades lista ao menos 4 recursos do produto com ícone, título e descrição",
+        "A seção de planos exibe ao menos 2 opções de preço em formato de comparação lado a lado",
+        "A seção de prova social exibe logos de clientes e um carrossel navegável de depoimentos",
+        "A seção de FAQ permite expandir e recolher cada pergunta individualmente",
+        "O formulário de captura de lead valida campos obrigatórios antes de permitir o envio",
+        "Ao submeter o formulário com sucesso, uma mensagem de confirmação visual é exibida ao usuário",
+        "O rodapé contém um campo de inscrição para newsletter com validação de formato de e-mail"
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "content-landing",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "content-landing"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench",
+            "workflow-map",
+            "form-crud-tool",
+            "custom-product-surface"
+          ]
+        },
+        "states": [
+          "loading",
+          "empty",
+          "error",
+          "success"
+        ],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cards aninhados",
+          "cores high-light",
+          "paleta monocromática",
+          "overflow de texto",
+          "landing page genérica para ferramenta",
+          "drift visual"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:43.413Z"
+    },
+    "spec_summary": "Landing page completa de lançamento com prova social e FAQ para maximizar a conversão de visitantes em leads qualificados",
+    "spec_technicalApproach": "Estrutura de HTML/CSS/JS utilizando React/TypeScript, Pattern: content-landing, com componentes de hero, funcionalidades, planos, prova social, FAQ e formulário de captura de lead, utilizando contratos reais de API para validação e envio de dados",
+    "spec_components": [
+      {
+        "name": "HeroSection",
+        "type": "ui",
+        "description": "HeroSection",
+        "dependencies": []
+      },
+      {
+        "name": "FeaturesList",
+        "type": "ui",
+        "description": "FeaturesList",
+        "dependencies": []
+      },
+      {
+        "name": "PricingTable",
+        "type": "ui",
+        "description": "PricingTable",
+        "dependencies": []
+      },
+      {
+        "name": "SocialProof",
+        "type": "ui",
+        "description": "SocialProof",
+        "dependencies": []
+      },
+      {
+        "name": "FaqAccordion",
+        "type": "ui",
+        "description": "FaqAccordion",
+        "dependencies": []
+      },
+      {
+        "name": "LeadForm",
+        "type": "ui",
+        "description": "LeadForm",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "A seção hero exibe headline, subtítulo, vídeo demonstrativo embutido e botão de CTA principal",
+      "A seção de funcionalidades lista ao menos 4 recursos do produto com ícone, título e descrição",
+      "A seção de planos exibe ao menos 2 opções de preço em formato de comparação lado a lado",
+      "A seção de prova social exibe logos de clientes e um carrossel navegável de depoimentos",
+      "A seção de FAQ permite expandir e recolher cada pergunta individualmente",
+      "O formulário de captura de lead valida campos obrigatórios antes de permitir o envio",
+      "Ao submeter o formulário com sucesso, uma mensagem de confirmação visual é exibida ao usuário",
+      "O rodapé contém um campo de inscrição para newsletter com validação de formato de e-mail"
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/api/leads",
+        "description": "Endpoint /api/leads"
+      },
+      {
+        "method": "GET",
+        "path": "/api/newsletter",
+        "description": "Endpoint /api/newsletter"
+      }
+    ],
+    "spec_dataModels": [
+      "Lead",
+      "Newsletter"
+    ]
+  },
+  {
+    "us_title": "Quadro simples de notas adesivas",
+    "us_id": "de790115-0211-4c4e-a27c-7bf768351158",
+    "complexidade": "baixa",
+    "pattern_gabarito": "custom-product-surface",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "form-crud-tool",
+    "m2_pattern_correto": false,
+    "m3_completeness_score": 6,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": true,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "f6f8b4b4-0ca3-43ae-995c-acfedb53cf51",
+      "userStoryId": "de790115-0211-4c4e-a27c-7bf768351158",
+      "version": 1,
+      "summary": "Desenvolver um quadro simples de notas adesivas para organizar ideias soltas.",
+      "technicalApproach": "Estrutura em React/TypeScript com Pattern: form-crud-tool, utilizando componentes de UI para criar e mover notas, com responsividade e acessibilidade.",
+      "components": [
+        {
+          "name": "Nota",
+          "type": "ui",
+          "description": "Nota",
+          "dependencies": []
+        },
+        {
+          "name": "Quadro",
+          "type": "ui",
+          "description": "Quadro",
+          "dependencies": []
+        },
+        {
+          "name": "NotaService",
+          "type": "service",
+          "description": "NotaService",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [],
+      "dataModels": [
+        "Nota"
+      ],
+      "acceptanceCriteria": [
+        "O usuário pode criar uma nota de texto na área da tela.",
+        "O usuário pode arrastar a nota para outra posição.",
+        "A nota é exibida corretamente após ser criada e movida.",
+        "O quadro responde corretamente a diferentes tamanhos de tela.",
+        "O quadro é acessível para usuários com deficiência."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "form-crud-tool",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "form-crud-tool"
+          ],
+          "forbiddenPatterns": [
+            "operational-dashboard",
+            "chat-preview-workbench",
+            "workflow-map",
+            "content-landing",
+            "custom-product-surface"
+          ]
+        },
+        "states": [],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:42:48.946Z"
+    },
+    "spec_summary": "Desenvolver um quadro simples de notas adesivas para organizar ideias soltas.",
+    "spec_technicalApproach": "Estrutura em React/TypeScript com Pattern: form-crud-tool, utilizando componentes de UI para criar e mover notas, com responsividade e acessibilidade.",
+    "spec_components": [
+      {
+        "name": "Nota",
+        "type": "ui",
+        "description": "Nota",
+        "dependencies": []
+      },
+      {
+        "name": "Quadro",
+        "type": "ui",
+        "description": "Quadro",
+        "dependencies": []
+      },
+      {
+        "name": "NotaService",
+        "type": "service",
+        "description": "NotaService",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O usuário pode criar uma nota de texto na área da tela.",
+      "O usuário pode arrastar a nota para outra posição.",
+      "A nota é exibida corretamente após ser criada e movida.",
+      "O quadro responde corretamente a diferentes tamanhos de tela.",
+      "O quadro é acessível para usuários com deficiência."
+    ],
+    "spec_apiEndpoints": [],
+    "spec_dataModels": [
+      "Nota"
+    ]
+  },
+  {
+    "us_title": "Mesa de composição musical por camadas com mixagem ao vivo",
+    "us_id": "4d1c7fd6-15da-4623-aa84-14c0d2af66d7",
+    "complexidade": "alta",
+    "pattern_gabarito": "custom-product-surface",
+    "m1_schema_pass": true,
+    "m1_erro": null,
+    "m2_pattern_extraido": "custom-product-surface",
+    "m2_pattern_correto": true,
+    "m3_completeness_score": 5,
+    "m3_itens": {
+      "components_count_2_6": true,
+      "has_ui_component": true,
+      "acceptance_criteria_1_8": true,
+      "visual_contract_with_patterns": true,
+      "states_loading_empty_error_quando_dinamico": false,
+      "apiEndpoint_tem_dataModel_ou_componente": true
+    },
+    "spec_raw": {
+      "id": "7b5f8787-2f9d-4b96-8bc1-c86d7e474669",
+      "userStoryId": "4d1c7fd6-15da-4623-aa84-14c0d2af66d7",
+      "version": 1,
+      "summary": "Desenvolver uma superfície de composição musical por camadas com mixagem ao vivo no navegador.",
+      "technicalApproach": "Pattern: custom-product-surface. Utiliza React/TypeScript, estrutura de componentes funcionais, organização visual por camadas, controles deslizantes e efeitos de som. Incorpora contratos de API reais para persistência e exportação.",
+      "components": [
+        {
+          "name": "LayerComponent",
+          "type": "ui",
+          "description": "LayerComponent",
+          "dependencies": []
+        },
+        {
+          "name": "VolumeControl",
+          "type": "ui",
+          "description": "VolumeControl",
+          "dependencies": []
+        },
+        {
+          "name": "BpmController",
+          "type": "ui",
+          "description": "BpmController",
+          "dependencies": []
+        },
+        {
+          "name": "EffectController",
+          "type": "ui",
+          "description": "EffectController",
+          "dependencies": []
+        },
+        {
+          "name": "ProjectService",
+          "type": "service",
+          "description": "ProjectService",
+          "dependencies": []
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/projects",
+          "description": "Endpoint /projects"
+        },
+        {
+          "method": "GET",
+          "path": "/projects/:id",
+          "description": "Endpoint /projects/:id"
+        },
+        {
+          "method": "GET",
+          "path": "/export/mix",
+          "description": "Endpoint /export/mix"
+        }
+      ],
+      "dataModels": [
+        "Layer",
+        "Project"
+      ],
+      "acceptanceCriteria": [
+        "O usuário pode adicionar uma nova camada de som.",
+        "Cada camada exibe sua forma de onda visual e um controle deslizante de volume.",
+        "O controle de BPM ajusta a velocidade de reprodução de todas as camadas.",
+        "Cada camada possui controles de efeito ajustáveis.",
+        "O usuário pode silenciar ou isolar uma camada.",
+        "A composição pode ser salva como projeto e recarregada.",
+        "O botão de exportação gera a mixagem final.",
+        "Camadas podem ser reordenadas ou removidas."
+      ],
+      "visualContract": {
+        "mode": "blank_project",
+        "designSource": "generated_default",
+        "layoutArchetype": "custom-product-surface",
+        "density": "balanced",
+        "tone": "professional",
+        "colorPolicy": {
+          "background": [],
+          "surface": [],
+          "text": [],
+          "accent": [],
+          "forbidden": [],
+          "usageRules": []
+        },
+        "typography": {
+          "families": [],
+          "scaleRules": []
+        },
+        "spacingAndShape": {
+          "spacingScale": [],
+          "radiusRules": [],
+          "strokeRules": [],
+          "shadowRules": []
+        },
+        "componentPolicy": {
+          "preferExistingComponents": true,
+          "allowedLibraries": [],
+          "requiredPatterns": [
+            "custom-product-surface"
+          ],
+          "forbiddenPatterns": []
+        },
+        "states": [
+          "loading",
+          "error",
+          "success"
+        ],
+        "responsiveRules": [],
+        "accessibilityRules": [],
+        "antiPatterns": [
+          "excesso de frames",
+          "cores high-light"
+        ],
+        "referenceFiles": []
+      },
+      "generatedAt": "2026-06-17T17:43:04.063Z"
+    },
+    "spec_summary": "Desenvolver uma superfície de composição musical por camadas com mixagem ao vivo no navegador.",
+    "spec_technicalApproach": "Pattern: custom-product-surface. Utiliza React/TypeScript, estrutura de componentes funcionais, organização visual por camadas, controles deslizantes e efeitos de som. Incorpora contratos de API reais para persistência e exportação.",
+    "spec_components": [
+      {
+        "name": "LayerComponent",
+        "type": "ui",
+        "description": "LayerComponent",
+        "dependencies": []
+      },
+      {
+        "name": "VolumeControl",
+        "type": "ui",
+        "description": "VolumeControl",
+        "dependencies": []
+      },
+      {
+        "name": "BpmController",
+        "type": "ui",
+        "description": "BpmController",
+        "dependencies": []
+      },
+      {
+        "name": "EffectController",
+        "type": "ui",
+        "description": "EffectController",
+        "dependencies": []
+      },
+      {
+        "name": "ProjectService",
+        "type": "service",
+        "description": "ProjectService",
+        "dependencies": []
+      }
+    ],
+    "spec_acceptanceCriteria": [
+      "O usuário pode adicionar uma nova camada de som.",
+      "Cada camada exibe sua forma de onda visual e um controle deslizante de volume.",
+      "O controle de BPM ajusta a velocidade de reprodução de todas as camadas.",
+      "Cada camada possui controles de efeito ajustáveis.",
+      "O usuário pode silenciar ou isolar uma camada.",
+      "A composição pode ser salva como projeto e recarregada.",
+      "O botão de exportação gera a mixagem final.",
+      "Camadas podem ser reordenadas ou removidas."
+    ],
+    "spec_apiEndpoints": [
+      {
+        "method": "GET",
+        "path": "/projects",
+        "description": "Endpoint /projects"
+      },
+      {
+        "method": "GET",
+        "path": "/projects/:id",
+        "description": "Endpoint /projects/:id"
+      },
+      {
+        "method": "GET",
+        "path": "/export/mix",
+        "description": "Endpoint /export/mix"
+      }
+    ],
+    "spec_dataModels": [
+      "Layer",
+      "Project"
+    ]
+  }
+]

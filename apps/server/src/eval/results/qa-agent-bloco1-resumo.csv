@@ -1,0 +1,13 @@
+us_title,complexidade,pattern_gabarito,num_test_cases,m1_criterion_coverage_pct,m4_dimension_coverage_pct,m5_backend_violations,m5_total_api_related_tcs
+Lista simples de status dos servidores,baixa,operational-dashboard,6,100,83.3,0,1
+Central de operações de suporte multi-fila,alta,operational-dashboard,8,100,16.7,0,0
+Caixa de perguntas e respostas simples,baixa,chat-preview-workbench,7,100,83.3,0,2
+Workbench de geração de relatórios com revisão por etapas,alta,chat-preview-workbench,10,100,33.3,0,0
+Visualização simples de duas etapas conectadas,baixa,workflow-map,5,100,80.0,0,0
+Mapa de dependências de microsserviços com simulação de impacto,alta,workflow-map,12,100,66.7,0,0
+Cadastro simples de categorias,baixa,form-crud-tool,7,100,100.0,0,2
+"Console de gestão de usuários com papéis, permissões e auditoria",alta,form-crud-tool,8,100,16.7,0,0
+Página simples de divulgação de evento,baixa,content-landing,5,100,60.0,0,0
+Landing page completa de lançamento com prova social e FAQ,alta,content-landing,11,100,100.0,0,2
+Quadro simples de notas adesivas,baixa,custom-product-surface,5,100,40.0,0,0
+Mesa de composição musical por camadas com mixagem ao vivo,alta,custom-product-surface,12,100,83.3,0,3

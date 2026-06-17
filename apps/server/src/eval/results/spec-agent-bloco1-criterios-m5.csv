@@ -1,0 +1,29 @@
+us_id,us_title,criterio_num,criterio_texto,visivel,tem_gatilho,especifico,score_m5
+74411d82-3ffd-4040-bc4a-30cad2f8466e,Painel de monitoramento de tarefas da equipe,1,"A tabela exibe colunas: tarefa, responsavel, status e data limite.",TRUE,FALSE,TRUE,0
+74411d82-3ffd-4040-bc4a-30cad2f8466e,Painel de monitoramento de tarefas da equipe,2,"E possivel filtrar tarefas por status (aberto, em andamento, concluido).",TRUE,FALSE,TRUE,0
+74411d82-3ffd-4040-bc4a-30cad2f8466e,Painel de monitoramento de tarefas da equipe,3,"Tarefas atrasadas aparecem com destaque visual distinto.",TRUE,FALSE,TRUE,0
+74411d82-3ffd-4040-bc4a-30cad2f8466e,Painel de monitoramento de tarefas da equipe,4,"Ao clicar em uma tarefa, um painel lateral exibe os detalhes completos.",TRUE,TRUE,TRUE,1
+82861696-0257-4a9a-a06c-533b9bac8f37,Interface de chat com previa de codigo gerado,1,"O painel esquerdo exibe o historico de mensagens do chat.",TRUE,FALSE,TRUE,0
+82861696-0257-4a9a-a06c-533b9bac8f37,Interface de chat com previa de codigo gerado,2,"O painel direito exibe o ultimo trecho de codigo gerado com highlight de sintaxe.",TRUE,FALSE,TRUE,0
+82861696-0257-4a9a-a06c-533b9bac8f37,Interface de chat com previa de codigo gerado,3,"Um botao 'Copiar' permite copiar o codigo gerado para a area de transferencia.",TRUE,TRUE,TRUE,1
+82861696-0257-4a9a-a06c-533b9bac8f37,Interface de chat com previa de codigo gerado,4,"O campo de entrada suporta envio com a tecla Enter e exibe contador de caracteres.",TRUE,TRUE,TRUE,1
+82861696-0257-4a9a-a06c-533b9bac8f37,Interface de chat com previa de codigo gerado,5,"A interface e responsiva e acessivel.",FALSE,FALSE,FALSE,0
+cbc4e03a-a623-490f-bd3a-e5ca2cc02ebb,Mapa visual do pipeline de dados,1,"Cada etapa do pipeline e exibida como um no com nome e status de execucao.",TRUE,FALSE,TRUE,0
+cbc4e03a-a623-490f-bd3a-e5ca2cc02ebb,Mapa visual do pipeline de dados,2,"As arestas entre nos representam dependencias entre as etapas.",TRUE,FALSE,TRUE,0
+cbc4e03a-a623-490f-bd3a-e5ca2cc02ebb,Mapa visual do pipeline de dados,3,"Nos com falha de execucao sao destacados em vermelho.",TRUE,FALSE,TRUE,0
+cbc4e03a-a623-490f-bd3a-e5ca2cc02ebb,Mapa visual do pipeline de dados,4,"Clicar em um no exibe seus logs de execucao em um painel lateral.",TRUE,TRUE,TRUE,1
+cbc4e03a-a623-490f-bd3a-e5ca2cc02ebb,Mapa visual do pipeline de dados,5,"A aplicacao e responsiva e acessivel em diferentes tamanhos de tela.",FALSE,FALSE,FALSE,0
+9f4c0fea-f6a9-49f4-b065-33f4c04eeef1,Gerenciamento de chaves de API,1,"A lista de chaves e exibida com nome, data de criacao e permissoes associadas.",TRUE,FALSE,TRUE,0
+9f4c0fea-f6a9-49f4-b065-33f4c04eeef1,Gerenciamento de chaves de API,2,"O formulario de criacao de chave permite informar nome e selecionar permissoes.",TRUE,TRUE,TRUE,1
+9f4c0fea-f6a9-49f4-b065-33f4c04eeef1,Gerenciamento de chaves de API,3,"A revogacao de uma chave e feita com etapa de confirmacao antes de excluir.",TRUE,TRUE,TRUE,1
+9f4c0fea-f6a9-49f4-b065-33f4c04eeef1,Gerenciamento de chaves de API,4,"Chaves revogadas sao exibidas com indicador visual distinto e nao permitem edicao.",TRUE,FALSE,TRUE,0
+1c7392c0-03ad-47c2-a2f0-d075c03d1c01,Pagina de lancamento de produto SaaS,1,"A pagina exibe secao hero com headline, subtitulo e botao de chamada para acao.",TRUE,FALSE,TRUE,0
+1c7392c0-03ad-47c2-a2f0-d075c03d1c01,Pagina de lancamento de produto SaaS,2,"Secao de beneficios lista 3 diferenciais do produto com icone e descricao curta.",TRUE,FALSE,TRUE,0
+1c7392c0-03ad-47c2-a2f0-d075c03d1c01,Pagina de lancamento de produto SaaS,3,"Secao de depoimentos exibe ao menos 2 testemunhos com nome e cargo do autor.",TRUE,FALSE,TRUE,0
+1c7392c0-03ad-47c2-a2f0-d075c03d1c01,Pagina de lancamento de produto SaaS,4,"O rodape contem links para politica de privacidade e pagina de contato.",TRUE,FALSE,TRUE,0
+1c7392c0-03ad-47c2-a2f0-d075c03d1c01,Pagina de lancamento de produto SaaS,5,"A pagina e responsiva e acessivel em dispositivos moveis e desktop.",FALSE,FALSE,FALSE,0
+456208b8-b608-44d1-a7d4-b2862f68a7a9,Editor de fluxos de automacao por blocos,1,"A tela exibe uma paleta lateral com tipos de blocos disponiveis.",TRUE,FALSE,TRUE,0
+456208b8-b608-44d1-a7d4-b2862f68a7a9,Editor de fluxos de automacao por blocos,2,"Blocos podem ser arrastados da paleta para a area de trabalho e conectados entre si.",TRUE,TRUE,TRUE,1
+456208b8-b608-44d1-a7d4-b2862f68a7a9,Editor de fluxos de automacao por blocos,3,"Cada bloco tem um formulario inline de configuracao exibido ao ser selecionado.",TRUE,TRUE,TRUE,1
+456208b8-b608-44d1-a7d4-b2862f68a7a9,Editor de fluxos de automacao por blocos,4,"O fluxo pode ser salvo com um nome e recarregado em sessoes futuras.",TRUE,TRUE,TRUE,1
+456208b8-b608-44d1-a7d4-b2862f68a7a9,Editor de fluxos de automacao por blocos,5,"A tela exibe aviso visual quando ha blocos presentes mas desconectados no fluxo.",TRUE,FALSE,TRUE,0

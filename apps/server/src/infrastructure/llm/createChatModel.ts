@@ -48,12 +48,15 @@ export function createChatModel(
         siteName: "Horus.AI",
       });
 
-    case "groq":
-      return new ChatGroq({
-        ...common,
-        apiKey: config.apiKey,
-        baseUrl: config.baseUrl,
-      });
+    case "groq": {
+      // ChatGroq appends /openai/v1 internally — only pass baseUrl when overridden
+      const groqDefaultBase = "https://api.groq.com/openai/v1";
+      const groqFields: Record<string, unknown> = { ...common, apiKey: config.apiKey };
+      if (config.baseUrl && config.baseUrl !== groqDefaultBase) {
+        groqFields.baseUrl = config.baseUrl;
+      }
+      return new ChatGroq(groqFields as ConstructorParameters<typeof ChatGroq>[0]);
+    }
   }
 }
 
