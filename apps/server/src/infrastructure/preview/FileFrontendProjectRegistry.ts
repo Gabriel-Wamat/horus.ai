@@ -172,6 +172,19 @@ export class FileFrontendProjectRegistry {
     return project;
   }
 
+  async saveProject(project: FrontendProject): Promise<FrontendProject> {
+    const validated = FrontendProjectSchema.parse({
+      ...project,
+      rootPath: await this.canonicalizeProjectRoot(project.rootPath),
+    });
+    const projects = await this.readProjects();
+    await this.writeProjects([
+      ...projects.filter((item) => item.id !== validated.id),
+      validated,
+    ]);
+    return validated;
+  }
+
   async registerProject(input: {
     name: string;
     rootPath: string;

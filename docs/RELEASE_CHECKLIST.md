@@ -14,6 +14,7 @@
 - File persistence is allowed only for local single-user runs with `HORUS_ALLOW_FILE_DRIVER_IN_PRODUCTION=true`.
 - Multi-user or production runs must use `PERSISTENCE_DRIVER=postgres`.
 - For Postgres releases, run `docker compose --profile postgres up migrate` before promoting the API.
+- Before first Postgres promotion or after refreshing bundled demo data, run `pnpm db:seed -- --dry-run` and then `PERSISTENCE_DRIVER=postgres DATABASE_URL=<postgres-url> pnpm db:seed`.
 - Confirm `/ready` returns 200 after migrations.
 - Keep `horus-data` and `horus-postgres` volumes backed up before destructive changes.
 
