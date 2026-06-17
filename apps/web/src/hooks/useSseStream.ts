@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface UseSseStreamResult<TEvent> {
   latestEvent: TEvent | null;
@@ -24,13 +24,23 @@ export function useSseStream<TEvent>({
   const [events, setEvents] = useState<TEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const parseEventRef = useRef(parseEvent);
+  const errorMessageRef = useRef(errorMessage);
+  const logPrefixRef = useRef(logPrefix);
+  const eventTypesKey = eventTypes?.join("\u0000") ?? "";
+
+  useEffect(() => {
+    parseEventRef.current = parseEvent;
+    errorMessageRef.current = errorMessage;
+    logPrefixRef.current = logPrefix;
+  }, [errorMessage, logPrefix, parseEvent]);
 
   useEffect(() => {
     if (!url) {
-      setLatestEvent(null);
-      setEvents([]);
+      setLatestEvent((current) => (current === null ? current : null));
+      setEvents((current) => (current.length === 0 ? current : []));
       setIsConnected(false);
-      setError(null);
+      setError((current) => (current === null ? current : null));
       return;
     }
 
@@ -39,6 +49,9 @@ export function useSseStream<TEvent>({
     setError(null);
 
     const source = new EventSource(url);
+    const activeEventTypes = eventTypesKey.length > 0
+      ? eventTypesKey.split("\u0000")
+      : [];
 
     source.onopen = () => {
       setIsConnected(true);
@@ -47,21 +60,21 @@ export function useSseStream<TEvent>({
 
     const parse = (event: MessageEvent<string>): void => {
       try {
-        const parsed = parseEvent(JSON.parse(event.data));
+        const parsed = parseEventRef.current(JSON.parse(event.data));
         setError(null);
         setLatestEvent(parsed);
         setEvents((current) => [...current, parsed]);
       } catch (err) {
         setError(
-          `${logPrefix} received an invalid SSE payload: ${
+          `${logPrefixRef.current} received an invalid SSE payload: ${
             err instanceof Error ? err.message : String(err)
           }`
         );
       }
     };
 
-    if (eventTypes?.length) {
-      for (const type of eventTypes) {
+    if (activeEventTypes.length) {
+      for (const type of activeEventTypes) {
         source.addEventListener(type, parse as EventListener);
       }
     } else {
@@ -70,19 +83,19 @@ export function useSseStream<TEvent>({
 
     source.onerror = () => {
       setIsConnected(false);
-      setError(errorMessage);
+      setError(errorMessageRef.current);
     };
 
     return () => {
-      if (eventTypes?.length) {
-        for (const type of eventTypes) {
+      if (activeEventTypes.length) {
+        for (const type of activeEventTypes) {
           source.removeEventListener(type, parse as EventListener);
         }
       }
       source.close();
       setIsConnected(false);
     };
-  }, [errorMessage, eventTypes, logPrefix, parseEvent, url]);
+  }, [eventTypesKey, url]);
 
   return { latestEvent, events, isConnected, error };
 }

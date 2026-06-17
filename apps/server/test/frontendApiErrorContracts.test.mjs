@@ -118,7 +118,9 @@ test("generic SSE hook requires caller-owned event contracts", async () => {
 
   assert.equal(hookSource.includes("JSON.parse(event.data) as TEvent"), false);
   assert.match(hookSource, /parseEvent: \(payload: unknown\) => TEvent/);
-  assert.match(hookSource, /parseEvent\(JSON\.parse\(event\.data\)\)/);
+  assert.match(hookSource, /parseEventRef\.current\(JSON\.parse\(event\.data\)\)/);
+  assert.match(hookSource, /useRef\(parseEvent\)/);
+  assert.match(hookSource, /\[eventTypesKey, url\]/);
   assert.match(workflowSource, /parseWorkflowEvent/);
   assert.match(previewSource, /PreviewEventSchema\.parse/);
   assert.match(
@@ -496,6 +498,14 @@ test("workflow API validates workspace response contracts before exposing state"
     join(repositoryRoot, "apps/web/src/api/workflowApi.ts"),
     "utf8"
   );
+  const sharedSource = await readFile(
+    join(repositoryRoot, "packages/shared/src/entities/Workspace.ts"),
+    "utf8"
+  );
+  const routeSource = await readFile(
+    join(repositoryRoot, "apps/server/src/infrastructure/http/routes/workspaceRoutes.ts"),
+    "utf8"
+  );
 
   const forbiddenWorkflowWorkspaceCasts = [
     "const body = (await res.json()) as { folders: WorkspaceFolder[] }",
@@ -503,6 +513,17 @@ test("workflow API validates workspace response contracts before exposing state"
     "const body = (await res.json()) as { userStories: UserStory[] }",
     "const body = (await res.json()) as { userStory: UserStory }",
     "const body = (await res.json()) as { spec: Spec }",
+    "const WorkspaceArtifactRevisionSchema = z.object",
+    "const WorkspaceSpecArtifactSchema = z.object",
+    "const WorkspaceUserStoryArtifactSchema = z.object",
+    "const WorkspaceFoldersResponseSchema = z.object",
+    "const WorkspaceFolderResponseSchema = z.object",
+    "const WorkspaceUserStoriesResponseSchema = z.object",
+    "const WorkspaceUserStoryResponseSchema = z.object",
+    "const WorkspaceSpecResponseSchema = z.object",
+    "WorkspaceFolderSchema,",
+    "UserStorySchema,",
+    "SpecSchema,",
   ];
 
   for (const fragment of forbiddenWorkflowWorkspaceCasts) {
@@ -510,10 +531,46 @@ test("workflow API validates workspace response contracts before exposing state"
   }
 
   assert.match(source, /readWorkflowJson/);
-  assert.match(source, /WorkspaceFolderSchema/);
-  assert.match(source, /UserStorySchema/);
-  assert.match(source, /SpecSchema/);
+  assert.match(source, /WorkspaceFoldersResponseSchema/);
+  assert.match(source, /WorkspaceFolderResponseSchema/);
   assert.match(source, /WorkspaceUserStoriesResponseSchema/);
+  assert.match(source, /WorkspaceUserStoryResponseSchema/);
+  assert.match(source, /WorkspaceSpecResponseSchema/);
+  assert.match(sharedSource, /WorkspaceArtifactRevisionSchema/);
+  assert.match(sharedSource, /WorkspaceSpecArtifactSchema/);
+  assert.match(sharedSource, /WorkspaceUserStoryArtifactSchema/);
+  assert.match(sharedSource, /WorkspaceFoldersResponseSchema/);
+  assert.match(sharedSource, /WorkspaceFolderResponseSchema/);
+  assert.match(sharedSource, /WorkspaceUserStoriesResponseSchema/);
+  assert.match(sharedSource, /WorkspaceArtifactsResponseSchema/);
+  assert.match(sharedSource, /WorkspaceUserStoryResponseSchema/);
+  assert.match(sharedSource, /WorkspaceSpecResponseSchema/);
+  assert.match(
+    routeSource,
+    /parseWorkspaceRouteResponse\("GET \/workspace\/folders", WorkspaceFoldersResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseWorkspaceRouteResponse\(\s*"POST \/workspace\/folders",\s*WorkspaceFolderResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseWorkspaceRouteResponse\(\s*"GET \/workspace\/folders\/:folderId\/user-stories",\s*WorkspaceUserStoriesResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseWorkspaceRouteResponse\(\s*"GET \/workspace\/folders\/:folderId\/artifacts",\s*WorkspaceArtifactsResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseWorkspaceRouteResponse\(\s*"PATCH \/workspace\/folders\/:folderId\/user-stories\/:storyId",\s*WorkspaceUserStoryResponseSchema/
+  );
+  assert.match(
+    routeSource,
+    /parseWorkspaceRouteResponse\(\s*"PATCH \/workspace\/folders\/:folderId\/user-stories\/:storyId\/specs\/:specId",\s*WorkspaceSpecResponseSchema/
+  );
+  assert.match(routeSource, /contract\.parse\(payload\)/);
+  assert.match(routeSource, /WorkspaceRouteResponseContractError/);
 });
 
 test("workflow API validates execution response contracts before exposing state", async () => {
