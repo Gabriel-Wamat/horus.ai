@@ -1,7 +1,17 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
-import { CreateWorkspaceFolderInputSchema, SpecSchema, UserStorySchema } from "@u-build/shared";
+import {
+  CreateWorkspaceFolderInputSchema,
+  SpecSchema,
+  UserStorySchema,
+  WorkspaceArtifactsResponseSchema,
+  WorkspaceFolderResponseSchema,
+  WorkspaceFoldersResponseSchema,
+  WorkspaceSpecResponseSchema,
+  WorkspaceUserStoriesResponseSchema,
+  WorkspaceUserStoryResponseSchema,
+} from "@u-build/shared";
 import {
   WorkspaceFolderNotFoundError,
   WorkspaceSpecNotFoundError,
@@ -19,7 +29,11 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
   router.get("/folders", async (_req: Request, res: Response) => {
     try {
       const folders = await deps.workspaceStore.listFolders();
-      res.json({ folders });
+      res.json(
+        parseWorkspaceRouteResponse("GET /workspace/folders", WorkspaceFoldersResponseSchema, {
+          folders,
+        })
+      );
     } catch (err) {
       handleWorkspaceRouteError(err, res);
     }
@@ -29,7 +43,13 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
     try {
       const input = CreateWorkspaceFolderInputSchema.parse(req.body);
       const folder = await deps.workspaceStore.createFolder(input.name);
-      res.status(201).json({ folder });
+      res.status(201).json(
+        parseWorkspaceRouteResponse(
+          "POST /workspace/folders",
+          WorkspaceFolderResponseSchema,
+          { folder }
+        )
+      );
     } catch (err) {
       handleWorkspaceRouteError(err, res);
     }
@@ -41,7 +61,13 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
         req.params["folderId"] ?? ""
       );
       const userStories = artifacts.map((artifact) => artifact.story);
-      res.json({ userStories, artifacts });
+      res.json(
+        parseWorkspaceRouteResponse(
+          "GET /workspace/folders/:folderId/user-stories",
+          WorkspaceUserStoriesResponseSchema,
+          { userStories, artifacts }
+        )
+      );
     } catch (err) {
       handleWorkspaceRouteError(err, res);
     }
@@ -52,7 +78,13 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
       const artifacts = await deps.workspaceStore.listUserStoryArtifacts(
         req.params["folderId"] ?? ""
       );
-      res.json({ artifacts });
+      res.json(
+        parseWorkspaceRouteResponse(
+          "GET /workspace/folders/:folderId/artifacts",
+          WorkspaceArtifactsResponseSchema,
+          { artifacts }
+        )
+      );
     } catch (err) {
       handleWorkspaceRouteError(err, res);
     }
@@ -66,7 +98,13 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
         req.params["storyId"] ?? "",
         userStory
       );
-      res.json({ userStory: updated });
+      res.json(
+        parseWorkspaceRouteResponse(
+          "PATCH /workspace/folders/:folderId/user-stories/:storyId",
+          WorkspaceUserStoryResponseSchema,
+          { userStory: updated }
+        )
+      );
     } catch (err) {
       handleWorkspaceRouteError(err, res);
     }
@@ -81,7 +119,13 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
         req.params["specId"] ?? "",
         spec
       );
-      res.json({ spec: updated });
+      res.json(
+        parseWorkspaceRouteResponse(
+          "PATCH /workspace/folders/:folderId/user-stories/:storyId/specs/:specId",
+          WorkspaceSpecResponseSchema,
+          { spec: updated }
+        )
+      );
     } catch (err) {
       handleWorkspaceRouteError(err, res);
     }
@@ -102,7 +146,34 @@ export function createWorkspaceRouter(deps: WorkspaceRouteDeps): Router {
   return router;
 }
 
+interface WorkspaceRouteContract<T> {
+  parse(input: unknown): T;
+}
+
+class WorkspaceRouteResponseContractError extends Error {
+  constructor(route: string, cause: unknown) {
+    super(`Workspace route response contract violated at ${route}`, { cause });
+    this.name = "WorkspaceRouteResponseContractError";
+  }
+}
+
+function parseWorkspaceRouteResponse<T>(
+  route: string,
+  contract: WorkspaceRouteContract<T>,
+  payload: unknown
+): T {
+  try {
+    return contract.parse(payload);
+  } catch (err) {
+    throw new WorkspaceRouteResponseContractError(route, err);
+  }
+}
+
 function handleWorkspaceRouteError(err: unknown, res: Response): void {
+  if (err instanceof WorkspaceRouteResponseContractError) {
+    res.status(500).json({ error: "Internal server error", message: err.message });
+    return;
+  }
   if (err instanceof ZodError) {
     res.status(400).json({ error: "Validation failed", issues: err.issues });
     return;

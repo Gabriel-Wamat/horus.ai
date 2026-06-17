@@ -8,9 +8,11 @@ import {
   PreviewSessionSchema,
   ProjectConstructionRunSchema,
   ProjectWorkspaceSchema,
-  SpecSchema,
-  UserStorySchema,
-  WorkspaceFolderSchema,
+  WorkspaceFolderResponseSchema,
+  WorkspaceFoldersResponseSchema,
+  WorkspaceSpecResponseSchema,
+  WorkspaceUserStoriesResponseSchema,
+  WorkspaceUserStoryResponseSchema,
   WorkflowStateSchema,
   type UserStory,
   type Spec,
@@ -44,50 +46,6 @@ export class WorkflowApiError extends Error {
     this.name = "WorkflowApiError";
   }
 }
-
-const WorkspaceArtifactRevisionSchema = z.object({
-  activeRevision: z.number().int().positive(),
-  revisions: z.array(
-    z.object({
-      revision: z.number().int().positive(),
-      file: z.string().trim().min(1),
-      createdAt: z.string().datetime(),
-    })
-  ),
-});
-
-const WorkspaceSpecArtifactSchema = z.object({
-  specId: z.string().trim().min(1),
-  spec: SpecSchema.optional(),
-  revision: WorkspaceArtifactRevisionSchema,
-});
-
-const WorkspaceUserStoryArtifactSchema = z.object({
-  story: UserStorySchema,
-  revision: WorkspaceArtifactRevisionSchema,
-  specs: z.array(WorkspaceSpecArtifactSchema),
-});
-
-const WorkspaceFoldersResponseSchema = z.object({
-  folders: z.array(WorkspaceFolderSchema),
-});
-
-const WorkspaceFolderResponseSchema = z.object({
-  folder: WorkspaceFolderSchema,
-});
-
-const WorkspaceUserStoriesResponseSchema = z.object({
-  userStories: z.array(UserStorySchema),
-  artifacts: z.array(WorkspaceUserStoryArtifactSchema).optional(),
-});
-
-const WorkspaceUserStoryResponseSchema = z.object({
-  userStory: UserStorySchema,
-});
-
-const WorkspaceSpecResponseSchema = z.object({
-  spec: SpecSchema,
-});
 
 const StartWorkflowResponseSchema = z.object({
   threadId: z.string().uuid(),
