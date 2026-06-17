@@ -125,18 +125,20 @@ async function clickStart(page) {
 async function readChatSurfaceState(page) {
   return page.evaluate(() => {
     const panel = document.querySelector(".preview-conversation-panel");
+    const projectSelector = document.querySelector("#preview-project");
+    const routeInput = document.querySelector("#preview-route");
     const composer = document.querySelector(".visual-composer");
     const textarea = document.querySelector(".visual-composer-input");
     const status = document.querySelector(".composer-status-row span");
     const history = document.querySelector(".preview-chat-message-list");
     const empty = document.querySelector(".preview-chat-empty");
-    const scopeBar = document.querySelector(".preview-chat-scope-bar");
     const panelBox = panel?.getBoundingClientRect();
 
     return {
       hasPanel: Boolean(panel),
+      hasProjectSelector: Boolean(projectSelector),
+      hasRouteInput: Boolean(routeInput),
       hasComposer: Boolean(composer),
-      hasScopeBar: Boolean(scopeBar),
       statusText: status?.textContent?.trim() ?? "",
       textareaDisabled: textarea instanceof HTMLTextAreaElement
         ? textarea.disabled
@@ -178,8 +180,12 @@ async function ensureChatSurfaceSettled(page, artifactDir, screenshotName) {
   );
   const state = await readChatSurfaceState(page);
   check(state.hasPanel, "Painel de chat do Preview não foi renderizado.");
+  check(
+    state.hasProjectSelector,
+    "Seletor de projeto do Preview não foi renderizado."
+  );
+  check(state.hasRouteInput, "Campo de rota do Preview não foi renderizado.");
   check(state.hasComposer, "Composer do chat não foi renderizado.");
-  check(state.hasScopeBar, "Barra de escopo do chat não foi renderizada.");
   check(
     state.statusText.length > 0,
     "Composer do chat não expõe status ou motivo de bloqueio."
@@ -190,6 +196,65 @@ async function ensureChatSurfaceSettled(page, artifactDir, screenshotName) {
   );
   check(!state.horizontalOverflow, "Chat gerou overflow horizontal no viewport.");
   const screenshotPath = await screenshot(page.locator(".preview-conversation-panel"), artifactDir, screenshotName);
+  return { ...state, screenshotPath };
+}
+
+async function readRuntimeEvidenceState(page) {
+  return page.evaluate(() => {
+    const panel = document.querySelector(".preview-runtime-panel");
+    const rows = [...document.querySelectorAll(".preview-runtime-panel .preview-event-row")];
+    const details = [
+      ...document.querySelectorAll(".preview-runtime-panel .preview-event-detail"),
+    ].map((item) => item.textContent?.replace(/\s+/g, " ").trim() ?? "");
+    const outputs = [
+      ...document.querySelectorAll(".preview-runtime-panel .preview-event-stderr"),
+    ].map((item) => item.textContent?.trim() ?? "");
+    const actions = [
+      ...document.querySelectorAll(".preview-runtime-panel .preview-event-action"),
+    ].map((item) => item.textContent?.replace(/\s+/g, " ").trim() ?? "");
+    return {
+      hasPanel: Boolean(panel),
+      text: panel?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+      rowCount: rows.length,
+      details,
+      outputs,
+      actions,
+    };
+  });
+}
+
+async function ensureRuntimeEvidenceVisible(page, artifactDir) {
+  await page.locator(".preview-runtime-panel").waitFor({
+    state: "visible",
+    timeout: SCREENSHOT_TIMEOUT_MS,
+  });
+  await page.waitForFunction(
+    () => {
+      const panel = document.querySelector(".preview-runtime-panel");
+      if (!panel) return false;
+      const rows = panel.querySelectorAll(".preview-event-row");
+      const detail = panel.querySelector(".preview-event-detail")?.textContent ?? "";
+      return rows.length > 0 && detail.includes("cmd ");
+    },
+    null,
+    { timeout: SCREENSHOT_TIMEOUT_MS }
+  );
+  const state = await readRuntimeEvidenceState(page);
+  check(state.hasPanel, "Painel de evidência de runtime não foi renderizado.");
+  check(state.rowCount > 0, "Timeline de runtime não exibiu eventos.");
+  check(
+    state.details.some((detail) => detail.includes("cmd ")),
+    "Timeline de runtime não exibiu o comando do preview."
+  );
+  check(
+    state.text.toLowerCase().includes("preview session"),
+    "Timeline de runtime não exibiu eventos de sessão do preview."
+  );
+  const screenshotPath = await screenshot(
+    page.locator(".preview-runtime-panel"),
+    artifactDir,
+    "04-runtime-evidence"
+  );
   return { ...state, screenshotPath };
 }
 
@@ -227,6 +292,7 @@ async function run() {
     consoleErrors: [],
     pageErrors: [],
   };
+  let browser;
 
   try {
     report.checks.health = await readJson(makeUrl(apiBaseUrl, "/health"));
@@ -276,7 +342,6 @@ async function run() {
     }
 
     const chromium = await loadChromium();
-    let browser;
     try {
       browser = await chromium.launch({ headless: true });
     } catch (error) {
@@ -341,13 +406,19 @@ async function run() {
       frameBox,
       iframeSrc: await page.locator("iframe.preview-frame").first().getAttribute("src"),
     };
+    report.checks.runtimeEvidence = await ensureRuntimeEvidenceVisible(
+      page,
+      artifactDir
+    );
+    report.screenshots.runtimeEvidence =
+      report.checks.runtimeEvidence.screenshotPath;
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(250);
     report.checks.mobileChatSurface = await ensureChatSurfaceSettled(
       page,
       artifactDir,
-      "04-mobile-chat-surface"
+      "05-mobile-chat-surface"
     );
     report.screenshots.mobileChatSurface =
       report.checks.mobileChatSurface.screenshotPath;
@@ -365,7 +436,7 @@ async function run() {
         invalidProject.id,
         { timeout: SCREENSHOT_TIMEOUT_MS }
       );
-      report.screenshots.allProjects = await screenshot(page, artifactDir, "05-all-projects");
+      report.screenshots.allProjects = await screenshot(page, artifactDir, "06-all-projects");
 
       await page.selectOption("#preview-project", invalidProject.id);
       await clickStart(page);
@@ -380,7 +451,7 @@ async function run() {
       report.screenshots.blockedProject = await screenshot(
         page,
         artifactDir,
-        "06-blocked-project"
+        "07-blocked-project"
       );
       report.checks.blockedProject = {
         projectId: invalidProject.id,
@@ -389,6 +460,7 @@ async function run() {
     }
 
     await browser.close();
+    browser = null;
     check(report.pageErrors.length === 0, `Page errors detectados: ${report.pageErrors.join("; ")}`);
     report.status = "passed";
     report.finishedAt = new Date().toISOString();
@@ -401,6 +473,9 @@ async function run() {
       ].join("\n") + "\n"
     );
   } catch (error) {
+    if (browser) {
+      await browser.close().catch(() => undefined);
+    }
     report.status = "failed";
     report.error = error instanceof Error ? error.message : String(error);
     report.finishedAt = new Date().toISOString();

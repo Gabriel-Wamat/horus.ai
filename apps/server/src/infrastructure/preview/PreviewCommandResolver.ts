@@ -87,6 +87,28 @@ export async function resolvePreviewCommand(
     project.commandCatalog.find((command) => command.id === commandId) ??
     (commandId === "legacy-dev" ? legacyCommandFromDevCommand(project) : null);
 
+  return resolveProjectCommand(project, commandId, catalogCommand, options);
+}
+
+export async function resolveCatalogCommand(
+  project: FrontendProject,
+  commandId: string,
+  options: PreviewCommandResolverOptions
+): Promise<NormalizedCliCommandSpec> {
+  return resolveProjectCommand(
+    project,
+    commandId,
+    project.commandCatalog.find((command) => command.id === commandId) ?? null,
+    options
+  );
+}
+
+async function resolveProjectCommand(
+  project: FrontendProject,
+  commandId: string,
+  catalogCommand: PreviewCommand | null,
+  options: PreviewCommandResolverOptions
+): Promise<NormalizedCliCommandSpec> {
   if (!catalogCommand) {
     throw new PreviewCommandResolutionError("Preview command id was not found", {
       projectId: project.id,

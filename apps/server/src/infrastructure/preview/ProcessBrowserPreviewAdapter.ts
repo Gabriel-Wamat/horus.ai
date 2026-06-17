@@ -5,11 +5,13 @@ import { setTimeout as delay } from "node:timers/promises";
 import {
   HorusProjectManifestSchema,
   type FrontendProject,
+  type PreviewCommand,
   type PreviewSession,
 } from "@u-build/shared";
 import type { NormalizedCliCommandSpec } from "../tools/CliCommandPolicy.js";
 import {
   PreviewCommandResolutionError,
+  resolveCatalogCommand,
   resolvePreviewCommand,
 } from "./PreviewCommandResolver.js";
 import {
@@ -26,12 +28,27 @@ interface ManagedPreviewProcess {
   child: ChildProcess;
   command: NormalizedCliCommandSpec;
   project: FrontendProject;
+  dependencyBootstrap: CommandRunEvidence | null;
   stdoutTail: string;
   stderrTail: string;
   exited: boolean;
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   startedAt: number;
+}
+
+interface CommandRunEvidence {
+  commandId: string;
+  executable: string;
+  args: readonly string[];
+  cwd: string;
+  processId: number | null;
+  stdoutTail: string;
+  stderrTail: string;
+  exitCode: number | null;
+  signal: NodeJS.Signals | null;
+  durationMs: number;
+  reason: string;
 }
 
 export interface ProcessBrowserPreviewAdapterOptions {
@@ -44,6 +61,7 @@ export interface ProcessBrowserPreviewAdapterOptions {
   allowedExecutables?: readonly string[];
   inheritedEnvKeys?: readonly string[];
   killProcessGroup?: boolean;
+  dependencyBootstrap?: boolean;
   readinessProbe?: (previewUrl: string) => Promise<boolean>;
 }
 
@@ -87,6 +105,7 @@ function evidenceForProcess(processInfo: ManagedPreviewProcess): Record<string, 
     exitCode: processInfo.exitCode,
     signal: processInfo.signal,
     durationMs: nowMs() - processInfo.startedAt,
+    dependencyBootstrap: processInfo.dependencyBootstrap,
   };
 }
 
@@ -101,6 +120,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
   private readonly allowedExecutables: readonly string[] | undefined;
   private readonly inheritedEnvKeys: readonly string[];
   private readonly killProcessGroupEnabled: boolean;
+  private readonly dependencyBootstrapEnabled: boolean;
   private readonly readinessProbe: ((previewUrl: string) => Promise<boolean>) | undefined;
 
   constructor(options: ProcessBrowserPreviewAdapterOptions = {}) {
@@ -115,6 +135,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     this.inheritedEnvKeys =
       options.inheritedEnvKeys ?? DEFAULT_INHERITED_CHILD_ENV_KEYS;
     this.killProcessGroupEnabled = options.killProcessGroup ?? true;
+    this.dependencyBootstrapEnabled = options.dependencyBootstrap ?? true;
     this.readinessProbe = options.readinessProbe;
   }
 
@@ -154,8 +175,14 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       }
     }
 
+    const dependencyBootstrap = await this.bootstrapDependenciesIfNeeded(project);
     const command = await this.resolveCommand(project);
-    const managed = this.spawnManagedProcess(session.id, command, project);
+    const managed = this.spawnManagedProcess(
+      session.id,
+      command,
+      project,
+      dependencyBootstrap
+    );
     try {
       await this.waitForReadiness(previewUrl, managed, project);
     } catch (err) {
@@ -202,10 +229,134 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     }
   }
 
+  private async resolveCatalogCommand(
+    project: FrontendProject,
+    commandId: string,
+    timeoutMs: number
+  ): Promise<NormalizedCliCommandSpec> {
+    try {
+      return await resolveCatalogCommand(project, commandId, {
+        ...(this.allowedExecutables ? { allowedExecutables: this.allowedExecutables } : {}),
+        timeoutMs,
+      });
+    } catch (err) {
+      if (err instanceof PreviewCommandResolutionError) {
+        throw new BrowserPreviewStartError(err.message, err.evidence);
+      }
+      throw err;
+    }
+  }
+
+  private async bootstrapDependenciesIfNeeded(
+    project: FrontendProject
+  ): Promise<CommandRunEvidence | null> {
+    if (!this.dependencyBootstrapEnabled) return null;
+    if (!(await this.pathExists(join(project.rootPath, "package.json")))) return null;
+    if (await this.pathExists(join(project.rootPath, "node_modules"))) return null;
+
+    const bootstrapCommand =
+      selectDependencyBootstrapCommand(project.commandCatalog) ??
+      selectDependencyBootstrapCommand(
+        await this.readProjectManifestCommandCatalog(project.rootPath)
+      );
+    if (!bootstrapCommand) return null;
+
+    const timeoutMs = bootstrapCommand.timeoutMs ?? 120_000;
+    const commandProject = ensureCommandAvailable(project, bootstrapCommand);
+    const command = await this.resolveCatalogCommand(commandProject, bootstrapCommand.id, timeoutMs);
+    const evidence = await this.runOneShotCommand(command, "dependency_bootstrap");
+    if (evidence.exitCode !== 0 || evidence.signal) {
+      throw new BrowserPreviewStartError("Preview dependency bootstrap failed", {
+        dependencyBootstrap: evidence,
+        reason: "dependency_bootstrap_failed",
+      });
+    }
+    return evidence;
+  }
+
+  private async runOneShotCommand(
+    command: NormalizedCliCommandSpec,
+    reason: string
+  ): Promise<CommandRunEvidence> {
+    const startedAt = nowMs();
+    const child = spawn(command.executable, command.args, {
+      cwd: command.cwd,
+      env: buildAllowlistedChildEnv(command.env, this.inheritedEnvKeys),
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdoutTail = "";
+    let stderrTail = "";
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (!settled) child.kill("SIGTERM");
+    }, command.timeoutMs);
+
+    child.stdout?.on("data", (chunk: Buffer) => {
+      stdoutTail = appendTail(stdoutTail, chunk, this.outputTailLimit);
+    });
+    child.stderr?.on("data", (chunk: Buffer) => {
+      stderrTail = appendTail(stderrTail, chunk, this.outputTailLimit);
+    });
+
+    return new Promise((resolve) => {
+      child.once("error", (err) => {
+        settled = true;
+        clearTimeout(timeout);
+        stderrTail = appendTail(
+          stderrTail,
+          Buffer.from(err.message),
+          this.outputTailLimit
+        );
+        resolve({
+          commandId: command.id,
+          executable: command.executable,
+          args: command.args,
+          cwd: command.cwd,
+          processId: child.pid ?? null,
+          stdoutTail,
+          stderrTail,
+          exitCode: 1,
+          signal: null,
+          durationMs: nowMs() - startedAt,
+          reason,
+        });
+      });
+      child.once("close", (exitCode, signal) => {
+        settled = true;
+        clearTimeout(timeout);
+        resolve({
+          commandId: command.id,
+          executable: command.executable,
+          args: command.args,
+          cwd: command.cwd,
+          processId: child.pid ?? null,
+          stdoutTail,
+          stderrTail,
+          exitCode,
+          signal,
+          durationMs: nowMs() - startedAt,
+          reason,
+        });
+      });
+    });
+  }
+
+  private async pathExists(path: string): Promise<boolean> {
+    try {
+      await fs.access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private spawnManagedProcess(
     sessionId: string,
     command: NormalizedCliCommandSpec,
-    project: FrontendProject
+    project: FrontendProject,
+    dependencyBootstrap: CommandRunEvidence | null
   ): ManagedPreviewProcess {
     const child = spawn(command.executable, command.args, {
       cwd: command.cwd,
@@ -219,6 +370,7 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
       child,
       command,
       project,
+      dependencyBootstrap,
       stdoutTail: "",
       stderrTail: "",
       exited: false,
@@ -373,6 +525,18 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
     }
   }
 
+  private async readProjectManifestCommandCatalog(
+    rootPath: string
+  ): Promise<PreviewCommand[]> {
+    try {
+      const raw = await fs.readFile(join(rootPath, "horus.project.json"), "utf-8");
+      const parsed = HorusProjectManifestSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data.commandCatalog : [];
+    } catch {
+      return [];
+    }
+  }
+
   private async readRemoteProjectManifestId(previewUrl: string): Promise<string | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.fetchTimeoutMs);
@@ -431,4 +595,45 @@ export class ProcessBrowserPreviewAdapter implements BrowserPreviewAdapter {
 function parseProjectManifestId(payload: unknown): string | null {
   const parsed = HorusProjectManifestSchema.safeParse(payload);
   return parsed.success ? parsed.data.projectId : null;
+}
+
+function ensureCommandAvailable(
+  project: FrontendProject,
+  command: PreviewCommand
+): FrontendProject {
+  if (project.commandCatalog.some((item) => item.id === command.id)) return project;
+  return {
+    ...project,
+    commandCatalog: [...project.commandCatalog, command],
+  };
+}
+
+function selectDependencyBootstrapCommand(
+  commandCatalog: readonly PreviewCommand[]
+): PreviewCommand | null {
+  const candidates = commandCatalog.filter(isDependencyBootstrapCommand);
+  return (
+    candidates.find((command) => command.id === "install-root-dependencies") ??
+    candidates[0] ??
+    null
+  );
+}
+
+function isDependencyBootstrapCommand(
+  command: PreviewCommand
+): boolean {
+  const id = command.id.toLowerCase();
+  const executable = command.executable
+    .split("/")
+    .pop()
+    ?.split("\\")
+    .pop()
+    ?.toLowerCase();
+  const packageManagers = new Set(["npm", "pnpm", "yarn", "bun"]);
+  const installArgs = new Set(["install", "ci"]);
+  return (
+    id.includes("install") ||
+    (Boolean(executable && packageManagers.has(executable)) &&
+      command.args.some((arg) => installArgs.has(arg.toLowerCase())))
+  );
 }

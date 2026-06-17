@@ -169,11 +169,40 @@
   line-height: 1.45;
 }
 
+.preview-event-stderr {
+  max-height: 136px;
+  overflow: auto;
+  margin: 8px 0 0;
+  border: 1px solid rgba(240, 85, 108, 0.18);
+  border-radius: 8px;
+  background: rgba(240, 85, 108, 0.055);
+  color: #ffd6dc;
+  padding: 8px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.preview-event-stderr.muted {
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--t2);
+}
+
+.preview-event-action {
+  border-left: 2px solid rgba(31, 229, 164, 0.42);
+  padding-left: 8px;
+  color: var(--t) !important;
+  font-weight: 800;
+}
+
 .preview-main-panel {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-rows: auto minmax(360px, 1fr);
+  grid-template-rows: auto minmax(300px, 1fr) minmax(160px, 220px);
 }
 
 .preview-toolbar {
@@ -369,6 +398,42 @@
   min-height: 360px;
   border: 0;
   background: white;
+}
+
+.preview-runtime-panel {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  border-top: 1px solid var(--bd);
+  background: rgba(255, 255, 255, 0.012);
+  padding: 10px 12px 12px;
+}
+
+.preview-runtime-panel .preview-timeline-list {
+  max-height: none;
+  min-height: 0;
+}
+
+.preview-runtime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.preview-runtime-head span {
+  color: var(--t);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preview-runtime-head strong {
+  color: var(--t3);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .preview-empty-state {

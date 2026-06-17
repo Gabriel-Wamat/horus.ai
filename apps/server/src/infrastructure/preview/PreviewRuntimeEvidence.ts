@@ -16,6 +16,20 @@ export interface PreviewRuntimeEvidenceInput {
   previewUrl?: unknown;
   reason?: unknown;
   timeoutMs?: unknown;
+  dependencyBootstrap?: unknown;
+}
+
+export interface PreviewDependencyBootstrapEvidence {
+  commandId: string | null;
+  executable: string | null;
+  args: string[];
+  cwd: string | null;
+  stdoutTail: string;
+  stderrTail: string;
+  exitCode: number | null;
+  signal: string | null;
+  durationMs: number | null;
+  reason: string | null;
 }
 
 export interface PreviewRuntimeEvidence {
@@ -32,6 +46,7 @@ export interface PreviewRuntimeEvidence {
   previewUrl: string | null;
   reason: string | null;
   timeoutMs: number | null;
+  dependencyBootstrap: PreviewDependencyBootstrapEvidence | null;
 }
 
 function asString(value: unknown): string | null {
@@ -55,6 +70,25 @@ function sanitizeArgs(value: unknown): string[] {
   return value.map((arg) => sanitizeText(String(arg))).slice(0, 48);
 }
 
+function sanitizeDependencyBootstrap(
+  value: unknown
+): PreviewDependencyBootstrapEvidence | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    commandId: asString(record["commandId"]),
+    executable: asString(record["executable"]),
+    args: sanitizeArgs(record["args"]),
+    cwd: asString(record["cwd"]),
+    stdoutTail: sanitizeText(record["stdoutTail"]),
+    stderrTail: sanitizeText(record["stderrTail"]),
+    exitCode: asNumber(record["exitCode"]),
+    signal: asString(record["signal"]),
+    durationMs: asNumber(record["durationMs"]),
+    reason: asString(record["reason"]),
+  };
+}
+
 export function buildPreviewRuntimeEvidence(
   input: PreviewRuntimeEvidenceInput = {}
 ): PreviewRuntimeEvidence {
@@ -72,6 +106,6 @@ export function buildPreviewRuntimeEvidence(
     previewUrl: asString(input.previewUrl),
     reason: asString(input.reason),
     timeoutMs: asNumber(input.timeoutMs),
+    dependencyBootstrap: sanitizeDependencyBootstrap(input.dependencyBootstrap),
   };
 }
-

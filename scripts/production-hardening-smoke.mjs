@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
 
+function previewBrowserSmokeEnabled() {
+  return Boolean(
+    process.env.HORUS_PREVIEW_BROWSER_SMOKE === "1" ||
+      process.env.HORUS_BASE_URL ||
+      process.env.HORUS_PREVIEW_SMOKE_HOST ||
+      process.env.HORUS_WEB_PREVIEW_PUBLIC_HOST
+  );
+}
+
 const checks = [
   {
     name: "shared build",
@@ -24,6 +33,12 @@ const checks = [
     command: "node",
     args: ["scripts/horus-chat-preview-e2e.mjs"],
     required: Boolean(process.env.HORUS_E2E_CHAT_SESSION_ID),
+  },
+  {
+    name: "preview browser smoke",
+    command: "node",
+    args: ["scripts/preview-browser-smoke.mjs"],
+    required: previewBrowserSmokeEnabled(),
   },
 ];
 

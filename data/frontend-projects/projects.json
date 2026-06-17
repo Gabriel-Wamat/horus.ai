@@ -19,6 +19,15 @@
     "previewCommandId": "run-root-dev",
     "commandCatalog": [
       {
+        "id": "install-root-dependencies",
+        "label": "Install dependencies",
+        "executable": "npm",
+        "args": ["install"],
+        "cwd": ".",
+        "env": {},
+        "timeoutMs": 120000
+      },
+      {
         "id": "run-root-dev",
         "label": "dev root",
         "executable": "npm",
@@ -51,6 +60,15 @@
     "devCommand": "npm run dev",
     "previewCommandId": "run-root-dev",
     "commandCatalog": [
+      {
+        "id": "install-root-dependencies",
+        "label": "Install dependencies",
+        "executable": "npm",
+        "args": ["install"],
+        "cwd": ".",
+        "env": {},
+        "timeoutMs": 120000
+      },
       {
         "id": "run-root-dev",
         "label": "dev root",
