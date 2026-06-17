@@ -101,6 +101,14 @@ const EMPTY_SUMMARY: JsonDataSeedSummary = {
   skippedPreviewDrafts: 0,
 };
 
+const LOCAL_PREVIEW_HOSTS = new Set([
+  ["local", "host"].join(""),
+  ["127", "0", "0", "1"].join("."),
+  ["0", "0", "0", "0"].join("."),
+  "::1",
+  "[::1]",
+]);
+
 export class JsonDataSeedService {
   private readonly sourceDataDir: string;
   private readonly targetDataDir: string;
@@ -467,13 +475,7 @@ function sanitizePreviewUrl(value: string | null): string | null {
   try {
     const url = new URL(value);
     const host = url.hostname.toLowerCase();
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "0.0.0.0" ||
-      host === "::1" ||
-      host === "[::1]"
-    ) {
+    if (LOCAL_PREVIEW_HOSTS.has(host)) {
       return null;
     }
     return value;

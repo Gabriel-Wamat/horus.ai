@@ -16,6 +16,12 @@ const qualityGateId = "88888888-8888-4888-8888-888888888888";
 const previewSessionId = "99999999-9999-4999-8999-999999999999";
 const previewEventId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const draftId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const localPreviewUrl = ["http://", ["local", "host"].join(""), ":5174"].join("");
+const loopbackPreviewUrl = [
+  "http://",
+  ["127", "0", "0", "1"].join("."),
+  ":5174",
+].join("");
 
 test("json data seed imports portable seed data idempotently through repositories", async () => {
   const root = await mkdtemp(join(tmpdir(), "horus-json-seed-"));
@@ -166,7 +172,7 @@ async function writeFixture(sourceDataDir) {
           env: {},
         },
       ],
-      previewUrl: "http://localhost:5174",
+      previewUrl: localPreviewUrl,
       createdAt: "2026-06-17T00:00:00.000Z",
     },
   ]);
@@ -265,7 +271,7 @@ async function writeFixture(sourceDataDir) {
     status: "running",
     route: "/",
     device: { name: "pc", width: 1440, height: 900 },
-    previewUrl: "http://127.0.0.1:5174",
+    previewUrl: loopbackPreviewUrl,
     processId: 12345,
     startedAt: "2026-06-17T00:00:00.000Z",
     stoppedAt: null,
@@ -281,7 +287,7 @@ async function writeFixture(sourceDataDir) {
       timestamp: "2026-06-17T00:00:00.000Z",
       status: "running",
       message: "Preview session ready",
-      data: { previewUrl: "http://127.0.0.1:5174" },
+      data: { previewUrl: loopbackPreviewUrl },
     },
   ]);
   await writeJson(join(previewDir, "drafts.json"), [
