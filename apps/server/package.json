@@ -12,7 +12,16 @@
     "start": "node dist/main.js",
     "lint": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist *.tsbuildinfo"
+    "clean": "rimraf dist *.tsbuildinfo",
+    "eval:curator": "tsx evals/curator.eval.ts",
+    "eval:curator:llm": "tsx evals/curator.eval.ts --llm",
+    "eval:spec": "tsx evals/spec.eval.ts",
+    "eval:spec:llm": "tsx evals/spec.eval.ts --llm",
+    "eval:front": "tsx evals/front.eval.ts",
+    "eval:front:llm": "tsx evals/front.eval.ts --llm",
+    "eval:qa": "tsx evals/qa.eval.ts",
+    "eval:qa:llm": "tsx evals/qa.eval.ts --llm",
+    "eval:odin": "tsx evals/odin.eval.ts"
   },
   "dependencies": {
     "@langchain/core": "^1.1.48",
